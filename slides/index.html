@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10 Tips for Becoming a Top 1% AI User — Manuel Corpas</title>
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0d1117; color: #e6edf3; }
+
+/* ===== SLIDE ENGINE ===== */
+.deck { position: relative; width: 100vw; height: 100vh; }
+.slide {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 4vh 6vw;
+    opacity: 0; visibility: hidden; transition: opacity 0.4s ease;
+}
+.slide.active { opacity: 1; visibility: visible; }
+
+/* ===== TYPOGRAPHY ===== */
+h1 { font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 700; text-align: center; line-height: 1.2; margin-bottom: 1.5rem; }
+h2 { font-size: clamp(1.6rem, 3vw, 2.6rem); font-weight: 600; text-align: center; line-height: 1.3; margin-bottom: 1.2rem; }
+h3 { font-size: clamp(1.2rem, 2vw, 1.8rem); font-weight: 500; color: #8b949e; text-align: center; margin-bottom: 1rem; }
+p, li { font-size: clamp(1rem, 1.8vw, 1.4rem); line-height: 1.6; }
+ul { list-style: none; text-align: left; max-width: 80%; }
+ul li { padding: 0.4em 0; padding-left: 1.5em; position: relative; }
+ul li::before { content: "→"; position: absolute; left: 0; color: #58a6ff; }
+.small { font-size: clamp(0.85rem, 1.4vw, 1.1rem); color: #8b949e; }
+
+/* ===== COLOURS ===== */
+.accent { color: #58a6ff; }
+.green { color: #3fb950; }
+.orange { color: #d29922; }
+.red { color: #f85149; }
+.purple { color: #bc8cff; }
+.highlight { background: rgba(88,166,255,0.15); padding: 0.15em 0.4em; border-radius: 4px; }
+
+/* ===== LAYOUT HELPERS ===== */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 3vw; width: 90%; align-items: center; }
+.two-col > * { text-align: left; }
+.center { text-align: center; }
+.content { width: 90%; max-width: 1100px; }
+.gap { margin-top: 1.5rem; }
+
+/* ===== IMAGES ===== */
+.slide img { max-width: 85%; max-height: 55vh; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+.slide img.small-img { max-height: 40vh; }
+.slide img.full-img { max-width: 95%; max-height: 65vh; }
+
+/* ===== CODE BLOCKS ===== */
+pre {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    padding: 1.2em 1.5em; font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: clamp(0.8rem, 1.4vw, 1.1rem); line-height: 1.5;
+    text-align: left; overflow-x: auto; max-width: 90%; width: fit-content;
+}
+code { font-family: 'SF Mono', 'Fira Code', monospace; }
+.cmd { color: #3fb950; }
+.out { color: #8b949e; }
+.val { color: #d29922; }
+
+/* ===== TIP NUMBER ===== */
+.tip-num {
+    display: inline-block; background: #58a6ff; color: #0d1117;
+    font-size: clamp(0.9rem, 1.6vw, 1.3rem); font-weight: 700;
+    padding: 0.3em 0.8em; border-radius: 20px; margin-bottom: 0.8rem;
+}
+
+/* ===== SCORE BADGE ===== */
+.score-badge {
+    display: inline-block; font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 800;
+    background: linear-gradient(135deg, #3fb950, #58a6ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress { position: fixed; bottom: 0; left: 0; height: 3px; background: #58a6ff; transition: width 0.3s; z-index: 100; }
+
+/* ===== SLIDE COUNTER ===== */
+.counter {
+    position: fixed; bottom: 12px; right: 20px; font-size: 0.85rem;
+    color: #484f58; z-index: 100;
+}
+
+/* ===== SPEAKER NOTES (hidden, for reference) ===== */
+.notes { display: none; }
+
+/* ===== TITLE SLIDE SPECIAL ===== */
+.title-slide h1 { font-size: clamp(2.2rem, 4.5vw, 4rem); }
+.title-slide .subtitle { font-size: clamp(1.1rem, 2vw, 1.6rem); color: #8b949e; margin-top: 0.5rem; }
+.title-slide .author { margin-top: 2rem; font-size: clamp(1rem, 1.6vw, 1.3rem); color: #58a6ff; }
+.title-slide .meta { margin-top: 0.5rem; font-size: clamp(0.85rem, 1.3vw, 1rem); color: #484f58; }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+<!-- ============================================================ -->
+<!-- SLIDE 1: TITLE -->
+<!-- ============================================================ -->
+<section class="slide title-slide">
+    <h1>10 Tips for Becoming a<br>Top 1% AI User</h1>
+    <div class="subtitle">From quick wins to building your own AI agents</div>
+    <div class="author">Manuel Corpas</div>
+    <div class="meta">
+        Senior Lecturer, University of Westminster &middot; Turing Fellow<br>
+        London Bioinformatics Meetup &middot; 26 February 2026
+    </div>
+    <div class="notes">
+        Welcome everyone. I'm Manuel Corpas. Tonight I want to share 10 things that
+        separate casual AI users from the top 1% who are fundamentally changing how
+        research gets done. We'll start with quick wins, build towards infrastructure,
+        and end with a live demo of something I built this week.
+        TIMING: 2 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 2: THE GAP -->
+<!-- ============================================================ -->
+<section class="slide">
+    <h2>The 99% vs the 1%</h2>
+    <div class="two-col content">
+        <div>
+            <h3 style="text-align:left">Most researchers</h3>
+            <ul>
+                <li>Use ChatGPT for one-off questions</li>
+                <li>Copy-paste into web UIs</li>
+                <li>Treat AI as a search engine</li>
+                <li>No memory across sessions</li>
+            </ul>
+        </div>
+        <div>
+            <h3 style="text-align:left" class="accent">Top 1%</h3>
+            <ul>
+                <li>AI agents run overnight</li>
+                <li>Persistent memory + RAG pipelines</li>
+                <li>Automated research workflows</li>
+                <li>Build tools, not just use them</li>
+            </ul>
+        </div>
+    </div>
+    <div class="notes">
+        Here's the gap. Most researchers interact with AI the same way they'd use
+        Google: ask a question, get an answer, move on. The top 1% have moved past
+        that. They have systems that remember, agents that work while they sleep,
+        and infrastructure that compounds.
+        TIMING: 3 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 3: TIP 1 — IDE INTEGRATION -->
+<!-- ============================================================ -->
+<section class="slide">
+    <div class="tip-num">Tip 1</div>
+    <h2>Use AI Inside Your IDE, Not a Browser</h2>
+    <div class="content center">
+        <ul>
+            <li><span class="accent">Claude Code</span> in your terminal: reads your codebase, edits files, runs tests</li>
+            <li><span class="accent">Cursor / Windsurf</span>: AI-native editors with inline code generation</li>
+            <li><span class="accent">GitHub Copilot</span>: autocomplete on steroids</li>
+        </ul>
+        <p class="gap small">The browser is for chatting. The IDE is for building.</p>
+    </div>
+    <div class="notes">
+        Tip 1 is the lowest-hanging fruit. Stop copy-pasting code between ChatGPT
+        and your editor. Use Claude Code in your terminal — it reads your entire
+        codebase, understands context, edits files directly, and runs your tests.
+        If you do one thing after tonight, install Claude Code.
+        TIMING: 2 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 4: TIP 2 — PROMPT LIBRARIES -->
+<!-- ============================================================ -->
+<section class="slide">
+    <div class="tip-num">Tip 2</div>
+    <h2>Build a Prompt Library</h2>
+    <div class="content">
+        <pre>
+<span class="cmd"># CLAUDE.md — project instructions that persist</span>
+## Python Standards
+- Python 3.11+, pathlib for all paths
+- Logging with timestamps to LOGS/
+- Single responsibility per script
+
+## Architecture Rules
+- Agent folders use two-digit prefixes
+- Every agent: PYTHON/, DATA/, LOGS/, OUTPUT/</pre>
+        <p class="gap center small">Your <code>CLAUDE.md</code> is your prompt library. The AI reads it every session.</p>
+    </div>
+    <div class="notes">
+        Tip 2: don't type the same instructions every time. Put them in a CLAUDE.md
+        file at your project root. Claude Code reads this automatically. It contains
+        your coding standards, architecture rules, common commands. Think of it as
+        onboarding documentation — but for your AI.
+        TIMING: 2 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 5: TIP 3 — RAG MEMORY -->
+<!-- ============================================================ -->
+<section class="slide">
+    <div class="tip-num">Tip 3</div>
+    <h2>Give Your AI Long-Term Memory</h2>
+    <div class="content center">
+        <ul>
+            <li><span class="accent">RAG pipeline</span>: embed your notes, emails, papers, transcripts</li>
+            <li><span class="accent">Vector database</span> (ChromaDB): semantic search across everything</li>
+            <li><span class="accent">Query</span>: "What did I decide about X last month?"</li>
+        </ul>
+        <pre class="gap">
+<span class="cmd">$ python query_corpas.py "genomic equity metrics"</span>
+<span class="out">Found 7 results across notes, publications, sessions
+Top match (0.89): "HEIM Index measures population
+representation using heterozygosity and FST..."</span></pre>
+    </div>
+    <div class="notes">
+        Tip 3: memory. The biggest limitation of AI is that every conversation starts
+        from zero. Fix this with a RAG pipeline. I embed my research notes, emails,
+        publications, and meeting transcripts into ChromaDB. Now I can ask: "What did
+        I decide about the Wellcome proposal?" and get a real answer.
+        This is Corpus Core — my knowledge system. More on this later.
+        TIMING: 2 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 6: TIP 4 — VOICE CODING -->
+<!-- ============================================================ -->
+<section class="slide">
+    <div class="tip-num">Tip 4</div>
+    <h2>Use Voice, Not Just Text</h2>
+    <div class="content center">
+        <ul>
+            <li><span class="accent">Whisper</span> (local, Apple Silicon): transcribe meetings, lectures, ideas</li>
+            <li><span class="accent">Voice memos → structured notes</span>: talk for 5 min, get formatted output</li>
+            <li><span class="accent">Dictation for prompts</span>: faster than typing, more natural phrasing</li>
+        </ul>
+        <p class="gap small">Your brain outputs ideas faster as speech. Let AI handle the formatting.</p>
+    </div>
+    <div class="notes">
+        Tip 4: voice. I run Whisper locally on Apple Silicon. I record a 5-minute
+        voice memo with my thoughts, transcribe it, and feed it to Claude for
+        structuring. This is how I draft papers, plan projects, and capture ideas
+        on walks. Your brain is faster at speaking than typing. Use that.
+        TIMING: 1.5 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 7: TIP 5 — AUTOMATE DAILY TASKS -->
+<!-- ============================================================ -->
+<section class="slide">
+    <div class="tip-num">Tip 5</div>
+    <h2>Automate Your Daily Intelligence</h2>
+    <div class="content center">
+        <ul>
+            <li><span class="accent">arXiv radar</span>: daily paper ranking by relevance to your research</li>
+            <li><span class="accent">Podcast extraction</span>: transcribe + summarise AI/science podcasts automatically</li>
+            <li><span class="accent">Inbox triage</span>: AI classifies emails by urgency and drafts replies</li>
+        </ul>
+        <pre class="gap">
+<span class="cmd"># Every morning at 06:30, my bot sends me this:</span>
+<span class="out">📰 Top 3 Papers Today:
+1. "Ancestry-aware PRS improves prediction in..." (Score: 9.2)
+2. "Foundation models for single-cell..." (Score: 8.7)
+3. "Equitable genomic data sharing..." (Score: 8.4)</span></pre>
+    </div>
+    <div class="notes">
+        Tip 5: automate your information diet. I have scheduled jobs that run at
+        6:30am: arXiv ranking, podcast extraction, email triage. By the time I open
+        my laptop, my AI bot has already summarised the top papers, podcasts, and
+        flagged urgent emails. This saves me an hour every day.
+        TIMING: 2 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 8: TIP 6 — AI AGENTS -->
+<!-- ============================================================ -->
+<section class="slide">
+    <div class="tip-num">Tip 6</div>
+    <h2>Deploy Persistent AI Agents</h2>
+    <div class="content center">
+        <ul>
+            <li><span class="accent">RoboTerri</span> (Telegram): 15 commands, 13 tools, 8 scheduled job groups</li>
+            <li><span class="accent">RoboIsaac</span> (WhatsApp): analytical critique partner (Newton persona)</li>
+            <li>Both share a <span class="accent">memory bridge</span>: same ChromaDB, same knowledge</li>
+        </ul>
+        <p class="gap small">These aren't chatbots. They're research assistants that run 24/7.</p>
+    </div>
+    <div class="notes">
+        Tip 6: build persistent agents. I have two: RoboTerri on Telegram handles
+        daily operations — paper summaries, podcast publishing, email drafts, strategy
+        reviews. RoboIsaac on WhatsApp plays devil's advocate on my research plans.
+        They share the same memory bridge. They never forget a conversation.
+        TIMING: 2 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 9: TIP 7 — COMPOUND OUTPUTS -->
+<!-- ============================================================ -->
+<section class="slide">
+    <div class="tip-num">Tip 7</div>
+    <h2>Let AI Compound Your Outputs</h2>
+    <div class="content center">
+        <ul>
+            <li>One research insight → <span class="accent">5 outputs</span>: paper section, blog post, tweet thread, podcast episode, LinkedIn post</li>
+            <li>Meeting transcript → <span class="accent">action items + follow-up emails</span> (automated)</li>
+            <li>Literature review → <span class="accent">gap analysis + research questions</span></li>
+        </ul>
+        <p class="gap small">The top 1% produce 5-10x more output. Not because they work harder, but because they <span class="highlight">repurpose with AI</span>.</p>
+    </div>
+    <div class="notes">
+        Tip 7: compound your outputs. Every insight I generate gets repurposed
+        automatically. A single finding becomes a paper paragraph, a Substack post,
+        a tweet thread, a podcast episode, and a LinkedIn article. The AI handles
+        the reformatting. I handle the thinking.
+        TIMING: 1.5 min. "Now we get to the real stuff."
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 10: TRANSITION -->
+<!-- ============================================================ -->
+<section class="slide">
+    <h2 style="margin-bottom: 2rem;">Tips 1-7 are about <span class="accent">using</span> AI.</h2>
+    <h2>Tips 8-10 are about <span class="green">building</span> with it.</h2>
+    <p class="gap small center">This is where it gets interesting for bioinformaticians.</p>
+    <div class="notes">
+        Transition slide. Pause here. "Everything so far is about using AI tools
+        that already exist. Now I want to talk about building. Because the
+        bioinformatics community has specific needs that general AI tools don't
+        address."
+        TIMING: 30 sec
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 11: TIP 8 — OPEN SOURCE AI -->
+<!-- ============================================================ -->
+<section class="slide">
+    <div class="tip-num">Tip 8</div>
+    <h2>Contribute to Open-Source AI</h2>
+    <div class="content center">
+        <p>The bioinformatics community needs<br><span class="accent" style="font-size:1.3em">local-first, privacy-focused AI agents</span></p>
+        <div class="gap">
+            <ul>
+                <li>Genomic data is <span class="red">sensitive</span>: you can't send VCFs to cloud APIs</li>
+                <li>Biology demands <span class="orange">reproducibility</span>: every step must be auditable</li>
+                <li>Generic agents don't know <span class="purple">domain-specific workflows</span></li>
+            </ul>
+        </div>
+        <p class="gap">Announcing: <span class="accent" style="font-size:1.3em; font-weight:700">OpenClaw Bio</span></p>
+        <p class="small">The first bioinformatics-native AI agent skill library</p>
+    </div>
+    <div class="notes">
+        Tip 8: contribute to open-source AI. Here's the problem: general purpose
+        AI agents like Claude or ChatGPT are powerful, but they don't understand
+        bioinformatics workflows. They don't know that VCF files need ancestry-aware
+        annotation. They don't generate reproducibility bundles.
+        And critically: you can't send your patient genomes to a cloud API.
+        So I'm announcing OpenClaw Bio — a collection of modular, local-first
+        AI agent skills designed specifically for bioinformatics.
+        TIMING: 3 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 12: OPENCLAW BIO ARCHITECTURE -->
+<!-- ============================================================ -->
+<section class="slide">
+    <h2>OpenClaw Bio: Architecture</h2>
+    <div class="content">
+        <pre style="font-size: clamp(0.75rem, 1.3vw, 1rem);">
+User: "Analyse the diversity in my VCF file"
+           │
+    ┌──────▼──────┐
+    │  Bio         │  ← routes by file type + keywords
+    │  Orchestrator│
+    └──────┬──────┘
+           │
+    ┌──────▼──────────────────────────────┐
+    │                                      │
+<span class="green">Equity     VCF        Lit        scRNA
+Scorer    Annotator  Synthesizer Orchestrator</span>
+    │                                      │
+    └──────┬──────────────────────────────┘
+           │
+    ┌──────▼──────┐
+    │  Markdown    │  ← report + figures + checksums
+    │  Report      │     + reproducibility bundle
+    └─────────────┘</pre>
+    </div>
+    <div class="notes">
+        Here's how it works. The Bio Orchestrator takes your natural language
+        request, detects the file type, and routes to the right specialist skill.
+        Each skill wraps proven bioinformatics tools — Biopython, SAMtools, Scanpy,
+        AlphaFold. Every analysis produces a markdown report with figures, tables,
+        and a reproducibility bundle you can share.
+        TIMING: 2 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 13: SKILL CATALOGUE -->
+<!-- ============================================================ -->
+<section class="slide">
+    <h2>8 Skills Planned</h2>
+    <div class="content">
+        <div class="two-col">
+            <ul>
+                <li><span class="green">Equity Scorer</span> — HEIM diversity metrics <span class="small">[MVP]</span></li>
+                <li><span class="green">Bio Orchestrator</span> — routing + reporting <span class="small">[MVP]</span></li>
+                <li><span class="accent">VCF Annotator</span> — VEP + ClinVar + gnomAD</li>
+                <li><span class="accent">Lit Synthesizer</span> — PubMed + LLM summaries</li>
+            </ul>
+            <ul>
+                <li><span class="accent">scRNA Orchestrator</span> — Scanpy automation</li>
+                <li><span class="accent">Struct Predictor</span> — AlphaFold/Boltz local</li>
+                <li><span class="accent">Seq Wrangler</span> — FastQC + alignment</li>
+                <li><span class="accent">Repro Enforcer</span> — Conda/Nextflow export</li>
+            </ul>
+        </div>
+        <p class="gap center small">Each skill = a <code>SKILL.md</code> + Python scripts. Composable. Local-first. Auditable.</p>
+    </div>
+    <div class="notes">
+        Here's the current roadmap. Two skills are already at MVP: the Equity Scorer
+        and the Bio Orchestrator. Six more are planned for the next 6 weeks.
+        Each skill is just a SKILL.md file — that's the instruction set for the agent —
+        plus supporting Python code. They're modular: use one alone, or chain them
+        through the orchestrator.
+        TIMING: 1.5 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 14: TIP 9 — LIVE DEMO INTRO -->
+<!-- ============================================================ -->
+<section class="slide">
+    <div class="tip-num">Tip 9</div>
+    <h2>Build Modular Skills</h2>
+    <h3>Live Demo: Equity Scorer</h3>
+    <div class="content center">
+        <p>Input: a VCF file with 50 samples across 5 populations</p>
+        <p class="gap">Output: HEIM Equity Score + 5 figures + full report</p>
+        <pre class="gap">
+<span class="cmd">$ python equity_scorer.py \
+    --input demo_populations.vcf \
+    --pop-map demo_population_map.csv \
+    --output demo_report</span></pre>
+        <p class="gap small">Let's run it.</p>
+    </div>
+    <div class="notes">
+        Tip 9: build modular skills. Let me show you what one looks like.
+        The Equity Scorer takes a VCF file, computes real population genetics
+        metrics — heterozygosity, FST, PCA — and outputs a HEIM Equity Score
+        that measures how well your dataset represents global population diversity.
+        Let me run it live.
+        TIMING: Switch to terminal. Run the command. ~30 sec to execute.
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 15: DEMO — TERMINAL OUTPUT -->
+<!-- ============================================================ -->
+<section class="slide">
+    <h2>Demo: Terminal Output</h2>
+    <div class="content">
+        <pre>
+<span class="cmd">Parsing VCF...</span>
+  50 samples, 500 variants
+  Populations: AFR (n=8), AMR (n=5), EAS (n=7), EUR (n=22), SAS (n=8)
+
+<span class="cmd">Computing heterozygosity...</span>
+  AFR: obs=<span class="val">0.3543</span>  exp=0.3338
+  EAS: obs=<span class="val">0.3014</span>  exp=0.2788   ← lowest diversity
+
+<span class="cmd">Computing pairwise FST...</span>
+  AFR vs EAS: <span class="val">0.1011</span>   ← highest divergence
+  AMR vs EUR: <span class="val">0.0425</span>   ← lowest (admixture)
+
+<span class="cmd">Computing PCA...</span>
+  PC1: 7.6%  PC2: 4.9%
+
+<span class="cmd">HEIM Score: <span class="val">76.2/100 (Good)</span></span></pre>
+    </div>
+    <div class="notes">
+        Walk through the terminal output. Highlight: AFR has highest heterozygosity
+        (as expected from out-of-Africa). AFR vs EAS has highest FST. The HEIM
+        score is 76 out of 100 — "Good" but not "Excellent" because EUR is
+        overrepresented at 44%.
+        TIMING: 2 min. If live demo failed, show this slide as fallback.
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 16: DEMO — PCA -->
+<!-- ============================================================ -->
+<section class="slide">
+    <h2>PCA: Population Structure</h2>
+    <img src="img/pca_plot.png" alt="PCA scatter plot showing 5 population clusters" class="full-img">
+    <div class="notes">
+        PCA plot. Five clear clusters: AFR on the right, EAS top-left, EUR
+        bottom-left, SAS in the middle, AMR between EUR and AFR (reflecting
+        admixture). This is from 500 synthetic SNPs with realistic allele frequency
+        differentiation.
+        TIMING: 1 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 17: DEMO — FST HEATMAP -->
+<!-- ============================================================ -->
+<section class="slide">
+    <h2>Pairwise FST: Population Divergence</h2>
+    <img src="img/fst_heatmap.png" alt="FST heatmap showing pairwise population divergence" class="full-img">
+    <div class="notes">
+        FST heatmap. Darkest cell: AFR vs EAS at 0.10 — consistent with known
+        human population genetics. Lightest: AMR vs EUR at 0.04, reflecting shared
+        ancestry through admixture. All computed locally from the genotype matrix.
+        TIMING: 1 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 18: DEMO — ANCESTRY + HET -->
+<!-- ============================================================ -->
+<section class="slide">
+    <h2>Ancestry Distribution + Heterozygosity</h2>
+    <div class="two-col content">
+        <img src="img/ancestry_bar.png" alt="Ancestry distribution bar chart" class="small-img">
+        <img src="img/heterozygosity.png" alt="Heterozygosity comparison chart" class="small-img">
+    </div>
+    <p class="center small gap">Red dashes = global proportions. EUR at 44% is 2.75x overrepresented.</p>
+    <div class="notes">
+        Left: ancestry distribution. The red dashed lines show global proportions.
+        EUR is massively overrepresented — a typical UK biobank skew.
+        Right: heterozygosity. AFR has the highest observed Het, EAS the lowest.
+        This is exactly what population genetics predicts from the out-of-Africa model.
+        TIMING: 1.5 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 19: DEMO — HEIM SCORE -->
+<!-- ============================================================ -->
+<section class="slide">
+    <h2>HEIM Equity Score</h2>
+    <img src="img/heim_gauge.png" alt="HEIM score gauge showing 76/100" style="max-height: 25vh;">
+    <div class="content center gap">
+        <div class="two-col" style="max-width: 800px; margin: 0 auto;">
+            <div>
+                <p><strong>Score Breakdown</strong></p>
+                <ul style="max-width:100%">
+                    <li>Representation Index: <span class="val">0.720</span></li>
+                    <li>Heterozygosity Balance: <span class="val">0.667</span></li>
+                    <li>FST Coverage: <span class="green">1.000</span></li>
+                    <li>Geographic Spread: <span class="val">0.714</span></li>
+                </ul>
+            </div>
+            <div>
+                <p><strong>What This Means</strong></p>
+                <ul style="max-width:100%">
+                    <li>EUR 2.75x overrepresented</li>
+                    <li>EAS and SAS underrepresented</li>
+                    <li>5 of 7 continental groups present</li>
+                    <li><span class="green">All pairwise FST computed</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="notes">
+        The HEIM Equity Score: 76 out of 100. Representation index drags it down
+        because EUR is overrepresented. Good geographic spread — 5 of 7 continental
+        groups. All pairwise FST computed. This single number tells a study
+        coordinator: "your cohort has reasonable diversity but needs more EAS and SAS
+        participants."
+        TIMING: 2 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 20: WHY THIS MATTERS -->
+<!-- ============================================================ -->
+<section class="slide">
+    <h2>Why This Matters</h2>
+    <div class="content center">
+        <ul>
+            <li><span class="red">86%</span> of GWAS participants are of European ancestry</li>
+            <li>Polygenic risk scores <span class="red">fail</span> across populations</li>
+            <li>The HEIM Index gives you a <span class="accent">single number</span> to quantify the problem</li>
+        </ul>
+        <p class="gap">Every dataset. Every study. Every biobank. <span class="highlight">Score it.</span></p>
+        <p class="gap small">Paper in review: Corpas, M. (2026). "HEIM: Health Equity Index for Minorities"</p>
+    </div>
+    <div class="notes">
+        Why does this matter? 86% of GWAS participants are European. Polygenic risk
+        scores trained on European data perform poorly in African, Asian, and
+        Indigenous populations. This is not just an academic problem — it's a health
+        equity crisis. The HEIM Index gives researchers a simple metric to quantify
+        and track this gap. Score your dataset. Report it alongside your demographics.
+        TIMING: 2 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 21: TIP 10 — CTA -->
+<!-- ============================================================ -->
+<section class="slide">
+    <div class="tip-num">Tip 10</div>
+    <h2>Create Infrastructure That Ships Your Research</h2>
+    <div class="content center">
+        <ul>
+            <li>The Equity Scorer took <span class="accent">2 days</span> to build</li>
+            <li>It computes real Het, FST, PCA from genotype data</li>
+            <li>It generates a reproducible, publication-ready report</li>
+            <li>Anyone can build the next skill</li>
+        </ul>
+        <div class="gap">
+            <p style="font-size:1.3em"><strong>Skills we need from <span class="accent">you</span>:</strong></p>
+            <ul>
+                <li><span class="orange">GWAS Pipeline</span> — PLINK/REGENIE automation</li>
+                <li><span class="orange">Metagenomics Classifier</span> — Kraken2/MetaPhlAn wrapper</li>
+                <li><span class="orange">Clinical Variant Reporter</span> — ACMG classification</li>
+                <li><span class="orange">Pathway Enricher</span> — GO/KEGG enrichment</li>
+            </ul>
+        </div>
+    </div>
+    <div class="notes">
+        Tip 10: build infrastructure that ships your research. The Equity Scorer
+        took 2 days. It's real population genetics, not a toy. And anyone in this
+        room can build the next skill. Do you work with GWAS? Build a PLINK wrapper.
+        Metagenomics? Wrap Kraken2. Clinical genetics? Build an ACMG classifier.
+        The template is there. The orchestrator routes to your skill automatically.
+        TIMING: 2 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 22: GITHUB + LINKS -->
+<!-- ============================================================ -->
+<section class="slide">
+    <h2>Get Started</h2>
+    <div class="content center">
+        <p style="font-size: 1.6em; margin-bottom: 1.5rem;">
+            <span class="accent">github.com/manuelcorpas/openclaw-bio</span>
+        </p>
+        <div class="two-col" style="max-width: 700px; margin: 0 auto;">
+            <div>
+                <p><strong>Repository</strong></p>
+                <ul style="max-width:100%">
+                    <li>8 skills (2 MVP, 6 planned)</li>
+                    <li>SKILL-TEMPLATE.md</li>
+                    <li>Architecture docs</li>
+                    <li>Demo dataset + report</li>
+                </ul>
+            </div>
+            <div>
+                <p><strong>Next Steps</strong></p>
+                <ul style="max-width:100%">
+                    <li>Star the repo</li>
+                    <li>Run the Equity Scorer</li>
+                    <li>Copy the skill template</li>
+                    <li>Submit a PR with your skill</li>
+                </ul>
+            </div>
+        </div>
+        <p class="gap small">Also: <span class="accent">github.com/manuelcorpas/corpus-core</span> — the RAG memory system</p>
+    </div>
+    <div class="notes">
+        Here's how to get involved. The repo goes live tonight. Star it, clone it,
+        run the Equity Scorer on your own data. If you want to build a skill,
+        copy the template, and open a PR. The contributing guide walks you through it.
+        Also check out Corpus Core — that's the RAG memory system behind everything.
+        TIMING: 1.5 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 23: RECAP -->
+<!-- ============================================================ -->
+<section class="slide">
+    <h2>10 Tips Recap</h2>
+    <div class="content">
+        <div class="two-col">
+            <ul>
+                <li><span class="small">1.</span> AI in your IDE, not browser</li>
+                <li><span class="small">2.</span> Build a prompt library (CLAUDE.md)</li>
+                <li><span class="small">3.</span> Give AI long-term memory (RAG)</li>
+                <li><span class="small">4.</span> Use voice, not just text</li>
+                <li><span class="small">5.</span> Automate daily intelligence</li>
+            </ul>
+            <ul>
+                <li><span class="small">6.</span> Deploy persistent AI agents</li>
+                <li><span class="small">7.</span> Let AI compound your outputs</li>
+                <li><span class="small">8.</span> Contribute to open-source AI</li>
+                <li><span class="small">9.</span> Build modular skills</li>
+                <li><span class="small">10.</span> Create shipping infrastructure</li>
+            </ul>
+        </div>
+        <p class="gap center"><span class="highlight" style="font-size:1.2em">The top 1% build systems. Everyone else uses tools.</span></p>
+    </div>
+    <div class="notes">
+        Quick recap. Tips 1-7: use AI effectively — IDE, prompts, memory, voice,
+        automation, agents, compounding. Tips 8-10: build with AI — open-source,
+        modular skills, shipping infrastructure. The throughline: the top 1% build
+        systems that compound. Everyone else uses tools one at a time.
+        TIMING: 1 min
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 24: THANK YOU -->
+<!-- ============================================================ -->
+<section class="slide title-slide">
+    <h1>Thank You</h1>
+    <div class="subtitle">Questions welcome — and at the pub after</div>
+    <div class="gap" style="margin-top: 2rem;">
+        <p><span class="accent">GitHub</span>: github.com/manuelcorpas/openclaw-bio</p>
+        <p><span class="accent">LinkedIn</span>: linkedin.com/in/manuelcorpas</p>
+        <p><span class="accent">X</span>: @manuelcorpas</p>
+    </div>
+    <p class="gap small">Slides: github.com/manuelcorpas/openclaw-bio/slides</p>
+    <div class="notes">
+        Thank you. I'll be at the pub after — come talk to me if you want to
+        build a skill, have ideas for the library, or just want to chat about
+        AI agents in research. Questions?
+        TIMING: remainder
+    </div>
+</section>
+
+</div><!-- /deck -->
+
+<!-- ===== PROGRESS BAR ===== -->
+<div class="progress" id="progress"></div>
+<div class="counter" id="counter"></div>
+
+<script>
+// ===== MINIMAL SLIDE ENGINE =====
+const slides = document.querySelectorAll('.slide');
+let current = 0;
+const total = slides.length;
+
+function show(n) {
+    if (n < 0 || n >= total) return;
+    slides[current].classList.remove('active');
+    current = n;
+    slides[current].classList.add('active');
+    document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+    document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(current + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(current - 1); }
+    if (e.key === 'Home') { e.preventDefault(); show(0); }
+    if (e.key === 'End') { e.preventDefault(); show(total - 1); }
+    // 'n' key toggles speaker notes in console
+    if (e.key === 'n') {
+        const notes = slides[current].querySelector('.notes');
+        if (notes) console.log('NOTES [' + (current+1) + ']:', notes.textContent.trim());
+    }
+});
+
+// Touch navigation (swipe)
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; });
+document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].screenX - touchStartX;
+    if (dx < -50) show(current + 1);
+    if (dx > 50) show(current - 1);
+});
+
+// Click to advance (except on links/code)
+document.addEventListener('click', e => {
+    if (e.target.closest('a, pre, code')) return;
+    if (e.clientX > window.innerWidth / 2) show(current + 1);
+    else show(current - 1);
+});
+
+// Init
+show(0);
+</script>
+
+</body>
+</html>
