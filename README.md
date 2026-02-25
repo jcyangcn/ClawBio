@@ -40,12 +40,25 @@ Computes the **HEIM (Health Equity Index for Minorities)** score from VCF or anc
 
 **Demo result**: 50 samples across 5 populations (AFR, AMR, EAS, EUR, SAS), 500 variants → HEIM Score **76.2/100** (Good). Identified EUR overrepresentation at 44% vs 16% global proportion.
 
+### PharmGx Reporter
+
+Generates a **pharmacogenomic report** from consumer genetic data (23andMe, AncestryDNA):
+
+- Parses raw genetic data files (auto-detects format)
+- Extracts **31 pharmacogenomic SNPs** across **12 genes** (CYP2C19, CYP2D6, CYP2C9, VKORC1, SLCO1B1, DPYD, TPMT, UGT1A1, CYP3A5, CYP2B6, NUDT15, CYP1A2)
+- Calls star alleles and determines metabolizer phenotypes
+- Looks up **CPIC drug recommendations** for **51 medications**
+- Outputs: markdown report with alerts, gene profiles, complete drug table, reproducibility block
+
+**Demo result**: Synthetic patient with CYP2D6 *4/*4 (Poor Metabolizer) → **10 drugs flagged AVOID** (codeine, tramadol, 7 TCAs, tamoxifen), 20 caution, 21 standard. Report generated in <1 second.
+
 ## Skills
 
 | Skill | Status | Description |
 |-------|--------|-------------|
 | [Bio Orchestrator](skills/bio-orchestrator/) | MVP | Meta-agent that routes bioinformatics requests to specialised sub-agents |
 | [Equity Scorer](skills/equity-scorer/) | MVP | HEIM diversity metrics from VCF/ancestry data; heterozygosity, FST, PCA, equity reports |
+| [PharmGx Reporter](skills/pharmgx-reporter/) | MVP | Pharmacogenomic report from DTC genetic data; 12 genes, 51 drugs, CPIC guidelines |
 | [VCF Annotator](skills/vcf-annotator/) | Planned | Variant annotation with VEP, ancestry context, and diversity metrics |
 | [Lit Synthesizer](skills/lit-synthesizer/) | Planned | PubMed/bioRxiv search with LLM summarisation and citation graphs |
 | [scRNA Orchestrator](skills/scrna-orchestrator/) | Planned | Seurat/Scanpy automation: QC, clustering, DE analysis, visualisation |
@@ -90,6 +103,7 @@ User Request
 Bio Orchestrator (routing + file I/O + reporting)
     |
     +---> Equity Scorer (diversity metrics, HEIM index)
+    +---> PharmGx Reporter (pharmacogenomic profiling, CPIC)
     +---> VCF Annotator (variant annotation, VEP)
     +---> Lit Synthesizer (literature search, summarisation)
     +---> scRNA Orchestrator (single-cell pipelines)
