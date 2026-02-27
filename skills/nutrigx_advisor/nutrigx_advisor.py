@@ -4,7 +4,7 @@ nutrigx_advisor.py — NutriGx Advisor: Personalised Nutrition from Genetic Data
 ClawBio Skill v0.1.0
 
 Usage:
-    python nutrigx_advisor.py --input genome.txt --output results/
+    python nutrigx_advisor.py --input genome.csv --output results/
     python nutrigx_advisor.py --input variants.vcf --output results/ --format vcf
 """
 
@@ -26,7 +26,7 @@ def main():
     )
     parser.add_argument(
         "--input", required=True,
-        help="Path to genetic data file (23andMe .txt, AncestryDNA .csv, or .vcf)"
+        help="Path to genetic data file (23andMe .txt/.csv, AncestryDNA .csv, or .vcf)"
     )
     parser.add_argument(
         "--output", default="nutrigx_results",
@@ -44,17 +44,16 @@ def main():
         "--no-figures", action="store_true",
         help="Skip figure generation (useful in headless environments)"
     )
-    parser.add_argument(
-        "--synthetic", action="store_true",
-        help="Run on synthetic patient data (for testing)"
-    )
     args = parser.parse_args()
 
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Resolve SNP panel
-    panel_path = Path(args.panel) if args.panel else Path(__file__).parent / "data" / "snp_panel.json"
+    panel_path = (
+        Path(args.panel) if args.panel
+        else Path(__file__).parent / "data" / "snp_panel.json"
+    )
     if not panel_path.exists():
         print(f"[ERROR] SNP panel not found at {panel_path}", file=sys.stderr)
         sys.exit(1)
@@ -62,7 +61,7 @@ def main():
     with open(panel_path) as f:
         snp_panel = json.load(f)
 
-    input_path = Path(__file__).parent / "tests" / "synthetic_patient.txt" if args.synthetic else Path(args.input)
+    input_path = Path(args.input)
     if not input_path.exists():
         print(f"[ERROR] Input file not found: {input_path}", file=sys.stderr)
         sys.exit(1)
@@ -98,8 +97,8 @@ def main():
         args=vars(args)
     )
 
-    print(f"\n[NutriGx] ✓ Done. Report: {report_path}")
-    print(f"[NutriGx] ✓ Results in: {output_dir}/")
+    print(f"\n[NutriGx] Done. Report: {report_path}")
+    print(f"[NutriGx] Results in: {output_dir}/")
 
 
 if __name__ == "__main__":
