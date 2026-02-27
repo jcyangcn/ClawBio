@@ -36,7 +36,7 @@ User request (natural language)
             → Output: Markdown report + figures + audit log + repro bundle
 ```
 
-## 🦖 The Skills (4 MVP, 6 planned)
+## 🦖 The Skills (5 MVP, 6 planned)
 
 | Skill | Status | What it does |
 |-------|--------|-------------|
@@ -44,6 +44,7 @@ User request (natural language)
 | PharmGx Reporter | **MVP** | Pharmacogenomic report: 12 genes, 51 drugs, CPIC guidelines |
 | Ancestry PCA | **MVP** | PCA decomposition vs SGDP (345 samples, 164 global populations) |
 | Semantic Similarity | **MVP** | Semantic Isolation Index for 175 GBD diseases from 13.1M PubMed abstracts |
+| NutriGx Advisor | **MVP** | Personalised nutrition report from 23andMe/AncestryDNA/VCF — 40 SNPs across 13 nutrient domains |
 | Equity Scorer | Planned | HEIM diversity metrics from VCF/ancestry data |
 | VCF Annotator | Planned | Variant annotation with VEP and ancestry context |
 | Lit Synthesizer | Planned | PubMed/bioRxiv search with LLM summarisation |
