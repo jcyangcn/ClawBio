@@ -913,6 +913,92 @@ def run_comparison(
 # --------------------------------------------------------------------------- #
 
 
+def run_summary(
+    input_path: Path,
+    reference_path: Optional[Path] = None,
+    is_demo: bool = False,
+) -> str:
+    """Run IBS comparison and return a concise text summary (no files).
+
+    Uses Manuel's verified 23andMe ancestry for the demo. The IBS score
+    is computed directly from genotype data and is accurate.
+    """
+    if reference_path is None:
+        reference_path = REFERENCE_FILE
+
+    user_geno, user_pos = parse_23andme_extended(input_path)
+    ref_geno, _ = parse_23andme_extended(reference_path)
+
+    ibs_score, n_overlap, n_concordant, per_chrom = compute_ibs(
+        user_geno, ref_geno, user_pos
+    )
+
+    # Relationship context
+    context = f"IBS = {ibs_score:.4f}"
+    for i, entry in enumerate(IBS_REFERENCE):
+        if i > 0 and ibs_score >= entry["ibs"]:
+            context = (
+                f"Your IBS ({ibs_score:.4f}) falls between "
+                f"{entry['relationship']} ({entry['ibs']:.3f}) and "
+                f"{IBS_REFERENCE[i-1]['relationship']} ({IBS_REFERENCE[i-1]['ibs']:.3f})"
+            )
+            break
+
+    # Load Manuel's verified ancestry
+    manuel_ancestry = {}
+    if MANUEL_ANCESTRY_FILE.exists():
+        cached = _stage_from_icloud(MANUEL_ANCESTRY_FILE)
+        with open(cached) as f:
+            manuel_ancestry = json.load(f)
+
+    lines = []
+    lines.append("GENOME COMPARISON RESULTS")
+    lines.append("")
+    if is_demo:
+        lines.append("Subject: Manuel Corpas (PGP-UK uk6D0CFA)")
+    else:
+        lines.append(f"Subject: {input_path.name}")
+    lines.append("Reference: George Church (PGP-1, hu43860C)")
+    lines.append("  Founder of the Personal Genome Project,")
+    lines.append("  professor of genetics at Harvard Medical School.")
+    lines.append("")
+    lines.append("== DNA SIMILARITY ==")
+    lines.append(f"IBS Score: {ibs_score:.4f} ({ibs_score*100:.1f}%)")
+    lines.append(f"SNPs compared: {n_overlap:,}")
+    lines.append(f"Identical genotypes: {n_concordant:,} ({n_concordant/n_overlap*100:.1f}%)")
+    lines.append(context)
+    lines.append("")
+
+    ac = manuel_ancestry.get("ancestry_composition", {})
+    if ac and is_demo:
+        lines.append("== ANCESTRY (23andMe verified) ==")
+        for region, data in ac.items():
+            total = data.get("total", data) if isinstance(data, dict) else data
+            pct = total * 100 if isinstance(total, float) and total <= 1.0 else total
+            if pct >= 0.1:
+                lines.append(f"{region}: {pct:.1f}%")
+                if isinstance(data, dict):
+                    for sub, sub_data in data.items():
+                        if sub == "total":
+                            continue
+                        st = sub_data.get("total", sub_data) if isinstance(sub_data, dict) else sub_data
+                        sp = st * 100 if isinstance(st, float) and st <= 1.0 else st
+                        if sp >= 0.1:
+                            lines.append(f"  {sub}: {sp:.1f}%")
+        lines.append("")
+        hg = manuel_ancestry.get("haplogroups", {})
+        if hg:
+            lines.append(f"Maternal haplogroup: {hg.get('maternal', 'unknown')}")
+            lines.append(f"Paternal haplogroup: {hg.get('paternal', 'unknown')}")
+        neanderthal = manuel_ancestry.get("neanderthal", "")
+        if isinstance(neanderthal, dict):
+            lines.append(f"Neanderthal: {neanderthal.get('description', '')}")
+        elif neanderthal:
+            lines.append(f"Neanderthal: {neanderthal}")
+
+    return "\n".join(lines)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="ClawBio Genome Comparator: compare your genome to George Church (PGP-1)"
@@ -922,7 +1008,7 @@ def main():
         "--reference", "-r", default=None,
         help="Reference genome file (default: George Church PGP-1)"
     )
-    parser.add_argument("--output", "-o", default="genome_compare_results", help="Output directory")
+    parser.add_argument("--output", "-o", help="Output directory (enables full report + figures)")
     parser.add_argument("--demo", action="store_true", help="Run with Manuel Corpas as input (demo)")
     parser.add_argument("--aims-panel", default=None, help="Path to AIMs panel JSON")
     parser.add_argument("--no-figures", action="store_true", help="Skip figure generation")
@@ -939,6 +1025,14 @@ def main():
     if not Path(input_path).exists():
         print(f"Error: input file not found: {input_path}")
         sys.exit(1)
+
+    # Default: print summary text to stdout (no files)
+    # If --output is given: produce full report + figures
+    if not args.output:
+        reference = Path(args.reference) if args.reference else None
+        text = run_summary(Path(input_path), reference, is_demo=args.demo)
+        print(text)
+        sys.exit(0)
 
     output_dir = Path(args.output)
     reference = Path(args.reference) if args.reference else None
