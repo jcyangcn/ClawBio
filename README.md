@@ -237,7 +237,7 @@ python -m pytest
 ## Run via Telegram (RoboTerri)
 
 <p align="center">
-  <img src="img/terri_attwood_avatar_top_left.png" alt="RoboTerri" width="120">
+  <img src="img/terri_attwood_avatar_top_left.png" alt="RoboTerri" width="250">
   <br><em>RoboTerri — ClawBio's Telegram agent, inspired by <a href="https://en.wikipedia.org/wiki/Teresa_Attwood">Prof. Teresa K. Attwood</a></em>
 </p>
 
