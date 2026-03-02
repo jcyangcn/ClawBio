@@ -107,6 +107,128 @@ Before this patch, every function in every pipeline treated these two states ide
 - NutriGx empty input: aborts with exit code 1
 - Metagenomics: syntax verified (requires external databases for full run)
 
+---
+
+# Security Audit: Genome Comparator Skill
+
+**Date**: 2026-03-02
+**Commit**: `6e1f0e9`
+**Scope**: New `genome-compare` skill + integration changes (clawbio.py, orchestrator.py, ci.yml, Makefile, CLAUDE.md, README.md, RoboTerri Telegram bot)
+
+## Background
+
+The genome-compare skill was added for the UK AI Agent Hack demo day (7 March 2026). It compares a user's 23andMe genotype data against George Church's public PGP-1 genome via Identity By State (IBS) and estimates continental ancestry via EM admixture. Demo patient is Manuel Corpas (PGP-UK uk6D0CFA). Four parallel security audits were conducted: genome_compare.py, integration files, RoboTerri Telegram bot, and data files.
+
+## Audit Methodology
+
+Every file added or modified on 2026-03-02 was examined for:
+1. Network exfiltration (HTTP requests, socket connections, cloud SDK usage)
+2. Command injection (subprocess, os.system, eval, exec)
+3. Path traversal (user-supplied paths escaping intended directories)
+4. Deserialization attacks (pickle, unsafe YAML, custom decoders)
+5. Denial of service (unbounded memory, infinite loops, missing timeouts)
+6. Information leakage (system paths, credentials, raw genotypes in output)
+7. Input validation (malformed files, schema validation, boundary checks)
+8. Data file integrity (zip bombs, polyglots, embedded scripts)
+9. Genetic data privacy (raw genotypes vs aggregate statistics)
+10. CI/CD pipeline safety (dependency pinning, permissions)
+
+## Positive Security Properties
+
+These are intentional design decisions that eliminate entire vulnerability classes:
+
+| ID | Property | Details |
+|----|----------|---------|
+| GOOD-01 | **No network activity** | `genome_compare.py` imports zero HTTP/socket/cloud libraries. All processing is local. Genetic data never leaves the machine. |
+| GOOD-02 | **No command injection surface** | No `subprocess`, `os.system()`, `eval()`, or `exec()` in the skill script. Pure Python computation + stdlib file I/O. |
+| GOOD-03 | **No dangerous deserialization** | Only `json.load()` (safe) and `gzip.open()` (safe). No pickle, no unsafe YAML. |
+| GOOD-04 | **No credential exposure** | No environment variables, API keys, tokens, or `.env` files read. |
+| GOOD-05 | **Subprocess uses list form** | `clawbio.py` uses `subprocess.run(cmd, ...)` with a list (not `shell=True`). RoboTerri uses `asyncio.create_subprocess_exec` (not `create_subprocess_shell`). |
+| GOOD-06 | **Defensive parsing** | 23andMe parser skips blank lines, comments, short lines, non-rsID entries, and handles missing genotypes gracefully. |
+| GOOD-07 | **Numerical stability** | EM algorithm uses log-sum-exp normalisation, clips frequencies to [0.001, 0.999], and converges via `np.allclose(atol=1e-7)`. |
+| GOOD-08 | **Bounded iteration** | EM loop hard-capped at 200 iterations. |
+| GOOD-09 | **Matplotlib Agg backend** | All plots force non-interactive `Agg` backend with graceful `ImportError` fallback. |
+| GOOD-10 | **Proper file handle management** | All file opens use `with` statements. |
+| GOOD-11 | **Trusted dependency chain** | Only external dep is `numpy`. `matplotlib` optional. All others are stdlib. |
+| GOOD-12 | **No raw genotypes in report** | Report contains only aggregate statistics (IBS scores, ancestry %). Individual SNP genotypes are never written to output. |
+| GOOD-13 | **Data files verified clean** | Both `.gz` files pass `gzip -t`, have valid magic bytes (`1f 8b`), 2.9x compression ratio (no zip bomb), zero trailing bytes (no polyglot). AIMs panel JSON has no embedded scripts, URLs, or executable patterns. |
+
+## Findings: 20 items across 4 audit areas
+
+### genome_compare.py (10 findings)
+
+| Severity | ID | Category | Finding | Lines | Recommendation |
+|----------|----|----------|---------|-------|----------------|
+| **MEDIUM** | GC-001 | Path Traversal | `--output` writes to arbitrary filesystem location via `mkdir(parents=True)` | 742, 859 | Validate output resolves within allowed root |
+| LOW | GC-002 | Path Traversal | `--input`, `--reference`, `--aims-panel` read from arbitrary paths | 854-861 | Add path validation if ever exposed as a service |
+| LOW | GC-003 | Info Leakage | Input filename and SHA-256 prefix exposed in report | 548, 709 | Allow `--label` flag for anonymised reports |
+| LOW | GC-004 | DoS | No upper bound on input file size / line count | 79-100 | Add `MAX_LINES = 10_000_000` check |
+| LOW | GC-005 | Input Validation | Invalid files produce empty reports silently (no minimum SNP check) | 79-100 | Warn if `<1,000` SNPs parsed |
+| INFO | GC-006 | Input Validation | AIMs panel JSON not schema-validated; missing keys raise raw `KeyError` | 196-200 | Wrap in try/except with user-friendly message |
+| INFO | GC-007 | Filesystem | `mkdir(parents=True, exist_ok=True)` creates arbitrary directory trees | 742, 745 | See GC-001 |
+| LOW | GC-008 | Exception Handling | `except Exception` in figure generation masks serious errors | 816-817 | Log full traceback; re-raise for `PermissionError`, `OSError` |
+| INFO | GC-009 | Division by Zero | `n_concordant/n_overlap` at line 558 if `n_overlap == 0` | 558 | Add `if n_overlap > 0` guard |
+| INFO | GC-010 | DoS (positive) | EM iteration properly bounded at 200 with convergence check | 297, 324 | No action needed |
+
+### Integration Files (5 findings)
+
+| Severity | ID | Category | Finding | File | Lines | Recommendation |
+|----------|-----|----------|---------|------|-------|----------------|
+| **HIGH** | INT-001 | Command Injection | `extra_args` passes arbitrary CLI flags to subprocess unfiltered | clawbio.py | 174-175 | Allowlist of permitted flags per skill |
+| **HIGH** | INT-002 | Path Traversal | Orchestrator `--skill` arg concatenated to path without validation | orchestrator.py | 199 | Reject skill names containing `/`, `\`, or `..` |
+| **MEDIUM** | INT-003 | Info Disclosure | Error messages include full filesystem paths, sent to Telegram | clawbio.py | 129, 138, 209 | Sanitize paths before returning to external channels |
+| LOW | INT-004 | Keyword Collision | `"compare"` and `"ibs"` are overly broad orchestrator keywords | orchestrator.py | 67-72 | Use multi-word keywords; add word-boundary matching |
+| LOW | INT-005 | CI Pipeline | Dependencies not pinned; `permissions:` not restricted | ci.yml | 25-28 | Pin versions; add `permissions: contents: read` |
+
+### RoboTerri Telegram Bot (5 findings)
+
+| Severity | ID | Category | Finding | Lines | Recommendation |
+|----------|-----|----------|---------|-------|----------------|
+| **HIGH** | TG-001 | Code Injection | PDF extraction embeds `tmp_path` (with user filename) into `python -c` f-string | 2819-2832 | Pass path as `sys.argv[1]` or call PyPDF2 in-process |
+| **MEDIUM** | TG-002 | Path Traversal | Telegram filename used unsanitized in temp path construction | 2800-2804 | `re.sub(r'[/\\]', '_', Path(filename).name)` |
+| **MEDIUM** | TG-003 | Authorisation | `_received_files` takes first file regardless of `chat_id` | 1916-1918 | Scope file access by `chat_id` |
+| **MEDIUM** | TG-004 | DoS | No file size or type validation before passing to skill subprocess | 1957-1964 | Add 50MB limit and extension allowlist |
+| LOW | TG-005 | Info Disclosure | Absolute server paths sent to Telegram chat | 2015-2016 | Use relative path or directory name only |
+
+### Data Files (0 actionable findings)
+
+| Status | File | Details |
+|--------|------|---------|
+| CLEAN | `george_church_23andme.txt.gz` | Valid gzip, 4.8MB, 569K SNPs, CC0 |
+| CLEAN | `manuel_corpas_23andme.txt.gz` | Valid gzip, 4.8MB, 576K SNPs, CC0 |
+| CLEAN | `aims_panel.json` | Valid JSON, 65 markers, no scripts/URLs |
+| CLEAN | `manuel_ancestry.json` | Valid JSON, 1 URL (PGP-UK profile — legitimate provenance) |
+| CLEAN | `test_genome_compare.py` | No eval/exec/subprocess, no network access, deterministic inputs |
+
+## Summary by Severity
+
+| Severity | Count | IDs |
+|----------|-------|-----|
+| **HIGH** | 3 | INT-001, INT-002, TG-001 |
+| **MEDIUM** | 5 | GC-001, INT-003, TG-002, TG-003, TG-004 |
+| **LOW** | 7 | GC-002, GC-003, GC-004, GC-005, GC-008, INT-004, INT-005, TG-005 |
+| **INFO** | 4 | GC-006, GC-007, GC-009, GC-010 |
+
+**Note**: TG-001 (PDF f-string injection) and INT-001 (`extra_args` passthrough) are pre-existing patterns, not introduced by the genome-compare commit. They are documented here because they affect the genome-compare execution path.
+
+## Priority Remediation
+
+1. **Immediate** — TG-001: Fix PDF extraction code injection (pre-existing, high severity)
+2. **Immediate** — INT-001: Allowlist `extra_args` per skill
+3. **Immediate** — INT-002: Validate skill names contain no path separators
+4. **Short-term** — TG-002, TG-003, TG-004: Sanitize filenames, scope files by chat, add size limits
+5. **Short-term** — INT-003: Redact filesystem paths from error messages sent to Telegram
+6. **Maintenance** — GC-001 through GC-009: Hardening for service deployment
+
+## Overall Assessment
+
+The genome-compare skill itself is **well-written and security-conscious**. Its most important property is what it does NOT do: no subprocess calls, no network access, no dangerous deserialization, no credential handling. The attack surface is very small. All HIGH findings (INT-001, INT-002, TG-001) are in the surrounding infrastructure (clawbio.py runner, orchestrator, Telegram bot) rather than in the skill code itself.
+
+**Risk rating for genome_compare.py**: Low. No critical or high findings.
+**Risk rating for integration path**: Medium. Three HIGH findings in surrounding code.
+
+---
+
 ## Disclaimer
 
 ClawBio is a **research and educational tool**. It is not a medical device and does not provide clinical diagnoses. Consult a healthcare professional before making any medical decisions based on genetic data.
