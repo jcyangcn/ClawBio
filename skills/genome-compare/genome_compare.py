@@ -61,21 +61,36 @@ CHROMOSOMES = [str(c) for c in range(1, 23)] + ["X", "Y", "MT"]
 # --------------------------------------------------------------------------- #
 
 
+def _stage_from_icloud(filepath: str | Path) -> Path:
+    """If filepath is on iCloud Drive, copy to /tmp to avoid Errno 11 deadlock.
+
+    The macOS `bird` daemon holds file locks on iCloud Drive files during
+    sync/indexing.  Copying to /tmp first avoids the persistent deadlock
+    that gzip.open / json.load trigger on long-lived file handles.
+    """
+    import shutil
+    import tempfile
+    filepath = Path(filepath)
+    # Detect iCloud Drive paths (contains "Mobile Documents" or "com~apple~CloudDocs")
+    path_str = str(filepath)
+    if "Mobile Documents" not in path_str and "com~apple~CloudDocs" not in path_str:
+        return filepath  # not on iCloud, use directly
+
+    cache_dir = Path(tempfile.gettempdir()) / "clawbio_cache"
+    cache_dir.mkdir(exist_ok=True)
+    cached = cache_dir / filepath.name
+    # Re-copy if missing or source is newer
+    if not cached.exists() or filepath.stat().st_mtime > cached.stat().st_mtime:
+        shutil.copy2(filepath, cached)
+    return cached
+
+
 def _open_file(filepath: str | Path):
-    """Open a file, handling .gz transparently. Retries on iCloud Errno 11."""
-    import time as _time
-    filepath = str(filepath)
-    for attempt in range(3):
-        try:
-            if filepath.endswith(".gz"):
-                return gzip.open(filepath, "rt", encoding="utf-8", errors="replace")
-            return open(filepath, encoding="utf-8", errors="replace")
-        except OSError as e:
-            if e.errno == 11 and attempt < 2:
-                print(f"  iCloud lock (Errno 11), retrying ({attempt + 1}/3)...")
-                _time.sleep(1 + attempt)
-            else:
-                raise
+    """Open a file, handling .gz transparently. Stages from iCloud first."""
+    filepath = str(_stage_from_icloud(filepath))
+    if filepath.endswith(".gz"):
+        return gzip.open(filepath, "rt", encoding="utf-8", errors="replace")
+    return open(filepath, encoding="utf-8", errors="replace")
 
 
 def parse_23andme_extended(filepath: str | Path) -> Tuple[dict, dict]:
@@ -202,20 +217,12 @@ def compute_ibs(
 
 def load_aims_panel(panel_path: Path) -> Tuple[list, list]:
     """Load AIMs panel. Returns (markers, population_names)."""
-    import time as _time
-    for attempt in range(3):
-        try:
-            with open(panel_path) as f:
-                data = json.load(f)
-            populations = data["meta"]["populations"]
-            markers = data["markers"]
-            return markers, populations
-        except OSError as e:
-            if e.errno == 11 and attempt < 2:
-                print(f"  iCloud lock reading AIMs panel (Errno 11), retrying ({attempt + 1}/3)...")
-                _time.sleep(1 + attempt)
-            else:
-                raise
+    panel_path = _stage_from_icloud(panel_path)
+    with open(panel_path) as f:
+        data = json.load(f)
+    populations = data["meta"]["populations"]
+    markers = data["markers"]
+    return markers, populations
 
 
 def _count_alt_alleles(geno: str, ref: str, alt: str) -> Optional[int]:
@@ -791,18 +798,9 @@ def run_comparison(
     # Load Manuel's known ancestry
     manuel_ancestry = {}
     if MANUEL_ANCESTRY_FILE.exists():
-        import time as _time
-        for _attempt in range(3):
-            try:
-                with open(MANUEL_ANCESTRY_FILE) as f:
-                    manuel_ancestry = json.load(f)
-                break
-            except OSError as e:
-                if e.errno == 11 and _attempt < 2:
-                    print(f"  iCloud lock reading ancestry file (Errno 11), retrying ({_attempt + 1}/3)...")
-                    _time.sleep(1 + _attempt)
-                else:
-                    raise
+        cached_ancestry = _stage_from_icloud(MANUEL_ANCESTRY_FILE)
+        with open(cached_ancestry) as f:
+            manuel_ancestry = json.load(f)
 
     # Generate figures
     figures = {}
