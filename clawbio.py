@@ -46,6 +46,7 @@ SKILLS = {
             str(SKILLS_DIR / "pharmgx-reporter" / "demo_patient.txt"),
         ],
         "description": "Pharmacogenomics reporter (12 genes, 31 SNPs, 51 drugs)",
+        "allowed_extra_flags": {"--weights"},
     },
     "equity": {
         "script": SKILLS_DIR / "equity-scorer" / "equity_scorer.py",
@@ -56,6 +57,7 @@ SKILLS = {
             str(EXAMPLES_DIR / "demo_population_map.csv"),
         ],
         "description": "HEIM equity scorer (FST, heterozygosity, population representation)",
+        "allowed_extra_flags": {"--weights", "--pop-map"},
     },
     "nutrigx": {
         "script": SKILLS_DIR / "nutrigx_advisor" / "nutrigx_advisor.py",
@@ -64,16 +66,19 @@ SKILLS = {
             str(SKILLS_DIR / "nutrigx_advisor" / "tests" / "synthetic_patient.csv"),
         ],
         "description": "Nutrigenomics advisor (diet, vitamins, caffeine, lactose)",
+        "allowed_extra_flags": set(),
     },
     "metagenomics": {
         "script": SKILLS_DIR / "claw-metagenomics" / "metagenomics_profiler.py",
         "demo_args": ["--demo"],
         "description": "Metagenomics profiler (Kraken2, RGI/CARD, HUMAnN3)",
+        "allowed_extra_flags": set(),
     },
     "compare": {
         "script": SKILLS_DIR / "genome-compare" / "genome_compare.py",
         "demo_args": ["--demo"],
         "description": "Genome comparator (IBS vs George Church + ancestry estimation)",
+        "allowed_extra_flags": {"--no-figures", "--aims-panel", "--reference"},
     },
 }
 
@@ -171,8 +176,26 @@ def run_skill(
         }
 
     cmd.extend(["--output", str(out_dir)])
+
+    # SEC INT-001: filter extra_args against per-skill allowlist
     if extra_args:
-        cmd.extend(extra_args)
+        allowed = skill_info.get("allowed_extra_flags", set())
+        blocked = {"--input", "--output", "--demo"}  # never override core flags
+        filtered = []
+        i = 0
+        while i < len(extra_args):
+            flag = extra_args[i].split("=")[0]
+            if flag in blocked:
+                i += 2 if "=" not in extra_args[i] and i + 1 < len(extra_args) else i + 1
+                continue
+            if flag in allowed:
+                filtered.append(extra_args[i])
+                # Include the next token as the flag's value if not --key=val
+                if "=" not in extra_args[i] and i + 1 < len(extra_args) and not extra_args[i + 1].startswith("-"):
+                    filtered.append(extra_args[i + 1])
+                    i += 1
+            i += 1
+        cmd.extend(filtered)
 
     # Run subprocess
     t0 = time.time()

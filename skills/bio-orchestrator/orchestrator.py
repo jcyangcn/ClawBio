@@ -181,6 +181,10 @@ def main() -> None:
     # Determine skill
     input_path = Path(args.input)
     if args.skill:
+        # SEC INT-002: reject path traversal in skill name
+        if "/" in args.skill or "\\" in args.skill or ".." in args.skill:
+            print(f"Invalid skill name: {args.skill}")
+            sys.exit(1)
         skill = args.skill
         method = "user-specified"
     elif input_path.exists():
@@ -196,9 +200,13 @@ def main() -> None:
         sys.exit(1)
 
     # Check skill exists
-    skill_dir = SKILLS_DIR / skill
+    skill_dir = (SKILLS_DIR / skill).resolve()
+    # SEC INT-002: ensure resolved path stays within SKILLS_DIR
+    if not str(skill_dir).startswith(str(SKILLS_DIR.resolve())):
+        print(f"Invalid skill name: {skill}")
+        sys.exit(1)
     if not (skill_dir / "SKILL.md").exists():
-        print(f"Skill '{skill}' not found at {skill_dir}")
+        print(f"Skill '{skill}' not found")
         sys.exit(1)
 
     # Output routing decision

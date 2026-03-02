@@ -174,8 +174,8 @@ These are intentional design decisions that eliminate entire vulnerability class
 
 | Severity | ID | Category | Finding | File | Lines | Recommendation |
 |----------|-----|----------|---------|------|-------|----------------|
-| **HIGH** | INT-001 | Command Injection | `extra_args` passes arbitrary CLI flags to subprocess unfiltered | clawbio.py | 174-175 | Allowlist of permitted flags per skill |
-| **HIGH** | INT-002 | Path Traversal | Orchestrator `--skill` arg concatenated to path without validation | orchestrator.py | 199 | Reject skill names containing `/`, `\`, or `..` |
+| ~~**HIGH**~~ **FIXED** | INT-001 | Command Injection | `extra_args` passes arbitrary CLI flags to subprocess unfiltered | clawbio.py | 174-175 | **Fixed**: per-skill `allowed_extra_flags` allowlist; core flags (`--input`, `--output`, `--demo`) always blocked |
+| ~~**HIGH**~~ **FIXED** | INT-002 | Path Traversal | Orchestrator `--skill` arg concatenated to path without validation | orchestrator.py | 199 | **Fixed**: rejects `/`, `\`, `..` in skill name + `resolve()` check that path stays within `SKILLS_DIR` |
 | **MEDIUM** | INT-003 | Info Disclosure | Error messages include full filesystem paths, sent to Telegram | clawbio.py | 129, 138, 209 | Sanitize paths before returning to external channels |
 | LOW | INT-004 | Keyword Collision | `"compare"` and `"ibs"` are overly broad orchestrator keywords | orchestrator.py | 67-72 | Use multi-word keywords; add word-boundary matching |
 | LOW | INT-005 | CI Pipeline | Dependencies not pinned; `permissions:` not restricted | ci.yml | 25-28 | Pin versions; add `permissions: contents: read` |
@@ -184,7 +184,7 @@ These are intentional design decisions that eliminate entire vulnerability class
 
 | Severity | ID | Category | Finding | Lines | Recommendation |
 |----------|-----|----------|---------|-------|----------------|
-| **HIGH** | TG-001 | Code Injection | PDF extraction embeds `tmp_path` (with user filename) into `python -c` f-string | 2819-2832 | Pass path as `sys.argv[1]` or call PyPDF2 in-process |
+| ~~**HIGH**~~ **FIXED** | TG-001 | Code Injection | PDF extraction embeds `tmp_path` (with user filename) into `python -c` f-string | 2819-2832 | **Fixed**: path passed as `sys.argv[1]`, never embedded in code string |
 | **MEDIUM** | TG-002 | Path Traversal | Telegram filename used unsanitized in temp path construction | 2800-2804 | `re.sub(r'[/\\]', '_', Path(filename).name)` |
 | **MEDIUM** | TG-003 | Authorisation | `_received_files` takes first file regardless of `chat_id` | 1916-1918 | Scope file access by `chat_id` |
 | **MEDIUM** | TG-004 | DoS | No file size or type validation before passing to skill subprocess | 1957-1964 | Add 50MB limit and extension allowlist |
@@ -204,7 +204,7 @@ These are intentional design decisions that eliminate entire vulnerability class
 
 | Severity | Count | IDs |
 |----------|-------|-----|
-| **HIGH** | 3 | INT-001, INT-002, TG-001 |
+| ~~**HIGH**~~ **FIXED** | 3 | INT-001, INT-002, TG-001 (all fixed 2026-03-02) |
 | **MEDIUM** | 5 | GC-001, INT-003, TG-002, TG-003, TG-004 |
 | **LOW** | 7 | GC-002, GC-003, GC-004, GC-005, GC-008, INT-004, INT-005, TG-005 |
 | **INFO** | 4 | GC-006, GC-007, GC-009, GC-010 |
@@ -213,9 +213,9 @@ These are intentional design decisions that eliminate entire vulnerability class
 
 ## Priority Remediation
 
-1. **Immediate** — TG-001: Fix PDF extraction code injection (pre-existing, high severity)
-2. **Immediate** — INT-001: Allowlist `extra_args` per skill
-3. **Immediate** — INT-002: Validate skill names contain no path separators
+1. ~~**Immediate** — TG-001: Fix PDF extraction code injection~~ **FIXED 2026-03-02**
+2. ~~**Immediate** — INT-001: Allowlist `extra_args` per skill~~ **FIXED 2026-03-02**
+3. ~~**Immediate** — INT-002: Validate skill names contain no path separators~~ **FIXED 2026-03-02**
 4. **Short-term** — TG-002, TG-003, TG-004: Sanitize filenames, scope files by chat, add size limits
 5. **Short-term** — INT-003: Redact filesystem paths from error messages sent to Telegram
 6. **Maintenance** — GC-001 through GC-009: Hardening for service deployment
