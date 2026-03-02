@@ -75,6 +75,7 @@ def _stage_from_icloud(filepath: str | Path) -> Path:
     # Detect iCloud Drive paths
     path_str = str(filepath)
     if "Mobile Documents" not in path_str and "com~apple~CloudDocs" not in path_str:
+        print(f"  [stage] {filepath.name}: not on iCloud, using directly", file=sys.stderr)
         return filepath  # not on iCloud, use directly
 
     cache_dir = Path(tempfile.gettempdir()) / "clawbio_cache"
@@ -85,9 +86,11 @@ def _stage_from_icloud(filepath: str | Path) -> Path:
     if not needs_copy:
         try:
             needs_copy = filepath.stat().st_mtime > cached.stat().st_mtime
-        except OSError:
+        except OSError as e:
+            print(f"  [stage] stat failed on {filepath.name}: {e}", file=sys.stderr)
             needs_copy = True  # stat failed, try to copy
     if needs_copy:
+        print(f"  [stage] copying {filepath.name} to {cached}", file=sys.stderr)
         for attempt in range(4):
             try:
                 # Use macOS cp command — handles iCloud files better than Python open()
@@ -95,13 +98,16 @@ def _stage_from_icloud(filepath: str | Path) -> Path:
                     ["cp", str(filepath), str(cached)],
                     check=True, capture_output=True, timeout=30,
                 )
+                print(f"  [stage] {filepath.name} copied OK ({cached.stat().st_size:,} bytes)", file=sys.stderr)
                 break
             except (subprocess.CalledProcessError, OSError) as e:
+                print(f"  [stage] cp failed attempt {attempt + 1}/4: {e}", file=sys.stderr)
                 if attempt < 3:
-                    print(f"  iCloud copy failed (attempt {attempt + 1}/4), retrying...")
                     _time.sleep(2 ** attempt)
                 else:
                     raise OSError(f"Cannot stage {filepath.name} from iCloud after 4 attempts: {e}")
+    else:
+        print(f"  [stage] {filepath.name}: using cached copy at {cached}", file=sys.stderr)
     return cached
 
 
@@ -784,6 +790,20 @@ def run_comparison(
     if aims_path is None:
         aims_path = AIMS_PANEL_FILE
 
+    # Diagnostic logging
+    print(f"  [diag] SKILL_DIR = {SKILL_DIR}", file=sys.stderr)
+    print(f"  [diag] DATA_DIR  = {DATA_DIR}", file=sys.stderr)
+    print(f"  [diag] input     = {input_path} (exists={input_path.exists()})", file=sys.stderr)
+    print(f"  [diag] reference = {reference_path} (exists={reference_path.exists()})", file=sys.stderr)
+    print(f"  [diag] aims      = {aims_path} (exists={aims_path.exists()})", file=sys.stderr)
+    print(f"  [diag] output    = {output_dir}", file=sys.stderr)
+    print(f"  [diag] numpy     = {np.__version__}", file=sys.stderr)
+    try:
+        import matplotlib
+        print(f"  [diag] matplotlib = {matplotlib.__version__}", file=sys.stderr)
+    except ImportError:
+        print(f"  [diag] matplotlib = NOT INSTALLED", file=sys.stderr)
+
     output_dir.mkdir(parents=True, exist_ok=True)
     fig_dir = output_dir / "figures"
     if not no_figures:
@@ -938,4 +958,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import traceback
+    try:
+        main()
+    except Exception:
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)
