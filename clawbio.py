@@ -79,6 +79,7 @@ SKILLS = {
         "demo_args": ["--demo"],
         "description": "Genome comparator (IBS vs George Church + ancestry estimation)",
         "allowed_extra_flags": {"--no-figures", "--aims-panel", "--reference"},
+        "summary_default": True,  # no --output → summary text on stdout
     },
 }
 
@@ -149,12 +150,18 @@ def run_skill(
         }
 
     # Build output directory
-    if output_dir:
+    # Skills with summary_default=True skip --output when none was requested,
+    # producing a text summary on stdout instead of generating report files.
+    summary_mode = skill_info.get("summary_default", False) and not output_dir
+    if summary_mode:
+        out_dir = None
+    elif output_dir:
         out_dir = Path(output_dir)
     else:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         out_dir = DEFAULT_OUTPUT_ROOT / f"{skill_name}_{ts}"
-    out_dir.mkdir(parents=True, exist_ok=True)
+    if out_dir:
+        out_dir.mkdir(parents=True, exist_ok=True)
 
     # Build command
     cmd = [PYTHON, str(script_path)]
@@ -168,14 +175,15 @@ def run_skill(
             "skill": skill_name,
             "success": False,
             "exit_code": -1,
-            "output_dir": str(out_dir),
+            "output_dir": str(out_dir) if out_dir else None,
             "files": [],
             "stdout": "",
             "stderr": "No input provided. Use --demo or --input <file>.",
             "duration_seconds": 0,
         }
 
-    cmd.extend(["--output", str(out_dir)])
+    if out_dir:
+        cmd.extend(["--output", str(out_dir)])
 
     # SEC INT-001: filter extra_args against per-skill allowlist
     if extra_args:
@@ -214,7 +222,7 @@ def run_skill(
             "skill": skill_name,
             "success": False,
             "exit_code": -1,
-            "output_dir": str(out_dir),
+            "output_dir": str(out_dir) if out_dir else None,
             "files": [],
             "stdout": "",
             "stderr": f"Timed out after {timeout} seconds.",
@@ -226,7 +234,7 @@ def run_skill(
             "skill": skill_name,
             "success": False,
             "exit_code": -1,
-            "output_dir": str(out_dir),
+            "output_dir": str(out_dir) if out_dir else None,
             "files": [],
             "stdout": "",
             "stderr": str(e),
@@ -234,15 +242,18 @@ def run_skill(
         }
 
     # Collect output files
-    output_files = sorted(
-        [f.name for f in out_dir.rglob("*") if f.is_file()],
-    )
+    if out_dir and out_dir.exists():
+        output_files = sorted(
+            [f.name for f in out_dir.rglob("*") if f.is_file()],
+        )
+    else:
+        output_files = []
 
     return {
         "skill": skill_name,
         "success": proc.returncode == 0,
         "exit_code": proc.returncode,
-        "output_dir": str(out_dir),
+        "output_dir": str(out_dir) if out_dir else None,
         "files": output_files,
         "stdout": proc.stdout,
         "stderr": proc.stderr,
@@ -279,7 +290,6 @@ def main():
     if args.command == "list":
         list_skills()
     elif args.command == "run":
-        print(f"Running {args.skill}...")
         result = run_skill(
             skill_name=args.skill,
             input_path=args.input_path,
@@ -287,13 +297,18 @@ def main():
             demo=args.demo,
             timeout=args.timeout,
         )
+        # Summary mode: skill printed text to stdout — relay it directly
+        if result["output_dir"] is None and result["success"] and result["stdout"]:
+            print(result["stdout"], end="")
+            sys.exit(0)
         print()
         if result["success"]:
             print(f"  Status:   OK (exit {result['exit_code']})")
         else:
             print(f"  Status:   FAILED (exit {result['exit_code']})")
         print(f"  Duration: {result['duration_seconds']}s")
-        print(f"  Output:   {result['output_dir']}")
+        if result["output_dir"]:
+            print(f"  Output:   {result['output_dir']}")
         if result["files"]:
             print(f"  Files:    {', '.join(result['files'])}")
         if not result["success"] and result["stderr"]:
