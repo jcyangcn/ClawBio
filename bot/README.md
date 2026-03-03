@@ -14,7 +14,7 @@ A Telegram bot that runs ClawBio bioinformatics skills using Claude as the reaso
 
 - Python 3.11+
 - A Telegram account
-- An [Anthropic API key](https://console.anthropic.com/)
+- An API key from any Anthropic-compatible provider (Anthropic, OpenRouter, AWS Bedrock, etc.)
 - ClawBio cloned and working (`python3 clawbio.py run pharmgx --demo`)
 
 ## Setup
@@ -45,14 +45,30 @@ Create a `.env` file in the ClawBio root directory:
 ```
 TELEGRAM_BOT_TOKEN=your-bot-token-here
 TELEGRAM_CHAT_ID=your-chat-id-here
-ANTHROPIC_API_KEY=sk-ant-your-key-here
+LLM_API_KEY=your-api-key-here
 ```
 
-Optional: set the Claude model (defaults to `claude-sonnet-4-5-20250929`):
+The `LLM_API_KEY` works with any Anthropic-compatible provider. For alternative providers, also set the base URL:
+
+```
+# OpenRouter
+LLM_BASE_URL=https://openrouter.ai/api/v1
+LLM_API_KEY=sk-or-...
+
+# AWS Bedrock (via proxy)
+LLM_BASE_URL=https://your-bedrock-proxy.example.com
+
+# Direct Anthropic (default, no LLM_BASE_URL needed)
+LLM_API_KEY=sk-ant-...
+```
+
+Optional: set the model (defaults to `claude-sonnet-4-5-20250929`):
 
 ```
 CLAWBIO_MODEL=claude-sonnet-4-5-20250929
 ```
+
+`ANTHROPIC_API_KEY` is also accepted as a fallback if `LLM_API_KEY` is not set.
 
 ### 5. Run
 

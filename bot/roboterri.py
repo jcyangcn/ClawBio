@@ -45,14 +45,15 @@ load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = int(os.environ.get("TELEGRAM_CHAT_ID", "0"))
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+LLM_API_KEY = os.environ.get("LLM_API_KEY") or os.environ.get("ANTHROPIC_API_KEY", "")
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "")  # e.g. https://openrouter.ai/api/v1
 CLAWBIO_MODEL = os.environ.get("CLAWBIO_MODEL", "claude-sonnet-4-5-20250929")
 
 if not TELEGRAM_BOT_TOKEN:
     print("Error: TELEGRAM_BOT_TOKEN not set. See bot/README.md for setup.")
     sys.exit(1)
-if not ANTHROPIC_API_KEY:
-    print("Error: ANTHROPIC_API_KEY not set. See bot/README.md for setup.")
+if not LLM_API_KEY:
+    print("Error: LLM_API_KEY not set. See bot/README.md for setup.")
     sys.exit(1)
 if not TELEGRAM_CHAT_ID:
     print("Error: TELEGRAM_CHAT_ID not set. See bot/README.md for setup.")
@@ -97,7 +98,10 @@ SYSTEM_PROMPT = f"{_soul}\n\n{ROLE_GUARDRAILS}"
 # State
 # --------------------------------------------------------------------------- #
 
-claude = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+_client_kwargs = {"api_key": LLM_API_KEY}
+if LLM_BASE_URL:
+    _client_kwargs["base_url"] = LLM_BASE_URL
+claude = anthropic.AsyncAnthropic(**_client_kwargs)
 conversations: dict[int, list] = {}
 MAX_HISTORY = 20
 
@@ -774,6 +778,8 @@ def main():
     """Start the bot."""
     logger.info(f"Starting RoboTerri ClawBio bot (model: {CLAWBIO_MODEL})")
     logger.info(f"ClawBio directory: {CLAWBIO_DIR}")
+    if LLM_BASE_URL:
+        logger.info(f"LLM base URL: {LLM_BASE_URL}")
     logger.info(f"Authorised chat ID: {TELEGRAM_CHAT_ID}")
 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
