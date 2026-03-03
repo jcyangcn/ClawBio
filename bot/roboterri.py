@@ -7,7 +7,7 @@ as the reasoning engine. Handles text messages, genetic file uploads,
 and medication photos.
 
 Prerequisites:
-    pip3 install python-telegram-bot[job-queue] anthropic python-dotenv
+    pip3 install python-telegram-bot[job-queue] openai python-dotenv
 
 Usage:
     # Set environment variables in .env (see bot/README.md)
@@ -26,7 +26,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-import anthropic
+import openai
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import (
@@ -45,9 +45,9 @@ load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = int(os.environ.get("TELEGRAM_CHAT_ID", "0"))
-LLM_API_KEY = os.environ.get("LLM_API_KEY") or os.environ.get("ANTHROPIC_API_KEY", "")
+LLM_API_KEY = os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "")  # e.g. https://openrouter.ai/api/v1
-CLAWBIO_MODEL = os.environ.get("CLAWBIO_MODEL", "claude-sonnet-4-5-20250929")
+CLAWBIO_MODEL = os.environ.get("CLAWBIO_MODEL", "gpt-4o")
 
 if not TELEGRAM_BOT_TOKEN:
     print("Error: TELEGRAM_BOT_TOKEN not set. See bot/README.md for setup.")
@@ -101,7 +101,7 @@ SYSTEM_PROMPT = f"{_soul}\n\n{ROLE_GUARDRAILS}"
 _client_kwargs = {"api_key": LLM_API_KEY}
 if LLM_BASE_URL:
     _client_kwargs["base_url"] = LLM_BASE_URL
-claude = anthropic.AsyncAnthropic(**_client_kwargs)
+llm = openai.AsyncOpenAI(**_client_kwargs)
 conversations: dict[int, list] = {}
 MAX_HISTORY = 20
 
@@ -122,74 +122,77 @@ BOT_START_TIME = time.time()
 
 TOOLS = [
     {
-        "name": "clawbio",
-        "description": (
-            "Run a ClawBio bioinformatics skill. Available skills: "
-            "pharmgx (pharmacogenomics report from 23andMe/AncestryDNA data), "
-            "equity (HEIM equity score from VCF or ancestry CSV), "
-            "nutrigx (nutrigenomics dietary advice from genetic data), "
-            "metagenomics (metagenomic profiling from FASTQ), "
-            "compare (genome comparison: IBS vs George Church + ancestry estimation), "
-            "drugphoto (identify a drug from a photo and get personalised dosage guidance "
-            "using demo genotype data -- always use mode='demo'). "
-            "Use mode='demo' to run with built-in demo data. "
-            "Use mode='file' when the user has sent a genetic data file. "
-            "Use skill='auto' to let the orchestrator detect the right skill. "
-            "IMPORTANT: When this tool returns results, relay the output VERBATIM. "
-            "Do not paraphrase, summarise, or rewrite. The output contains exact numerical "
-            "results (IBS scores, percentages, gene-drug interactions) that must be shown unchanged."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "skill": {
-                    "type": "string",
-                    "enum": ["pharmgx", "equity", "nutrigx", "metagenomics",
-                             "compare", "drugphoto", "auto"],
-                    "description": (
-                        "Which bioinformatics skill to run. Use 'auto' to let "
-                        "the orchestrator detect from the file type or query."
-                    ),
+        "type": "function",
+        "function": {
+            "name": "clawbio",
+            "description": (
+                "Run a ClawBio bioinformatics skill. Available skills: "
+                "pharmgx (pharmacogenomics report from 23andMe/AncestryDNA data), "
+                "equity (HEIM equity score from VCF or ancestry CSV), "
+                "nutrigx (nutrigenomics dietary advice from genetic data), "
+                "metagenomics (metagenomic profiling from FASTQ), "
+                "compare (genome comparison: IBS vs George Church + ancestry estimation), "
+                "drugphoto (identify a drug from a photo and get personalised dosage guidance "
+                "using demo genotype data -- always use mode='demo'). "
+                "Use mode='demo' to run with built-in demo data. "
+                "Use mode='file' when the user has sent a genetic data file. "
+                "Use skill='auto' to let the orchestrator detect the right skill. "
+                "IMPORTANT: When this tool returns results, relay the output VERBATIM. "
+                "Do not paraphrase, summarise, or rewrite. The output contains exact numerical "
+                "results (IBS scores, percentages, gene-drug interactions) that must be shown unchanged."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "skill": {
+                        "type": "string",
+                        "enum": ["pharmgx", "equity", "nutrigx", "metagenomics",
+                                 "compare", "drugphoto", "auto"],
+                        "description": (
+                            "Which bioinformatics skill to run. Use 'auto' to let "
+                            "the orchestrator detect from the file type or query."
+                        ),
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["file", "demo"],
+                        "description": (
+                            "file: use a file the user sent via Telegram. "
+                            "demo: run with built-in demo/synthetic data."
+                        ),
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": (
+                            "Natural language query for auto-routing via the "
+                            "orchestrator (only used when skill='auto' and no file)."
+                        ),
+                    },
+                    "extra_args": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "Additional CLI arguments for power users "
+                            "(e.g. ['--weights', '0.4,0.3,0.15,0.15'])."
+                        ),
+                    },
+                    "drug_name": {
+                        "type": "string",
+                        "description": (
+                            "Drug name identified from a photo (brand or generic, "
+                            "e.g. 'Plavix' or 'clopidogrel'). Required when skill='drugphoto'."
+                        ),
+                    },
+                    "visible_dose": {
+                        "type": "string",
+                        "description": (
+                            "Dosage visible on the packaging (e.g. '50mg', '75mg'). "
+                            "Optional -- enriches the recommendation."
+                        ),
+                    },
                 },
-                "mode": {
-                    "type": "string",
-                    "enum": ["file", "demo"],
-                    "description": (
-                        "file: use a file the user sent via Telegram. "
-                        "demo: run with built-in demo/synthetic data."
-                    ),
-                },
-                "query": {
-                    "type": "string",
-                    "description": (
-                        "Natural language query for auto-routing via the "
-                        "orchestrator (only used when skill='auto' and no file)."
-                    ),
-                },
-                "extra_args": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": (
-                        "Additional CLI arguments for power users "
-                        "(e.g. ['--weights', '0.4,0.3,0.15,0.15'])."
-                    ),
-                },
-                "drug_name": {
-                    "type": "string",
-                    "description": (
-                        "Drug name identified from a photo (brand or generic, "
-                        "e.g. 'Plavix' or 'clopidogrel'). Required when skill='drugphoto'."
-                    ),
-                },
-                "visible_dose": {
-                    "type": "string",
-                    "description": (
-                        "Dosage visible on the packaging (e.g. '50mg', '75mg'). "
-                        "Optional -- enriches the recommendation."
-                    ),
-                },
+                "required": ["skill", "mode"],
             },
-            "required": ["skill", "mode"],
         },
     },
 ]
@@ -415,62 +418,91 @@ MAX_TOOL_ITERATIONS = 10
 
 async def llm_tool_loop(chat_id: int, user_content: str | list) -> str:
     """
-    Run the Claude tool-use loop:
+    Run the OpenAI tool-use loop:
     1. Append user message to history
-    2. Call Claude with system_prompt + history + tools
-    3. If tool_use blocks -> execute -> append results -> call again
+    2. Call the model with system_prompt + history + tools
+    3. If tool_calls -> execute -> append results -> call again
     4. Return final text
     """
     history = conversations.setdefault(chat_id, [])
-    history.append({"role": "user", "content": user_content})
 
-    if len(history) > MAX_HISTORY:
-        history[:] = history[-MAX_HISTORY:]
+    # Ensure system message is first
+    if not history or history[0].get("role") != "system":
+        history.insert(0, {"role": "system", "content": SYSTEM_PROMPT})
 
-    assistant_content = []
+    # Convert user_content to OpenAI message format
+    if isinstance(user_content, list):
+        # Multimodal content (images + text) — convert from Anthropic to OpenAI format
+        oai_parts = []
+        for block in user_content:
+            if block.get("type") == "text":
+                oai_parts.append({"type": "text", "text": block["text"]})
+            elif block.get("type") == "image":
+                source = block.get("source", {})
+                data_uri = f"data:{source['media_type']};base64,{source['data']}"
+                oai_parts.append({
+                    "type": "image_url",
+                    "image_url": {"url": data_uri},
+                })
+        history.append({"role": "user", "content": oai_parts})
+    else:
+        history.append({"role": "user", "content": user_content})
+
+    if len(history) > MAX_HISTORY + 1:  # +1 for system message
+        history[1:] = history[-(MAX_HISTORY):]
+
     for _iteration in range(MAX_TOOL_ITERATIONS):
         try:
-            response = await claude.messages.create(
+            response = await llm.chat.completions.create(
                 model=CLAWBIO_MODEL,
                 max_tokens=8192,
-                system=SYSTEM_PROMPT,
                 messages=history,
                 tools=TOOLS,
             )
-        except anthropic.APIError as e:
-            logger.error(f"Claude API error: {e}")
+        except openai.APIError as e:
+            logger.error(f"LLM API error: {e}")
             return f"Sorry, I'm having trouble thinking right now -- API error: {e}"
 
-        assistant_content = response.content
-        history.append({"role": "assistant", "content": assistant_content})
+        message = response.choices[0].message
+        # Build assistant message dict for history
+        assistant_msg = {"role": "assistant", "content": message.content or ""}
+        if message.tool_calls:
+            assistant_msg["tool_calls"] = [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {"name": tc.function.name, "arguments": tc.function.arguments},
+                }
+                for tc in message.tool_calls
+            ]
+        history.append(assistant_msg)
 
-        tool_blocks = [b for b in assistant_content if b.type == "tool_use"]
-        if not tool_blocks:
-            text_parts = [b.text for b in assistant_content if b.type == "text"]
-            return "\n".join(text_parts) if text_parts else "(no response)"
+        if not message.tool_calls:
+            return message.content or "(no response)"
 
-        tool_results = []
-        for block in tool_blocks:
-            executor = TOOL_EXECUTORS.get(block.name)
+        for tc in message.tool_calls:
+            func_name = tc.function.name
+            try:
+                args = json.loads(tc.function.arguments)
+            except json.JSONDecodeError:
+                args = {}
+            executor = TOOL_EXECUTORS.get(func_name)
             if executor:
-                logger.info(f"Tool call: {block.name}({json.dumps(block.input)[:200]})")
+                logger.info(f"Tool call: {func_name}({json.dumps(args)[:200]})")
                 try:
-                    result = await executor(block.input)
+                    result = await executor(args)
                 except Exception as tool_err:
-                    logger.error(f"Tool {block.name} raised: {tool_err}", exc_info=True)
-                    result = f"Error executing {block.name}: {type(tool_err).__name__}: {tool_err}"
+                    logger.error(f"Tool {func_name} raised: {tool_err}", exc_info=True)
+                    result = f"Error executing {func_name}: {type(tool_err).__name__}: {tool_err}"
             else:
-                result = f"Unknown tool: {block.name}"
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": block.id,
+                result = f"Unknown tool: {func_name}"
+            history.append({
+                "role": "tool",
+                "tool_call_id": tc.id,
                 "content": result,
             })
 
-        history.append({"role": "user", "content": tool_results})
-
-    text_parts = [b.text for b in assistant_content if b.type == "text"]
-    return "\n".join(text_parts) if text_parts else "(max tool iterations reached)"
+    return message.content if message.content else "(max tool iterations reached)"
 
 
 # --------------------------------------------------------------------------- #
