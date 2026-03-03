@@ -124,6 +124,15 @@ KEYWORD_MAP: dict[str, str] = {
     "bar chart": "data-extractor",
     "scatter plot": "data-extractor",
     "meta-analysis": "data-extractor",
+    "differential expression": "rnaseq-de",
+    "deseq2": "rnaseq-de",
+    "pydeseq2": "rnaseq-de",
+    "bulk rna": "rnaseq-de",
+    "rna-seq": "rnaseq-de",
+    "volcano plot": "rnaseq-de",
+    "ma plot": "rnaseq-de",
+    "contrast": "rnaseq-de",
+    "count matrix": "rnaseq-de",
 }
 
 SKILLS_DIR = Path(__file__).resolve().parent.parent
@@ -139,7 +148,36 @@ def detect_skill_from_file(filepath: Path) -> str | None:
     if suffixes in EXTENSION_MAP:
         return EXTENSION_MAP[suffixes]
     suffix = filepath.suffix.lower()
+    if suffix in {".csv", ".tsv"}:
+        inferred = detect_skill_from_tabular_header(filepath)
+        if inferred:
+            return inferred
     return EXTENSION_MAP.get(suffix)
+
+
+def detect_skill_from_tabular_header(filepath: Path) -> str | None:
+    """Detect skill from tabular headers for CSV/TSV input files."""
+    try:
+        sep = "\t" if filepath.suffix.lower() == ".tsv" else ","
+        with open(filepath, "r", encoding="utf-8") as f:
+            first_line = f.readline().strip().lower()
+    except Exception:
+        return None
+
+    if not first_line:
+        return None
+
+    headers = [h.strip() for h in first_line.split(sep)]
+    header_set = set(headers)
+
+    if {"sample_id", "condition"}.issubset(header_set) and "population" not in header_set:
+        return "rnaseq-de"
+
+    gene_like = {"gene", "gene_id", "ensembl_id", "symbol"}
+    if headers and headers[0] in gene_like and len(headers) >= 4:
+        return "rnaseq-de"
+
+    return None
 
 
 def detect_skill_from_query(query: str) -> str | None:
@@ -242,6 +280,7 @@ SKILL_REGISTRY_MAP: dict[str, str] = {
     "gwas-lookup": "gwas",
     "profile-report": "profile",
     "data-extractor": "data-extract",
+    "rnaseq-de": "rnaseq",
 }
 
 

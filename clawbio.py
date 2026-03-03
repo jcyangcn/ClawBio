@@ -405,6 +405,20 @@ SKILLS = {
         "api_module": "skills.data-extractor.api",
         "accepts_genotypes": False,
     },
+    "rnaseq": {
+        "script": SKILLS_DIR / "rnaseq-de" / "rnaseq_de.py",
+        "demo_args": ["--demo"],
+        "description": "Bulk/pseudo-bulk RNA-seq differential expression (QC + PCA + DE)",
+        "allowed_extra_flags": {
+            "--counts",
+            "--metadata",
+            "--formula",
+            "--contrast",
+            "--backend",
+            "--min-count",
+            "--min-samples",
+        },
+    },
 }
 
 # Skills that run in the full-profile pipeline (order matters)

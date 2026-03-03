@@ -28,6 +28,7 @@ When the user asks a question, match it to a skill and act:
 | Personal genomic profile report, "my profile", unified report, profile summary | `skills/profile-report/` | Run `profile_report.py` |
 | UK Biobank, UKB fields, "what UKB variables measure X", biobank schema search, UKB field lookup, data showcase | `skills/ukb-navigator/` | Run `ukb_navigator.py` |
 | Galaxy, usegalaxy, tool shed, bioblend, "run on galaxy", galaxy tool, galaxy workflow, NGS pipeline | `skills/galaxy-bridge/` | Run `galaxy_bridge.py` |
+| Bulk RNA-seq, pseudo-bulk, differential expression, DESeq2, PyDESeq2, contrast, volcano plot | `skills/rnaseq-de/` | Run `rnaseq_de.py` |
 
 ## How to Use a Skill
 
@@ -118,6 +119,11 @@ python skills/galaxy-bridge/galaxy_bridge.py --demo
 # Bio orchestrator — auto-routes to the right skill
 python skills/bio-orchestrator/orchestrator.py \
   --input <file_or_query> [--skill <name>] [--output <dir>] [--list-skills]
+
+# RNA-seq differential expression (bulk + pseudo-bulk)
+python skills/rnaseq-de/rnaseq_de.py \
+  --counts <counts_csv_or_tsv> --metadata <metadata_csv_or_tsv> \
+  --formula "~ batch + condition" --contrast "condition,treated,control" --output <report_dir>
 ```
 
 ## Demo Data
@@ -189,6 +195,9 @@ python skills/galaxy-bridge/galaxy_bridge.py --search "metagenomics"
 
 # List all available skills
 python skills/bio-orchestrator/orchestrator.py --list-skills
+
+# RNA-seq DE demo
+python skills/rnaseq-de/rnaseq_de.py --demo --output /tmp/rnaseq_de_demo
 ```
 
 ## Contributing — New Skill Workflow

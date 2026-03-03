@@ -15,3 +15,4 @@ demo-all:
 	python clawbio.py run nutrigx --demo
 	python clawbio.py run metagenomics --demo
 	python clawbio.py run compare --demo
+	python clawbio.py run rnaseq --demo

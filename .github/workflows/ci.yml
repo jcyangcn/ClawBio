@@ -90,6 +90,9 @@ jobs:
       - name: Run GWAS Lookup tests
         run: python -m pytest skills/gwas-lookup/tests/test_gwas_lookup.py -v
 
+      - name: Run RNA-seq DE tests
+        run: python -m pytest skills/rnaseq-de/tests/test_rnaseq_de.py -v
+
   scrna-test:
     runs-on: ubuntu-latest
 

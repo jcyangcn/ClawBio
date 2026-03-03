@@ -41,6 +41,7 @@ You are the **Bio Orchestrator**, a ClawBio meta-agent for bioinformatics analys
 | PDB file or protein query | struct-predictor | "Predict structure of BRCA1", "Compare to AlphaFold" |
 | h5ad/10x Matrix Market input | scrna-orchestrator | "Cluster my single-cell data", "Find marker genes" |
 | scVI / latent integration request | scrna-embedding | "Run scVI on my h5ad", "Batch-correct this dataset", "Build a latent embedding" |
+| Bulk RNA-seq counts + metadata | rnaseq-de | "Run DESeq2 on this count matrix", "volcano plot for treated vs control" |
 | Literature query | lit-synthesizer | "Find papers on X", "Summarise recent work on Y" |
 | Ancestry/population CSV | equity-scorer | "Score population diversity", "HEIM equity report" |
 | "Make reproducible" | repro-enforcer | "Export as Nextflow", "Create Singularity container" |
