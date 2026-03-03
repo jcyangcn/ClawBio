@@ -81,6 +81,16 @@ SKILLS = {
         "allowed_extra_flags": {"--no-figures", "--aims-panel", "--reference"},
         "summary_default": True,  # no --output → summary text on stdout
     },
+    "drugphoto": {
+        "script": SKILLS_DIR / "pharmgx-reporter" / "pharmgx_reporter.py",
+        "demo_args": [
+            "--input",
+            str(SKILLS_DIR / "genome-compare" / "data" / "manuel_corpas_23andme.txt.gz"),
+        ],
+        "description": "Drug photo analysis (single-drug PGx lookup from photo identification)",
+        "allowed_extra_flags": {"--drug", "--dose"},
+        "summary_default": True,  # stdout card, no file output
+    },
 }
 
 # --------------------------------------------------------------------------- #
@@ -284,17 +294,26 @@ def main():
     run_parser.add_argument(
         "--timeout", type=int, default=300, help="Timeout in seconds (default: 300)"
     )
+    run_parser.add_argument("--drug", default=None, help="Drug name for single-drug lookup (drugphoto skill)")
+    run_parser.add_argument("--dose", default=None, help="Visible dose from packaging (e.g. '50mg')")
 
     args = parser.parse_args()
 
     if args.command == "list":
         list_skills()
     elif args.command == "run":
+        # Build extra_args from --drug / --dose
+        extra = []
+        if getattr(args, "drug", None):
+            extra.extend(["--drug", args.drug])
+        if getattr(args, "dose", None):
+            extra.extend(["--dose", args.dose])
         result = run_skill(
             skill_name=args.skill,
             input_path=args.input_path,
             output_dir=args.output_dir,
             demo=args.demo,
+            extra_args=extra or None,
             timeout=args.timeout,
         )
         # Summary mode: skill printed text to stdout — relay it directly

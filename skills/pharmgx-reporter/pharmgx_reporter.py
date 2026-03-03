@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import gzip
 import hashlib
 import os
 import re
@@ -130,9 +131,9 @@ GENE_DEFS = {
             "rs9923231": {"allele": "A", "alt": "A", "effect": "decreased_expression"},
         },
         "phenotypes": {
-            "Normal Warfarin Sensitivity":       ["GG"],
-            "Intermediate Warfarin Sensitivity":  ["GA", "AG"],
-            "High Warfarin Sensitivity":          ["AA"],
+            "Normal Warfarin Sensitivity":       ["GG", "CC"],
+            "Intermediate Warfarin Sensitivity":  ["GA", "AG", "CT", "TC"],
+            "High Warfarin Sensitivity":          ["AA", "TT"],
         },
     },
     "SLCO1B1": {
@@ -724,6 +725,179 @@ GUIDELINES = {
 
 
 # ---------------------------------------------------------------------------
+# 3b. Single-drug lookup helpers (drug photo skill)
+# ---------------------------------------------------------------------------
+
+def _levenshtein(s1, s2):
+    """Minimal Levenshtein distance (no external deps)."""
+    if len(s1) < len(s2):
+        return _levenshtein(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+    prev = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        curr = [i + 1]
+        for j, c2 in enumerate(s2):
+            curr.append(min(prev[j + 1] + 1, curr[j] + 1,
+                            prev[j] + (0 if c1 == c2 else 1)))
+        prev = curr
+    return prev[-1]
+
+
+def resolve_drug_name(query):
+    """Resolve a drug query (brand or generic, fuzzy) to a GUIDELINES key.
+
+    Tiers: 1) exact generic, 2) exact brand, 3) substring, 4) Levenshtein ≤ 2.
+    Returns the canonical generic name or None.
+    """
+    q = query.strip().lower()
+
+    # Tier 1: exact generic match
+    for name in GUIDELINES:
+        if name.lower() == q:
+            return name
+
+    # Tier 2: exact brand match
+    for name, info in GUIDELINES.items():
+        if info.get("brand", "").lower() == q:
+            return name
+
+    # Tier 3: substring match on generic or brand
+    for name, info in GUIDELINES.items():
+        if q in name.lower() or q in info.get("brand", "").lower():
+            return name
+    for name, info in GUIDELINES.items():
+        if name.lower() in q or info.get("brand", "").lower() in q:
+            return name
+
+    # Tier 4: Levenshtein ≤ 2
+    best, best_dist = None, 3
+    for name, info in GUIDELINES.items():
+        d = _levenshtein(q, name.lower())
+        if d < best_dist:
+            best, best_dist = name, d
+        d2 = _levenshtein(q, info.get("brand", "").lower())
+        if d2 < best_dist:
+            best, best_dist = name, d2
+    return best
+
+
+def lookup_single_drug(drug_name, profiles):
+    """Look up a single resolved drug against gene profiles.
+
+    Returns a dict with drug, brand, class, gene, diplotype, phenotype,
+    classification, recommendation — or None if drug not found.
+    """
+    info = GUIDELINES.get(drug_name)
+    if not info:
+        return None
+
+    # Warfarin is multi-gene special case
+    if info.get("special") == "warfarin":
+        classification, rec = get_warfarin_rec(profiles)
+        cyp2c9 = profiles.get("CYP2C9", {})
+        vkorc1 = profiles.get("VKORC1", {})
+        return {
+            "drug": drug_name, "brand": info["brand"], "class": info["class"],
+            "gene": "CYP2C9 + VKORC1",
+            "diplotype": f"CYP2C9 {cyp2c9.get('diplotype', '?')} / VKORC1 {vkorc1.get('diplotype', '?')}",
+            "phenotype": f"CYP2C9 {cyp2c9.get('phenotype', '?')} / VKORC1 {vkorc1.get('phenotype', '?')}",
+            "classification": classification, "recommendation": rec,
+        }
+
+    gene = info["gene"]
+    if gene not in profiles:
+        return {
+            "drug": drug_name, "brand": info["brand"], "class": info["class"],
+            "gene": gene, "diplotype": "NOT_TESTED", "phenotype": "Indeterminate",
+            "classification": "indeterminate",
+            "recommendation": "Gene not profiled. No recommendation available.",
+        }
+
+    prof = profiles[gene]
+    pheno_key = phenotype_to_key(prof["phenotype"])
+    recs = info.get("recs", {})
+
+    if pheno_key in recs:
+        classification, rec = recs[pheno_key]
+    elif pheno_key == "indeterminate":
+        classification = "indeterminate"
+        rec = f"Phenotype indeterminate ({prof['phenotype']}). Cannot assess."
+    else:
+        classification = "indeterminate"
+        rec = f"Phenotype '{prof['phenotype']}' not in guidelines."
+
+    return {
+        "drug": drug_name, "brand": info["brand"], "class": info["class"],
+        "gene": gene, "diplotype": prof["diplotype"], "phenotype": prof["phenotype"],
+        "classification": classification, "recommendation": rec,
+    }
+
+
+_CLASS_LABELS = {
+    "standard": "STANDARD DOSING",
+    "caution": "USE WITH CAUTION",
+    "avoid": "AVOID — DO NOT USE",
+    "indeterminate": "INSUFFICIENT DATA",
+}
+
+
+def format_dosage_card(result, visible_dose=None):
+    """Format a single-drug lookup result as a visual Telegram card."""
+    cls_label = _CLASS_LABELS.get(result["classification"], result["classification"].upper())
+    bar = "\u2501" * 35  # ━
+
+    # Build dose-aware recommendation line
+    rec_text = result["recommendation"]
+    if visible_dose:
+        cl = result["classification"]
+        if cl == "standard":
+            rec_text = f"Your genotype supports {result['drug']} {visible_dose} as prescribed."
+        elif cl == "caution":
+            rec_text = f"{visible_dose} may need adjustment. {result['recommendation']}"
+        elif cl == "avoid":
+            rec_text = f"Your genotype contraindicates {result['drug']} {visible_dose}. {result['recommendation']}"
+
+    # Wrap recommendation text at ~42 chars
+    words = rec_text.split()
+    rec_lines = []
+    current = "  "
+    for w in words:
+        if len(current) + len(w) + 1 > 44:
+            rec_lines.append(current)
+            current = "  " + w
+        else:
+            current += (" " if len(current) > 2 else "") + w
+    if current.strip():
+        rec_lines.append(current)
+    rec_block = "\n".join(rec_lines)
+
+    card = f"""{bar}
+  DRUG PHOTO ANALYSIS
+{bar}
+
+  Identified: {result['drug']} ({result['brand']})
+  Class: {result['class']}
+
+  YOUR GENETIC PROFILE
+  Gene: {result['gene']}
+  Diplotype: {result['diplotype']}
+  Phenotype: {result['phenotype']}
+
+  RECOMMENDATION: {cls_label}
+{rec_block}
+
+  Source: FDA Table of Pharmacogenomic
+  Biomarkers in Drug Labeling & CPIC
+  Guidelines (cpicpgx.org)
+
+  DISCLAIMER: Research/educational use only.
+  Consult a healthcare professional.
+{bar}"""
+    return card
+
+
+# ---------------------------------------------------------------------------
 # 4. File parser
 # ---------------------------------------------------------------------------
 
@@ -748,7 +922,11 @@ def detect_format(lines):
 
 
 def parse_file(path):
-    content = Path(path).read_text()
+    if str(path).endswith(".gz"):
+        with gzip.open(path, "rt", errors="replace") as fh:
+            content = fh.read()
+    else:
+        content = Path(path).read_text()
     lines = content.split("\n")
     fmt = detect_format(lines)
 
@@ -1155,6 +1333,8 @@ def main():
         description="ClawBio PharmGx Reporter: pharmacogenomic report from DTC genetic data")
     parser.add_argument("--input", required=True, help="Path to genetic data file (23andMe/AncestryDNA)")
     parser.add_argument("--output", default="pharmgx_report", help="Output directory (default: pharmgx_report)")
+    parser.add_argument("--drug", default=None, help="Single drug lookup (brand or generic name)")
+    parser.add_argument("--dose", default=None, help="Visible dose from packaging (e.g. '50mg')")
     args = parser.parse_args()
 
     if not Path(args.input).exists():
@@ -1201,6 +1381,16 @@ def main():
     for gene, p in profiles.items():
         print(f"  {gene:<10} {p['diplotype']:<20} {p['phenotype']}")
     print()
+
+    # Single-drug lookup mode (--drug flag)
+    if args.drug:
+        resolved = resolve_drug_name(args.drug)
+        if not resolved:
+            print(f"Drug not found: '{args.drug}'. Available drugs: {len(GUIDELINES)}", file=sys.stderr)
+            sys.exit(1)
+        result = lookup_single_drug(resolved, profiles)
+        print(format_dosage_card(result, visible_dose=args.dose))
+        sys.exit(0)
 
     # Drug lookup
     drug_results = lookup_drugs(profiles)
