@@ -355,6 +355,19 @@ def main():
             print(f"  Output:   {result['output_dir']}")
         if result["files"]:
             print(f"  Files:    {', '.join(result['files'])}")
+        # Show a preview of the report if one was generated
+        if result["success"] and result["output_dir"]:
+            report = Path(result["output_dir"]) / "report.md"
+            if report.exists():
+                text = report.read_text()
+                lines = text.splitlines()
+                preview = "\n".join(lines[:40])
+                remaining = max(0, len(lines) - 40)
+                print(f"\n{'─' * 60}")
+                print(preview)
+                if remaining:
+                    print(f"\n  ... ({remaining} more lines in {report})")
+                print(f"{'─' * 60}")
         if not result["success"] and result["stderr"]:
             print(f"\n  Error:\n{result['stderr'][-800:]}")
         sys.exit(0 if result["success"] else 1)
