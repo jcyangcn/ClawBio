@@ -13,46 +13,25 @@
   <a href="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml"><img src="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="#quick-start"><img src="https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=white" alt="Python 3.10+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
-  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-8_skills-orange" alt="ClawHub Skills"></a>
+  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-14_skills-orange" alt="ClawHub Skills"></a>
   <a href="https://github.com/ClawBio/ClawBio/issues"><img src="https://img.shields.io/github/issues/ClawBio/ClawBio" alt="Open Issues"></a>
   <a href="https://clawbio.github.io/ClawBio/slides/"><img src="https://img.shields.io/badge/slides-London_Bioinformatics_Meetup-purple" alt="Slides"></a>
 </p>
 
 ---
 
-## See It in Action
+## What ClawBio Does Today
 
-A community contributor built a nutrigenomics skill and ran it — from raw genetic data to personalised nutrition report with radar charts, heatmaps, and reproducibility bundle:
+**14 skills. Local-first. No cloud. No guessing.**
 
-https://github.com/ClawBio/ClawBio/releases/download/v0.2.0/david-nutrigx-demo.mp4
+Snap a photo of a medication in Telegram. ClawBio identifies the drug from the packaging, queries your pharmacogenomic profile from your 23andMe file, and returns a personalised dosage card — on your machine, in seconds:
 
-<details>
-<summary><strong>What just happened behind the scenes</strong></summary>
+> **Warfarin** | CYP2C9 \*1/\*2 Intermediate · VKORC1 High Sensitivity
+> **AVOID — DO NOT USE** · Standard dose causes over-anticoagulation in this genotype.
 
-1. The AI agent read `SKILL.md` — a specification that encodes the correct bioinformatics decisions (40 SNPs, 13 nutrient domains, evidence-based risk thresholds)
-2. It ran the Python skill **locally** — no genetic data left the machine
-3. It produced a markdown report with figures, tables, and a **reproducibility bundle** (`commands.sh`, `environment.yml`, `checksums.sha256`)
-4. Anyone can re-run the exact same analysis and get identical results, SHA-256 verified
+Or look up an rsID across nine federated genomic databases simultaneously. Or compute your polygenic risk score for type 2 diabetes from the PGS Catalog. Or ask what UK Biobank fields measure blood pressure, grip strength, or depression — and get the field IDs, descriptions, and linked publications back in plain English.
 
-</details>
-
-<p align="center">
-  <img src="img/pharmgx-demo.png" alt="ClawBio PharmGx Demo" width="700">
-  <br><em>PharmGx Reporter: 12 genes, 51 drugs, under 1 second</em>
-</p>
-
----
-
-## ClawBio at the UK AI Agent Hack, Imperial College London
-
-Manuel Corpas introduces ClawBio to Peter Steinberger at the UK AI Agent Hack (1 March 2026):
-
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=eEEA71qSOmU">
-    <img src="img/clawbio-peter-steinberger-poster.jpg" alt="ClawBio intro to Peter Steinberger" width="400">
-  </a>
-  <br><em>Click to watch on YouTube</em>
-</p>
+Every result ships with a reproducibility bundle: `commands.sh`, `environment.yml`, and SHA-256 checksums. A reviewer can reproduce your Figure 3 in 30 seconds without emailing you.
 
 ---
 
@@ -128,15 +107,21 @@ report/
 
 | Skill | Status | Description |
 |-------|--------|-------------|
-| [Bio Orchestrator](skills/bio-orchestrator/) | **MVP** | Routes requests to the right skill |
-| [PharmGx Reporter](skills/pharmgx-reporter/) | **MVP** | 12 genes, 51 drugs, CPIC guidelines |
-| [Equity Scorer](skills/equity-scorer/) | **MVP** | HEIM diversity metrics from VCF/ancestry |
-| [NutriGx Advisor](skills/nutrigx_advisor/) | **MVP** | Personalised nutrigenomics (40 SNPs, 13 domains) |
-| [Metagenomics Profiler](skills/claw-metagenomics/) | **MVP** | Kraken2/RGI/HUMAnN3 taxonomy + resistome |
-| [Ancestry PCA](skills/ancestry-pca/) | **MVP** | PCA vs SGDP (345 samples, 164 populations) |
-| [Semantic Similarity](skills/semantic-sim/) | **MVP** | Isolation Index from 13.1M PubMed abstracts |
-| [Genome Comparator](skills/genome-compare/) | **MVP** | IBS vs George Church (PGP-1) + ancestry estimation |
-| [VCF Annotator](skills/vcf-annotator/) | Planned | Variant annotation with VEP, ClinVar, gnomAD + ancestry context |
+| [Bio Orchestrator](skills/bio-orchestrator/) | **MVP** | Routes requests to the right skill automatically |
+| [PharmGx Reporter](skills/pharmgx-reporter/) | **MVP** | 12 genes, 51 drugs, CPIC guidelines from consumer genetic data |
+| [Drug Photo](skills/drug-photo/) | **MVP** | Snap a medication photo → personalised dosage card from your genotype |
+| [ClinPGx](skills/clinpgx/) | **MVP** | Gene-drug lookup from ClinPGx, PharmGKB, CPIC, and FDA drug labels |
+| [GWAS Lookup](skills/gwas-lookup/) | **MVP** | Federated variant query across 9 genomic databases |
+| [GWAS PRS](skills/gwas-prs/) | **MVP** | Polygenic risk scores from the PGS Catalog for 6+ traits |
+| [Profile Report](skills/profile-report/) | **MVP** | Unified personal genomic report: PGx + ancestry + PRS + nutrigenomics |
+| [UKB Navigator](skills/ukb-navigator/) | **MVP** | Semantic search across the UK Biobank schema |
+| [Equity Scorer](skills/equity-scorer/) | **MVP** | HEIM diversity metrics from VCF or ancestry CSV |
+| [NutriGx Advisor](skills/nutrigx_advisor/) | **MVP** *(community)* | Personalised nutrigenomics — 40 SNPs, 13 dietary domains |
+| [Metagenomics Profiler](skills/claw-metagenomics/) | **MVP** | Kraken2 / RGI / HUMAnN3 taxonomy, resistome, and functional profiles |
+| [Ancestry PCA](skills/claw-ancestry-pca/) | **MVP** | PCA vs SGDP (345 samples, 164 populations) with confidence ellipses |
+| [Semantic Similarity](skills/claw-semantic-sim/) | **MVP** | Semantic Isolation Index from 13.1M PubMed abstracts |
+| [Genome Comparator](skills/genome-compare/) | **MVP** | Pairwise IBS vs George Church (PGP-1) + ancestry estimation |
+| [VCF Annotator](skills/vcf-annotator/) | Planned | Variant annotation with VEP, ClinVar, gnomAD |
 | [Lit Synthesizer](skills/lit-synthesizer/) | Planned | PubMed/bioRxiv search with LLM summarisation and citation graphs |
 | [scRNA Orchestrator](skills/scrna-orchestrator/) | Planned | Scanpy automation: QC, clustering, DE analysis, visualisation |
 | [Struct Predictor](skills/struct-predictor/) | Planned | AlphaFold/Boltz local structure prediction |
@@ -150,7 +135,7 @@ report/
 
 Generates a pharmacogenomic report from consumer genetic data (23andMe, AncestryDNA):
 
-- Parses raw genetic data (auto-detects format)
+- Parses raw genetic data (auto-detects format, including gzip)
 - Extracts **31 pharmacogenomic SNPs** across **12 genes** (CYP2C19, CYP2D6, CYP2C9, VKORC1, SLCO1B1, DPYD, TPMT, UGT1A1, CYP3A5, CYP2B6, NUDT15, CYP1A2)
 - Calls star alleles and determines metabolizer phenotypes
 - Looks up **CPIC drug recommendations** for **51 medications**
@@ -163,6 +148,55 @@ python pharmgx_reporter.py --input demo_patient.txt --output report
 **Demo result**: CYP2D6 \*4/\*4 (Poor Metabolizer) → **10 drugs AVOID** (codeine, tramadol, 7 TCAs, tamoxifen), 20 caution, 21 standard.
 
 > ~7% of people are CYP2D6 Poor Metabolizers — codeine gives them zero pain relief. ~0.5% carry DPYD variants where standard 5-FU dose can be lethal. This skill catches both.
+
+### Drug Photo — *Personal Scale*
+
+Snap a photo of any medication in Telegram. ClawBio identifies the drug from the packaging and returns a personalised dosage card against your own genotype.
+
+- Claude vision extracts drug name and visible dose from the photo
+- Cross-references your 23andMe genotype against 31 PGx SNPs
+- Four-tier classification: **STANDARD DOSING / USE WITH CAUTION / AVOID / INSUFFICIENT DATA**
+- Correct VKORC1 complement-strand handling (23andMe reports minus strand for rs9923231)
+- Works for warfarin, clopidogrel, codeine, simvastatin, tamoxifen, sertraline, and 20+ others
+
+```bash
+python pharmgx_reporter.py --drug warfarin --dose "5mg" --input my_23andme.txt --output report
+```
+
+> No command needed in Telegram — send any medication photo and RoboTerri triggers the skill automatically.
+
+### GWAS Lookup — *Population Scale*
+
+Federated variant query across nine genomic databases in a single command:
+
+| Database | What you get |
+|----------|-------------|
+| GWAS Catalog | Genome-wide significant associations |
+| gnomAD | Allele frequencies across 125,748 exomes |
+| ClinVar | Clinical significance and condition links |
+| Open Targets | Disease-gene evidence scores |
+| Ensembl | Functional annotation, regulatory impact |
+| GTEx | eQTL data, tissue-specific expression effects |
+| LDlink | Linkage disequilibrium across 26 populations |
+| UK Biobank PheWAS | Phenome-wide associations across 4,000+ traits |
+| LOVD | Variant pathogenicity database |
+
+```bash
+python gwas_lookup.py --rsid rs3798220 --output report
+python gwas_lookup.py --demo --output /tmp/gwas_lookup_demo
+```
+
+### UKB Navigator — *Research Scale*
+
+Semantic search across the UK Biobank schema. Ask in plain English what UK Biobank measures about any phenotype — get field IDs, descriptions, data types, participant counts, and linked publications back instantly.
+
+```bash
+python ukb_navigator.py --query "grip strength"   --output report
+python ukb_navigator.py --field 21001              --output report   # BMI
+python ukb_navigator.py --demo                     --output /tmp/ukb_demo
+```
+
+Built on a ChromaDB embedding of the full UKB Data Showcase (22,000+ fields).
 
 ### Ancestry PCA — *Population Scale*
 
@@ -213,12 +247,16 @@ PharmGx demo runs in <2 seconds. Only needs Python 3.10+.
 ### Try all skills
 
 ```bash
-python clawbio.py list                          # See available skills
-python clawbio.py run pharmgx --demo            # Pharmacogenomics (1s)
-python clawbio.py run equity --demo             # Equity scoring (55s)
-python clawbio.py run nutrigx --demo            # Nutrigenomics (60s)
-python clawbio.py run metagenomics --demo       # Metagenomics (3s)
-python clawbio.py run compare --demo            # Manuel Corpas vs George Church (10s)
+python clawbio.py list                           # See available skills
+python clawbio.py run pharmgx --demo             # Pharmacogenomics (1s)
+python clawbio.py run equity --demo              # Equity scoring (55s)
+python clawbio.py run nutrigx --demo             # Nutrigenomics (60s)
+python clawbio.py run metagenomics --demo        # Metagenomics (3s)
+python clawbio.py run compare --demo             # Manuel Corpas vs George Church (10s)
+python clawbio.py run gwas-lookup --demo         # rs3798220 across 9 databases (5s)
+python clawbio.py run prs --demo                 # Polygenic risk scores (10s)
+python clawbio.py run ukb-navigator --demo       # UK Biobank schema search (5s)
+python clawbio.py run profile --demo             # Unified genomic profile (30s)
 ```
 
 ### Run with your own data
@@ -243,7 +281,7 @@ python -m pytest
   <br><em>RoboTerri — ClawBio's Telegram agent, inspired by <a href="https://en.wikipedia.org/wiki/Teresa_Attwood">Prof. Teresa K. Attwood</a></em>
 </p>
 
-ClawBio skills are also available through **RoboTerri**, our Telegram AI agent — named after [Prof. Teresa K. Attwood](https://en.wikipedia.org/wiki/Teresa_Attwood), a pioneer of bioinformatics education and computational biology in the UK. Send a genetic data file or ask for a demo — get back a summary, full report, and figures directly in Telegram.
+ClawBio skills are also available through **RoboTerri**, a Telegram AI agent named after [Prof. Teresa K. Attwood](https://en.wikipedia.org/wiki/Teresa_Attwood) — a pioneer of bioinformatics education, founding Chair of GOBLET, and winner of the 2021 ISCB Outstanding Contributions Award. Send a genetic data file, a medication photo, or a plain-English question. Get back a summary, full report, and figures directly in Telegram.
 
 > **[Install RoboTerri — Step-by-step tutorial](docs/tutorial-roboterri-install.md)**: Set up your own Telegram bot running ClawBio skills in ~20 minutes.
 
@@ -253,15 +291,19 @@ RoboTerri:  Running PharmGx Reporter...
             CYP2D6 *4/*4 — Poor Metabolizer → 10 drugs AVOID
             [report.md attached]
             [3 figures attached]
+
+You:        [send photo of warfarin packet]
+RoboTerri:  Warfarin detected. Running Drug Photo skill...
+            CYP2C9 *1/*2 · VKORC1 High Sensitivity
+            AVOID — DO NOT USE at standard dose.
+
+You:        run gwas-lookup rs3798220
+RoboTerri:  Querying 9 databases...
+            rs3798220 (LPA) — coronary artery disease, Lp(a) levels.
+            eQTL in liver (GTEx). gnomAD MAF 0.07.
 ```
 
-RoboTerri auto-detects file type (23andMe `.txt`, AncestryDNA `.csv`, VCF, FASTQ) and routes to the right skill via the Bio Orchestrator. You can also ask explicitly:
-
-- *"run pharmgx demo"* — PharmGx with synthetic patient data
-- *"run equity demo"* — HEIM equity score with demo populations
-- *"run nutrigx demo"* — Nutrigenomics with synthetic genotypes
-
-The integration uses the same `clawbio.run_skill()` API, so results are identical whether you run via CLI or Telegram. See [01-AGENTS/02-ROBOTERRI](https://github.com/manuelcorpas/AGENTIC-AI/tree/main/01-AGENTS/02-ROBOTERRI) for the full agent source.
+RoboTerri auto-detects file type (23andMe `.txt`, AncestryDNA `.csv`, VCF, FASTQ) and routes to the right skill via the Bio Orchestrator. Photos of medications trigger the Drug Photo skill automatically — no command needed.
 
 ---
 
@@ -303,7 +345,6 @@ We want skills from the bioinformatics community. If you work with genomics, pro
 | Skill | What | Your expertise |
 |-------|------|----------------|
 | **claw-gwas** | PLINK/REGENIE automation | Statistical genetics |
-| **claw-metagenomics** | Kraken2/MetaPhlAn wrapper | Microbiome |
 | **claw-acmg** | Clinical variant classification | Clinical genomics |
 | **claw-pathway** | GO/KEGG enrichment | Functional genomics |
 | **claw-phylogenetics** | IQ-TREE/RAxML automation | Evolutionary biology |
