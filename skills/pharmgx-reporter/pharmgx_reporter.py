@@ -11,13 +11,21 @@ Usage:
 """
 
 import argparse
-import gzip
-import hashlib
-import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Shared library imports
+# ---------------------------------------------------------------------------
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from clawbio.common.parsers import parse_genetic_file, genotypes_to_simple
+from clawbio.common.checksums import sha256_hex, sha256_file
+from clawbio.common.report import write_result_json, DISCLAIMER
 
 # ---------------------------------------------------------------------------
 # 1. PGx SNP definitions (ported from PharmXD snp-parser.js)
@@ -898,55 +906,46 @@ def format_dosage_card(result, visible_dose=None):
 
 
 # ---------------------------------------------------------------------------
-# 4. File parser
+# 4. File parser (delegates to clawbio.common.parsers)
 # ---------------------------------------------------------------------------
 
-def detect_format(lines):
-    for line in lines[:20]:
-        if line.startswith("# rsid"):
-            return "23andme"
-        if "RSID" in line and "CHROMOSOME" in line:
-            return "ancestrydna"
-        if "rsid" in line and "chromosome" in line:
-            return "generic"
-    for line in lines[:20]:
-        if line.startswith("#") or line.strip() == "":
-            continue
-        parts = line.split("\t")
-        if len(parts) >= 4 and parts[0].startswith("rs"):
-            return "23andme"
-        parts = line.split(",")
-        if len(parts) >= 4 and parts[0].startswith("rs"):
-            return "ancestrydna"
-    return "unknown"
+def detect_format(lines: list[str]) -> str:
+    """Detect file format from header lines (backward-compatible wrapper).
+
+    Delegates to clawbio.common.parsers.detect_format via a temp file.
+    """
+    from clawbio.common.parsers import detect_format as _detect_fmt
+    import tempfile, os
+    fd, tmp = tempfile.mkstemp(suffix=".txt")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write("\n".join(lines))
+        return _detect_fmt(Path(tmp))
+    finally:
+        os.unlink(tmp)
 
 
 def parse_file(path):
-    if str(path).endswith(".gz"):
-        with gzip.open(path, "rt", errors="replace") as fh:
-            content = fh.read()
-    else:
-        content = Path(path).read_text()
-    lines = content.split("\n")
-    fmt = detect_format(lines)
+    """Parse a genetic data file and extract PGx-relevant SNPs.
 
-    snps = {}
-    for line in lines:
-        if line.startswith("#") or line.strip() == "":
-            continue
-        if "rsid" in line.lower() and "chromosome" in line.lower():
-            continue
-        parts = line.split("\t") if "\t" in line else line.split(",")
-        if len(parts) >= 4:
-            rsid = parts[0].strip()
-            if not rsid.startswith("rs"):
-                continue
-            if len(parts) == 5:
-                genotype = parts[3].strip() + parts[4].strip()
-            else:
-                genotype = parts[3].strip()
-            if genotype and genotype not in ("--", "00"):
-                snps[rsid] = genotype.upper()
+    Uses the shared parser from clawbio.common.parsers for file reading and
+    format detection, then filters to the PGx panel.
+
+    Returns:
+        (fmt, total_snps, pgx_dict) where pgx_dict maps rsid -> {genotype, gene, allele, effect}.
+    """
+    from clawbio.common.parsers import detect_format as _detect_fmt
+
+    # Use shared parser for robust format detection and file reading
+    try:
+        fmt = _detect_fmt(path)
+    except ValueError:
+        fmt = "unknown"
+
+    records = parse_genetic_file(str(path), fmt=fmt if fmt != "unknown" else "auto")
+    snps = genotypes_to_simple(records)
+    # Normalize genotypes to uppercase for PGx matching
+    snps = {rsid: gt.upper() for rsid, gt in snps.items() if gt and gt not in ("--", "00")}
 
     pgx = {}
     for rsid, info in PGX_SNPS.items():
@@ -1166,7 +1165,7 @@ ICON = {"standard": "OK", "caution": "CAUTION", "avoid": "AVOID", "indeterminate
 
 def generate_report(input_path, fmt, total_snps, pgx_snps, profiles, drug_results):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    checksum = hashlib.sha256(Path(input_path).read_bytes()).hexdigest()
+    checksum = sha256_file(str(input_path))
     fname = Path(input_path).name
 
     lines = []
@@ -1295,7 +1294,7 @@ def generate_report(input_path, fmt, total_snps, pgx_snps, profiles, drug_result
     # Methods
     lines.append("## Methods")
     lines.append("")
-    lines.append("- **Tool**: ClawBio PharmGx Reporter v0.1.0")
+    lines.append("- **Tool**: ClawBio PharmGx Reporter v0.2.0")
     lines.append("- **SNP panel**: 31 pharmacogenomic variants across 12 genes")
     lines.append("- **Star allele calling**: Simplified DTC-compatible algorithm (single-SNP per allele)")
     lines.append("- **Phenotype assignment**: CPIC-based diplotype-to-phenotype mapping")
@@ -1341,7 +1340,7 @@ def main():
         print(f"Error: input file not found: {args.input}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"ClawBio PharmGx Reporter v0.1.0")
+    print(f"ClawBio PharmGx Reporter v0.2.0")
     print(f"================================")
     print()
 
@@ -1421,7 +1420,32 @@ def main():
     report_path = outdir / "report.md"
     report_path.write_text(report)
 
+    # Write result.json using shared report helper
+    input_checksum = sha256_hex(str(args.input))
+    result_json_path = write_result_json(
+        output_dir=outdir,
+        skill="pharmgx",
+        version="0.2.0",
+        summary={
+            "total_snps_in_file": total_snps,
+            "pgx_snps_found": len(pgx_snps),
+            "pgx_snps_total": len(PGX_SNPS),
+            "genes_profiled": len(profiles),
+            "drugs_assessed": total_assessed,
+            "drugs_standard": n_std,
+            "drugs_caution": n_cau,
+            "drugs_avoid": n_avo,
+            "drugs_indeterminate": n_ind,
+        },
+        data={
+            "gene_profiles": profiles,
+            "drug_recommendations": drug_results,
+        },
+        input_checksum=input_checksum,
+    )
+
     print(f"Report saved: {report_path}")
+    print(f"Result JSON:  {result_json_path}")
     print("Done.")
 
 

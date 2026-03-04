@@ -91,7 +91,7 @@ ROLE_GUARDRAILS = """
 Operational constraints:
 1. You are a bioinformatics assistant powered by ClawBio skills.
 2. Keep outputs concise, evidence-led, and explicit about confidence and gaps.
-3. When the user sends a genetic data file (23andMe .txt, AncestryDNA .csv, VCF, FASTQ) or asks about pharmacogenomics, nutrigenomics, equity scoring, metagenomics, or genome comparison, use the clawbio tool. For quick demos say "run pharmgx demo", "run compare demo" etc. Reports and figures are sent automatically after your summary.
+3. When the user sends a genetic data file (23andMe .txt, AncestryDNA .csv, VCF, FASTQ) or asks about pharmacogenomics, nutrigenomics, equity scoring, metagenomics, or genome comparison, use the clawbio tool. When the user asks about disease risk, polygenic risk scores, or "what am I at risk for", use skill='prs'. For a unified profile report use skill='profile'. For gene-drug database lookups use skill='clinpgx'. For variant lookups (rsID, "look up rs...") use skill='gwas'. For quick demos say "run pharmgx demo", "run prs demo", "run profile demo" etc. Reports and figures are sent automatically after your summary.
 4. TOOL OUTPUT RELAY (STRICT): When the clawbio tool returns results, relay the output VERBATIM. Do not paraphrase, summarise, or rewrite tool results. Tool outputs contain precise data (IBS scores, percentages, gene-drug interactions) that must not be altered. You may add a brief intro line before the verbatim output but never replace or condense it.
 """
 
@@ -137,7 +137,11 @@ TOOLS = [
                 "metagenomics (metagenomic profiling from FASTQ), "
                 "compare (genome comparison: IBS vs George Church + ancestry estimation), "
                 "drugphoto (identify a drug from a photo and get personalised dosage guidance "
-                "using demo genotype data -- always use mode='demo'). "
+                "using demo genotype data -- always use mode='demo'), "
+                "prs (polygenic risk scores from GWAS -- disease risk: T2D, atrial fibrillation, CAD, etc.), "
+                "clinpgx (gene-drug interaction database lookup via PharmGKB/CPIC), "
+                "gwas (federated variant lookup across 9 genomic databases by rsID), "
+                "profile (unified genomic profile report combining all skill results). "
                 "Use mode='demo' to run with built-in demo data. "
                 "Use mode='file' when the user has sent a genetic data file. "
                 "Use skill='auto' to let the orchestrator detect the right skill. "
@@ -151,7 +155,8 @@ TOOLS = [
                     "skill": {
                         "type": "string",
                         "enum": ["pharmgx", "equity", "nutrigx", "metagenomics",
-                                 "compare", "drugphoto", "auto"],
+                                 "compare", "drugphoto", "prs", "clinpgx",
+                                 "gwas", "profile", "auto"],
                         "description": (
                             "Which bioinformatics skill to run. Use 'auto' to let "
                             "the orchestrator detect from the file type or query."
@@ -192,6 +197,27 @@ TOOLS = [
                         "description": (
                             "Dosage visible on the packaging (e.g. '50mg', '75mg'). "
                             "Optional -- enriches the recommendation."
+                        ),
+                    },
+                    "trait": {
+                        "type": "string",
+                        "description": (
+                            "Disease/trait to assess risk for (e.g. 'type 2 diabetes', "
+                            "'atrial fibrillation'). Used with prs skill."
+                        ),
+                    },
+                    "gene": {
+                        "type": "string",
+                        "description": (
+                            "Gene symbol for clinpgx lookup (e.g. 'CYP2D6'). "
+                            "Used with clinpgx skill."
+                        ),
+                    },
+                    "rsid": {
+                        "type": "string",
+                        "description": (
+                            "rsID for GWAS variant lookup (e.g. 'rs3798220'). "
+                            "Used with gwas skill."
                         ),
                     },
                 },
@@ -245,6 +271,10 @@ async def execute_clawbio(args: dict) -> str:
                 "nutrigx_advisor": "nutrigx",
                 "claw-metagenomics": "metagenomics",
                 "genome-compare": "compare",
+                "gwas-prs": "prs",
+                "clinpgx": "clinpgx",
+                "gwas-lookup": "gwas",
+                "profile-report": "profile",
             }
             skill_key = orch_to_key.get(detected, "")
             if not skill_key:
@@ -261,14 +291,16 @@ async def execute_clawbio(args: dict) -> str:
         except Exception as e:
             return f"Error running orchestrator: {e}"
 
-    # Resolve input for file mode
+    # Resolve input and profile for file mode
     input_path = None
-    if mode == "file":
-        for _cid, info in _received_files.items():
-            input_path = info["path"]
-            break
-        if not input_path:
-            return "Error: no file received. Send a genetic data file first, then run the skill."
+    profile_path = None
+    for _cid, info in _received_files.items():
+        input_path = info.get("path")
+        profile_path = info.get("profile_path")
+        break
+
+    if mode == "file" and not input_path and not profile_path:
+        return "Error: no file received. Send a genetic data file first, then run the skill."
 
     # Build output directory
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -276,7 +308,44 @@ async def execute_clawbio(args: dict) -> str:
 
     # Build command
     cmd = [sys.executable, str(CLAWBIO_PY), "run", skill_key]
-    if mode == "demo":
+
+    # Profile-based skills: prefer --profile over --input
+    if skill_key == "profile":
+        if mode == "demo":
+            cmd.append("--demo")
+        elif profile_path:
+            cmd.extend(["--profile", profile_path])
+        else:
+            return "Error: no profile available. Send a genetic data file first to create a profile."
+    elif skill_key == "prs":
+        if mode == "demo":
+            cmd.append("--demo")
+        elif profile_path:
+            cmd.extend(["--profile", profile_path])
+        elif input_path:
+            cmd.extend(["--input", str(input_path)])
+        trait = args.get("trait", "")
+        if trait:
+            cmd.extend(["--trait", trait])
+    elif skill_key == "clinpgx":
+        if mode == "demo":
+            cmd.append("--demo")
+        else:
+            gene = args.get("gene", "")
+            if gene:
+                cmd.extend(["--gene", gene])
+            else:
+                cmd.append("--demo")
+    elif skill_key == "gwas":
+        if mode == "demo":
+            cmd.append("--demo")
+        else:
+            rsid = args.get("rsid", "")
+            if rsid:
+                cmd.extend(["--rsid", rsid])
+            else:
+                cmd.append("--demo")
+    elif mode == "demo":
         cmd.append("--demo")
     elif input_path:
         cmd.extend(["--input", str(input_path)])
@@ -315,8 +384,8 @@ async def execute_clawbio(args: dict) -> str:
         err = stderr_str[-1500:] if stderr_str else stdout_str[-1500:] if stdout_str else "unknown error"
         return f"{skill_key} failed (exit {proc.returncode}):\n{err}"
 
-    # For compare / drugphoto: send stdout directly (bypass LLM paraphrasing)
-    if skill_key in ("compare", "drugphoto"):
+    # For compare / drugphoto / profile: send stdout directly (bypass LLM paraphrasing)
+    if skill_key in ("compare", "drugphoto", "profile"):
         raw_output = stdout_str.strip()
         if raw_output:
             _pending_text.append(raw_output)
@@ -587,9 +656,10 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Hi there! RoboTerri here -- your ClawBio bioinformatics assistant ;-)\n\n"
         "Commands:\n"
         "  /skills  -- list available ClawBio skills\n"
-        "  /demo <skill>  -- run a demo (pharmgx, equity, nutrigx, compare)\n\n"
+        "  /demo <skill>  -- run a demo (pharmgx, equity, nutrigx, compare, prs, profile)\n\n"
         "Or just chat -- I can answer bioinformatics questions.\n"
-        "Send a genetic data file (.txt, .csv, .vcf) to analyse it.\n"
+        "Send a genetic data file to get your pharmacogenomics report.\n"
+        "Then ask: \"what diseases am I at risk for?\" or \"show my full profile\"\n"
         "Send a photo of a medication for personalised drug guidance."
     )
 
@@ -782,17 +852,53 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "path": str(tmp_path), "filename": filename,
         }
 
+        # Auto-create a patient profile for follow-up skill calls
+        profile_path = None
+        try:
+            upload_proc = await asyncio.create_subprocess_exec(
+                sys.executable, str(CLAWBIO_PY), "upload",
+                "--input", str(tmp_path),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            up_stdout, up_stderr = await asyncio.wait_for(
+                upload_proc.communicate(), timeout=30,
+            )
+            up_out = up_stdout.decode(errors="replace")
+            # Parse profile path from upload output
+            for line in up_out.splitlines():
+                if "profile" in line.lower() and ("/" in line or "\\" in line):
+                    # Extract path-like token from the line
+                    for token in line.split():
+                        if token.endswith(".json"):
+                            profile_path = token
+                            break
+            if profile_path:
+                _received_files[update.effective_chat.id]["profile_path"] = profile_path
+                logger.info(f"Auto-created profile: {profile_path}")
+            else:
+                logger.info(f"Profile upload output (no path parsed): {up_out[:200]}")
+        except Exception as prof_err:
+            logger.warning(f"Auto-profile creation failed (non-fatal): {prof_err}")
+
         caption = update.message.caption or ""
         parts = [f"[Document received: {filename} ({mime}, {file_size} bytes)]"]
+        if profile_path:
+            parts.append(f"[Patient profile auto-created: {profile_path}]")
         if caption:
             parts.append(caption)
         else:
+            profile_note = (
+                " A patient profile has been created -- the user can now ask "
+                "follow-up questions like 'what am I at risk for?' (prs) or "
+                "'show my full profile' (profile) without re-uploading."
+            ) if profile_path else ""
             parts.append(
                 "The user sent this genetic data file. Detect the file type and "
                 "run the appropriate ClawBio skill using mode='file'. For .txt "
                 "files (23andMe format) use pharmgx. For .csv (AncestryDNA) use "
                 "pharmgx. For .vcf use equity. For .fastq use metagenomics. "
-                "If unsure, use skill='auto'."
+                "If unsure, use skill='auto'." + profile_note
             )
 
         reply = await llm_tool_loop(

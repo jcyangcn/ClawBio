@@ -24,6 +24,16 @@ from pathlib import Path
 from typing import Optional
 
 # ---------------------------------------------------------------------------
+# Shared library imports
+# ---------------------------------------------------------------------------
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from clawbio.common.report import write_result_json, DISCLAIMER
+
+# ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
@@ -47,12 +57,6 @@ SKIP_ALIASES = {
     "bbj": "pheweb_bbj",
     "eqtl": "eqtl_catalogue",
 }
-
-DISCLAIMER = (
-    "ClawBio is a research and educational tool. It is not a medical device "
-    "and does not provide clinical diagnoses. Consult a healthcare "
-    "professional before making any medical decisions."
-)
 
 
 # ---------------------------------------------------------------------------
@@ -268,6 +272,32 @@ def run_lookup(
         "api_results": api_results,
         "merged": merged,
     }, indent=2, default=str))
+
+    # Write standardised result.json envelope
+    print("  Writing result.json...")
+    write_result_json(
+        output_dir=output_dir,
+        skill="gwas-lookup",
+        version="0.2.0",
+        summary={
+            "rsid": rsid,
+            "chr": chr_val,
+            "pos_grch38": pos_38,
+            "total_gwas": summary.get("total_gwas", 0),
+            "total_gwas_significant": summary.get("total_gwas_significant", 0),
+            "total_phewas_ukb": summary.get("total_phewas_ukb", 0),
+            "total_phewas_finngen": summary.get("total_phewas_finngen", 0),
+            "total_phewas_bbj": summary.get("total_phewas_bbj", 0),
+            "total_eqtls": summary.get("total_eqtls", 0),
+            "total_credible_sets": summary.get("total_credible_sets", 0),
+            "apis_queried": len(api_results),
+            "apis_skipped": len(skip_set),
+        },
+        data={
+            "variant": variant,
+            "merged": merged,
+        },
+    )
 
     print(f"\n  Report: {output_dir / 'report.md'}")
     print(f"  Full output: {output_dir}/")

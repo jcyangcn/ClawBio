@@ -27,19 +27,27 @@ from typing import Optional
 import requests
 
 # ---------------------------------------------------------------------------
+# Shared library imports
+# ---------------------------------------------------------------------------
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from clawbio.common.parsers import parse_genetic_file, genotypes_to_simple
+from clawbio.common.checksums import sha256_hex
+from clawbio.common.report import write_result_json, DISCLAIMER as _SHARED_DISCLAIMER
+
+# ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 PGS_API_BASE = "https://www.pgscatalog.org/rest"
 RATE_LIMIT_INTERVAL = 0.55  # seconds between requests (stay under 2 req/sec)
 CACHE_TTL = 86400  # 24 hours
-USER_AGENT = "ClawBio-GWAS-PRS/0.1.0"
+USER_AGENT = "ClawBio-GWAS-PRS/0.2.0"
 
-DISCLAIMER = (
-    "ClawBio is a research and educational tool. It is not a medical device "
-    "and does not provide clinical diagnoses. Consult a healthcare "
-    "professional before making any medical decisions."
-)
+DISCLAIMER = _SHARED_DISCLAIMER
 
 # Risk category thresholds (percentile-based)
 RISK_CATEGORIES = [
@@ -337,37 +345,30 @@ class PGSCatalogClient:
 
 
 # ---------------------------------------------------------------------------
-# Genotype parser — 23andMe / AncestryDNA / generic
+# Genotype parser — delegates to clawbio.common.parsers
 # ---------------------------------------------------------------------------
 
 
 def detect_format(lines: list[str]) -> str:
-    """Detect genotype file format from the first 20 lines.
+    """Detect file format from a list of header lines.
 
-    Returns: '23andme', 'ancestrydna', 'generic', or 'unknown'.
+    Thin wrapper around clawbio.common.parsers.detect_format for backward
+    compatibility with tests that pass lines rather than a file path.
     """
-    for line in lines[:20]:
-        if line.startswith("# rsid"):
-            return "23andme"
-        if "RSID" in line and "CHROMOSOME" in line:
-            return "ancestrydna"
-        if "rsid" in line and "chromosome" in line:
-            return "generic"
-    # Fallback: inspect data lines
-    for line in lines[:20]:
-        if line.startswith("#") or line.strip() == "":
-            continue
-        parts = line.split("\t")
-        if len(parts) >= 4 and parts[0].startswith("rs"):
-            return "23andme"
-        parts = line.split(",")
-        if len(parts) >= 4 and parts[0].startswith("rs"):
-            return "ancestrydna"
-    return "unknown"
+    from clawbio.common.parsers import detect_format as _detect_fmt
+    import tempfile, os
+    # Write lines to a temp file so the shared detector can inspect them
+    fd, tmp = tempfile.mkstemp(suffix=".txt")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write("\n".join(lines))
+        return _detect_fmt(Path(tmp))
+    finally:
+        os.unlink(tmp)
 
 
-def parse_genotype_file(path: str | Path) -> tuple[str, int, dict[str, str]]:
-    """Parse a DTC genotype file, returning ALL rsIDs.
+def load_genotypes(path: str | Path) -> tuple[str, int, dict[str, str]]:
+    """Parse a DTC genotype file via the shared parser.
 
     Supports .gz files, 23andMe (tab-separated) and AncestryDNA
     (comma-separated) formats.
@@ -375,38 +376,17 @@ def parse_genotype_file(path: str | Path) -> tuple[str, int, dict[str, str]]:
     Returns:
         (format_name, total_snps, {rsid: genotype_string})
     """
+    from clawbio.common.parsers import detect_format as _detect_fmt
+
     path = Path(path)
-    if str(path).endswith(".gz"):
-        with gzip.open(path, "rt", errors="replace") as fh:
-            content = fh.read()
-    else:
-        content = path.read_text(errors="replace")
+    fmt = _detect_fmt(path)
+    records = parse_genetic_file(str(path))
+    genotypes = genotypes_to_simple(records)
+    return fmt, len(genotypes), genotypes
 
-    lines = content.split("\n")
-    fmt = detect_format(lines)
 
-    snps: dict[str, str] = {}
-    for line in lines:
-        if line.startswith("#") or line.strip() == "":
-            continue
-        # Skip header lines
-        if "rsid" in line.lower() and "chromosome" in line.lower():
-            continue
-
-        parts = line.split("\t") if "\t" in line else line.split(",")
-        if len(parts) >= 4:
-            rsid = parts[0].strip()
-            if not rsid.startswith("rs"):
-                continue
-            # AncestryDNA has allele1, allele2 in columns 3 and 4
-            if len(parts) == 5:
-                genotype = parts[3].strip() + parts[4].strip()
-            else:
-                genotype = parts[3].strip()
-            if genotype and genotype not in ("--", "00", ""):
-                snps[rsid] = genotype.upper()
-
-    return fmt, len(snps), snps
+# Backward-compatible alias
+parse_genotype_file = load_genotypes
 
 
 # ---------------------------------------------------------------------------
@@ -728,7 +708,7 @@ def generate_report(
         "# GWAS Polygenic Risk Score Report",
         "",
         f"**Date**: {now}",
-        f"**Tool**: ClawBio GWAS-PRS v0.1.0",
+        f"**Tool**: ClawBio GWAS-PRS v0.2.0",
         f"**Input file**: {input_info.get('filepath', 'N/A')}",
         f"**Format detected**: {input_info.get('format', 'N/A')}",
         f"**Total SNPs in file**: {input_info.get('total_snps', 'N/A'):,}",
@@ -1276,7 +1256,7 @@ def main():
         sys.exit(1)
 
     print(f"Parsing genotype file: {input_path.name}")
-    fmt, total_snps, genotype_dict = parse_genotype_file(input_path)
+    fmt, total_snps, genotype_dict = load_genotypes(input_path)
     print(f"  Format: {fmt}")
     print(f"  Total SNPs parsed: {total_snps:,}")
     print()
@@ -1409,6 +1389,30 @@ def main():
         csv_path = output_dir / "prs_variants.csv"
         csv_path.write_text("\n".join(csv_lines) + "\n")
         print(f"Variant details written to {csv_path}")
+
+        # Write standardized result.json envelope
+        first = all_results[0] if all_results else {}
+        first_pct = first.get("percentile_info", {})
+        result_json_path = write_result_json(
+            output_dir=output_dir,
+            skill="gwas-prs",
+            version="0.2.0",
+            summary={
+                "scores_calculated": len(all_results),
+                "trait": first.get("trait", ""),
+                "pgs_id": first.get("pgs_id", ""),
+                "raw_score": first.get("prs", {}).get("raw_score"),
+                "percentile": first_pct.get("percentile"),
+                "risk_category": first_pct.get("risk_category"),
+                "overlap_fraction": first.get("prs", {}).get("overlap_fraction"),
+            },
+            data={
+                "input_info": input_info,
+                "results": json_results,
+            },
+            input_checksum=sha256_hex(str(input_path)) if input_path.exists() else "",
+        )
+        print(f"Result envelope written to {result_json_path}")
 
         print(f"\nFull output in {output_dir}/")
     else:

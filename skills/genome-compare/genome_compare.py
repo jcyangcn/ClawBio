@@ -15,16 +15,29 @@ Personal Genome Project (hu43860C, CC0 licensed).
 from __future__ import annotations
 
 import argparse
-import gzip
-import hashlib
 import json
 import sys
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
+
+# --- Shared ClawBio library ------------------------------------------------ #
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from clawbio.common.parsers import (
+    parse_genetic_file,
+    genotypes_to_simple,
+    genotypes_to_positions,
+    open_genetic_file,
+    stage_from_icloud,
+)
+from clawbio.common.checksums import sha256_hex
+from clawbio.common.report import write_result_json
 
 # --------------------------------------------------------------------------- #
 # Paths
@@ -57,97 +70,19 @@ IBS_REFERENCE = [
 CHROMOSOMES = [str(c) for c in range(1, 23)] + ["X", "Y", "MT"]
 
 # --------------------------------------------------------------------------- #
-# Parsing
+# Parsing helpers (delegated to clawbio.common.parsers)
 # --------------------------------------------------------------------------- #
 
 
-def _stage_from_icloud(filepath: str | Path) -> Path:
-    """If filepath is on iCloud Drive, copy to /tmp to avoid Errno 11 deadlock.
-
-    The macOS `bird` daemon holds file locks on iCloud Drive files during
-    sync/indexing.  Uses subprocess `cp` (which macOS handles differently
-    from Python's open/read for iCloud files) with retry.
-    """
-    import subprocess
-    import tempfile
-    import time as _time
-    filepath = Path(filepath)
-    # Detect iCloud Drive paths
-    path_str = str(filepath)
-    if "Mobile Documents" not in path_str and "com~apple~CloudDocs" not in path_str:
-        print(f"  [stage] {filepath.name}: not on iCloud, using directly", file=sys.stderr)
-        return filepath  # not on iCloud, use directly
-
-    cache_dir = Path(tempfile.gettempdir()) / "clawbio_cache"
-    cache_dir.mkdir(exist_ok=True)
-    cached = cache_dir / filepath.name
-    # Re-copy if missing or source is newer
-    needs_copy = not cached.exists()
-    if not needs_copy:
-        try:
-            needs_copy = filepath.stat().st_mtime > cached.stat().st_mtime
-        except OSError as e:
-            print(f"  [stage] stat failed on {filepath.name}: {e}", file=sys.stderr)
-            needs_copy = True  # stat failed, try to copy
-    if needs_copy:
-        print(f"  [stage] copying {filepath.name} to {cached}", file=sys.stderr)
-        for attempt in range(4):
-            try:
-                # Use macOS cp command — handles iCloud files better than Python open()
-                subprocess.run(
-                    ["cp", str(filepath), str(cached)],
-                    check=True, capture_output=True, timeout=30,
-                )
-                print(f"  [stage] {filepath.name} copied OK ({cached.stat().st_size:,} bytes)", file=sys.stderr)
-                break
-            except (subprocess.CalledProcessError, OSError) as e:
-                print(f"  [stage] cp failed attempt {attempt + 1}/4: {e}", file=sys.stderr)
-                if attempt < 3:
-                    _time.sleep(2 ** attempt)
-                else:
-                    raise OSError(f"Cannot stage {filepath.name} from iCloud after 4 attempts: {e}")
-    else:
-        print(f"  [stage] {filepath.name}: using cached copy at {cached}", file=sys.stderr)
-    return cached
-
-
-def _open_file(filepath: str | Path):
-    """Open a file, handling .gz transparently. Stages from iCloud first."""
-    filepath = str(_stage_from_icloud(filepath))
-    if filepath.endswith(".gz"):
-        return gzip.open(filepath, "rt", encoding="utf-8", errors="replace")
-    return open(filepath, encoding="utf-8", errors="replace")
-
-
-def parse_23andme_extended(filepath: str | Path) -> Tuple[dict, dict]:
-    """Parse a 23andMe file returning genotypes AND chromosome/position metadata.
+def _parse_genotype_file(filepath: str | Path) -> Tuple[dict, dict]:
+    """Parse a genetic data file via the shared parser.
 
     Returns:
         genotypes: {rsid: genotype_str}
         positions: {rsid: {"chrom": str, "pos": int}}
     """
-    genotypes = {}
-    positions = {}
-    with _open_file(filepath) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            parts = line.split("\t")
-            if len(parts) < 4:
-                continue
-            rsid, chrom, pos, geno = parts[0], parts[1], parts[2], parts[3]
-            if not (rsid.startswith("rs") or rsid.startswith("i")):
-                continue
-            geno = geno.replace("-", "").replace("--", "")
-            if len(geno) < 1:
-                continue
-            genotypes[rsid] = geno
-            try:
-                positions[rsid] = {"chrom": chrom, "pos": int(pos)}
-            except ValueError:
-                positions[rsid] = {"chrom": chrom, "pos": 0}
-    return genotypes, positions
+    records = parse_genetic_file(str(filepath), fmt="23andme")
+    return genotypes_to_simple(records), genotypes_to_positions(records)
 
 
 # --------------------------------------------------------------------------- #
@@ -243,7 +178,7 @@ def compute_ibs(
 
 def load_aims_panel(panel_path: Path) -> Tuple[list, list]:
     """Load AIMs panel. Returns (markers, population_names)."""
-    panel_path = _stage_from_icloud(panel_path)
+    panel_path = stage_from_icloud(panel_path)
     with open(panel_path) as f:
         data = json.load(f)
     populations = data["meta"]["populations"]
@@ -537,14 +472,6 @@ def plot_ibs_context(ibs_score: float, output_path: Path) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _sha256(filepath: Path) -> str:
-    h = hashlib.sha256()
-    with open(filepath, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk)
-    return h.hexdigest()[:16]
-
-
 def _interpret_ibs(score: float) -> str:
     """Return a human-readable interpretation of the IBS score."""
     for i, ref in enumerate(IBS_REFERENCE):
@@ -580,8 +507,8 @@ def generate_report(
 ) -> str:
     """Generate the genome comparison markdown report."""
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    input_hash = _sha256(input_path) if input_path.exists() else "n/a"
-    ref_hash = _sha256(reference_path) if reference_path.exists() else "n/a"
+    input_hash = sha256_hex(str(input_path)) if input_path.exists() else "n/a"
+    ref_hash = sha256_hex(str(reference_path)) if reference_path.exists() else "n/a"
 
     # Ancestry flat for display
     continental = user_ancestry.get("continental", {})
@@ -811,11 +738,11 @@ def run_comparison(
 
     # Parse both genomes
     print(f"  Parsing input: {input_path.name}")
-    user_geno, user_pos = parse_23andme_extended(input_path)
+    user_geno, user_pos = _parse_genotype_file(input_path)
     print(f"    {len(user_geno):,} SNPs loaded")
 
     print(f"  Parsing reference: {reference_path.name}")
-    ref_geno, ref_pos = parse_23andme_extended(reference_path)
+    ref_geno, ref_pos = _parse_genotype_file(reference_path)
     print(f"    {len(ref_geno):,} SNPs loaded")
 
     # Compute IBS
@@ -838,7 +765,7 @@ def run_comparison(
     # Load Manuel's known ancestry
     manuel_ancestry = {}
     if MANUEL_ANCESTRY_FILE.exists():
-        cached_ancestry = _stage_from_icloud(MANUEL_ANCESTRY_FILE)
+        cached_ancestry = stage_from_icloud(MANUEL_ANCESTRY_FILE)
         with open(cached_ancestry) as f:
             manuel_ancestry = json.load(f)
 
@@ -898,6 +825,27 @@ def run_comparison(
         is_demo=is_demo,
     )
 
+    # Write structured result.json
+    continental = user_ancestry.get("continental", {})
+    top_pop = max(continental, key=continental.get) if continental else "Unknown"
+    write_result_json(
+        output_dir=output_dir,
+        skill="genome-compare",
+        version="0.2.0",
+        summary={
+            "ibs_score": ibs_score,
+            "n_overlap": n_overlap,
+            "n_concordant": n_concordant,
+            "top_ancestry": top_pop,
+        },
+        data={
+            "ibs_score": ibs_score,
+            "per_chrom": per_chrom,
+            "ancestry": user_ancestry,
+        },
+        input_checksum=sha256_hex(str(input_path)),
+    )
+
     return {
         "ibs_score": ibs_score,
         "n_overlap": n_overlap,
@@ -926,8 +874,8 @@ def run_summary(
     if reference_path is None:
         reference_path = REFERENCE_FILE
 
-    user_geno, user_pos = parse_23andme_extended(input_path)
-    ref_geno, _ = parse_23andme_extended(reference_path)
+    user_geno, user_pos = _parse_genotype_file(input_path)
+    ref_geno, _ = _parse_genotype_file(reference_path)
 
     ibs_score, n_overlap, n_concordant, per_chrom = compute_ibs(
         user_geno, ref_geno, user_pos
@@ -947,7 +895,7 @@ def run_summary(
     # Load Manuel's verified ancestry
     manuel_ancestry = {}
     if MANUEL_ANCESTRY_FILE.exists():
-        cached = _stage_from_icloud(MANUEL_ANCESTRY_FILE)
+        cached = stage_from_icloud(MANUEL_ANCESTRY_FILE)
         with open(cached) as f:
             manuel_ancestry = json.load(f)
 

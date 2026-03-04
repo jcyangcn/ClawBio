@@ -23,7 +23,7 @@ from genome_compare import (
     IBS_REFERENCE,
     _ibs_at_site,
     _count_alt_alleles,
-    parse_23andme_extended,
+    _parse_genotype_file as parse_23andme_extended,
     compute_ibs,
     load_aims_panel,
     estimate_ancestry,

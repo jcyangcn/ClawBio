@@ -6,15 +6,16 @@ from __future__ import annotations
 
 import csv
 import math
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-DISCLAIMER = (
-    "ClawBio is a research and educational tool. It is not a medical device "
-    "and does not provide clinical diagnoses. Consult a healthcare "
-    "professional before making any medical decisions."
-)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from clawbio.common.report import DISCLAIMER
 
 
 def _fmt_pval(pval: Any) -> str:
@@ -352,7 +353,7 @@ python skills/gwas-lookup/gwas_lookup.py \\
     import json
     versions = {
         "tool": "ClawBio GWAS Lookup",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "apis": {
             "ensembl": "https://rest.ensembl.org",
             "gwas_catalog": "https://www.ebi.ac.uk/gwas/rest/api",

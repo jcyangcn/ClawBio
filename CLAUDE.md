@@ -25,10 +25,11 @@ When the user asks a question, match it to a skill and act:
 | ClinPGx database, gene-drug lookup, PharmGKB query, CPIC guideline database, FDA drug label PGx, "look up gene on ClinPGx" | `skills/clinpgx/` | Run `clinpgx.py` |
 | GWAS polygenic risk scores, PRS, "what's my risk for diabetes", PGS Catalog, polygenic | `skills/gwas-prs/` | Run `gwas_prs.py` |
 | GWAS variant lookup, rsID search, "look up rs3798220", variant associations, PheWAS, variant eQTL, federated variant query | `skills/gwas-lookup/` | Run `gwas_lookup.py` |
+| Personal genomic profile report, "my profile", unified report, profile summary | `skills/profile-report/` | Run `profile_report.py` |
 
 ## How to Use a Skill
 
-### Skills with Python scripts (pharmgx-reporter, equity-scorer, nutrigx_advisor, bio-orchestrator, clinpgx, gwas-prs, gwas-lookup)
+### Skills with Python scripts (pharmgx-reporter, equity-scorer, nutrigx_advisor, bio-orchestrator, clinpgx, gwas-prs, gwas-lookup, profile-report)
 1. Read the skill's `SKILL.md` for domain context
 2. Run the Python script with correct CLI arguments (see below)
 3. Show the user the output — open any generated figures and explain results
@@ -81,6 +82,11 @@ python skills/gwas-lookup/gwas_lookup.py \
   --rsid <rsid> --skip gtex,bbj --output <report_dir>
 python skills/gwas-lookup/gwas_lookup.py --demo --output /tmp/gwas_lookup_demo
 
+# Profile report — unified personal genomic profile report
+python skills/profile-report/profile_report.py \
+  --profile <profile.json> --output <report_dir>
+python skills/profile-report/profile_report.py --demo --output /tmp/profile_demo
+
 # Bio orchestrator — auto-routes to the right skill
 python skills/bio-orchestrator/orchestrator.py \
   --input <file_or_query> [--skill <name>] [--output <dir>] [--list-skills]
@@ -104,6 +110,7 @@ For instant demos when the user has no data:
 | Synthetic patient (PRS, ~300 SNPs) | `skills/gwas-prs/demo_patient_prs.txt` | gwas-prs |
 | Curated PGS scores (6 traits) | `skills/gwas-prs/curated_scores.json` | gwas-prs |
 | GWAS Lookup demo (rs3798220, pre-fetched) | `--demo` flag | gwas-lookup |
+| Profile report demo (full 4-skill profile) | `--demo` flag | profile-report |
 
 ### Demo Commands
 
@@ -132,6 +139,9 @@ python skills/gwas-prs/gwas_prs.py --demo --output /tmp/prs_demo
 
 # GWAS Lookup demo
 python skills/gwas-lookup/gwas_lookup.py --demo --output /tmp/gwas_lookup_demo
+
+# Profile report demo
+python skills/profile-report/profile_report.py --demo --output /tmp/profile_demo
 
 # List all available skills
 python skills/bio-orchestrator/orchestrator.py --list-skills

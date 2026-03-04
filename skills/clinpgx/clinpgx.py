@@ -22,6 +22,12 @@ from typing import Optional
 
 import requests
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from clawbio.common.report import write_result_json
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -689,6 +695,37 @@ def main():
 
         # Write CSV tables
         write_tables(output_dir, gene_results, drug_results)
+
+        # Write standardized result.json
+        all_annotations = []
+        all_guidelines = []
+        all_labels = []
+        for gr in gene_results:
+            if gr.get("found"):
+                all_annotations.extend(gr["clinical_annotations"])
+                all_guidelines.extend(gr["guidelines"])
+                all_labels.extend(gr["drug_labels"])
+        for dr in drug_results:
+            if dr.get("found"):
+                all_annotations.extend(dr["clinical_annotations"])
+                all_labels.extend(dr["drug_labels"])
+
+        write_result_json(
+            output_dir=output_dir,
+            skill="clinpgx",
+            version="0.2.0",
+            summary={
+                "genes_queried": len(gene_results),
+                "drugs_queried": len(drug_results),
+                "annotations_found": len(all_annotations),
+                "guidelines_found": len(all_guidelines),
+                "labels_found": len(all_labels),
+            },
+            data={
+                "gene_results": gene_results,
+                "drug_results": drug_results,
+            },
+        )
 
         print(f"\nFull output in {output_dir}/")
     else:

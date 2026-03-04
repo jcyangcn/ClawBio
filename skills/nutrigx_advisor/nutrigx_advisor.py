@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 nutrigx_advisor.py — NutriGx Advisor: Personalised Nutrition from Genetic Data
-ClawBio Skill v0.1.0
+ClawBio Skill v0.2.0
 
 Usage:
     python nutrigx_advisor.py --input genome.csv --output results/
@@ -13,7 +13,15 @@ import json
 import sys
 from pathlib import Path
 
-from parse_input import parse_genetic_file
+# Add project root to path for shared imports
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from clawbio.common.parsers import parse_genetic_file, genotypes_to_simple
+from clawbio.common.report import write_result_json
+from clawbio.common.checksums import sha256_hex
+
 from extract_genotypes import extract_snp_genotypes
 from score_variants import compute_nutrient_risk_scores
 from generate_report import generate_report
@@ -67,7 +75,8 @@ def main():
         sys.exit(1)
 
     print(f"[NutriGx] Parsing input: {input_path}")
-    genotype_table = parse_genetic_file(str(input_path), fmt=args.format)
+    records = parse_genetic_file(str(input_path), fmt=args.format)
+    genotype_table = genotypes_to_simple(records)
     print(f"[NutriGx] Loaded {len(genotype_table):,} variants")
 
     print("[NutriGx] Extracting SNP genotypes from panel ...")
@@ -115,6 +124,33 @@ def main():
         output_dir=str(output_dir),
         panel_path=str(panel_path),
         args=vars(args)
+    )
+
+    # Write structured result.json for programmatic consumption
+    print("[NutriGx] Writing result.json ...")
+    elevated_domains = [d for d, v in risk_scores.items() if v["category"] == "Elevated"]
+    moderate_domains = [d for d, v in risk_scores.items() if v["category"] == "Moderate"]
+    total_tested = sum(v["tested_snps"] for v in risk_scores.values())
+    total_missing = sum(v["missing_snps"] for v in risk_scores.values())
+
+    write_result_json(
+        output_dir=output_dir,
+        skill="nutrigx",
+        version="0.2.0",
+        summary={
+            "total_variants_loaded": len(genotype_table),
+            "panel_snps_tested": total_tested,
+            "panel_snps_missing": total_missing,
+            "panel_size": len(snp_panel),
+            "elevated_domains": elevated_domains,
+            "moderate_domains": moderate_domains,
+            "domains_assessed": len(risk_scores),
+        },
+        data={
+            "risk_scores": risk_scores,
+            "snp_calls": snp_calls,
+        },
+        input_checksum=sha256_hex(str(input_path)),
     )
 
     print(f"\n[NutriGx] Done. Report: {report_path}")

@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from pathlib import Path
 import argparse
-import hashlib
 import json
 import sys
 from collections import Counter, OrderedDict
@@ -28,6 +27,17 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+
+# ---------------------------------------------------------------------------
+# Shared library imports
+# ---------------------------------------------------------------------------
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from clawbio.common.parsers import parse_vcf_matrix
+from clawbio.common.checksums import sha256_file as _sha256_file
+from clawbio.common.report import write_result_json, DISCLAIMER as _DISCLAIMER
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -60,11 +70,13 @@ POP_COLOURS = {
 
 
 # ===================================================================
-# VCF PARSING
+# VCF PARSING (delegates to shared library)
 # ===================================================================
 
 def parse_vcf(filepath: Path) -> Tuple[List[str], List[str], np.ndarray]:
     """Parse a VCF file into a genotype matrix.
+
+    Delegates to ``clawbio.common.parsers.parse_vcf_matrix``.
 
     Returns:
         samples: list of sample IDs
@@ -72,52 +84,7 @@ def parse_vcf(filepath: Path) -> Tuple[List[str], List[str], np.ndarray]:
         genotype_matrix: numpy array of shape (n_samples, n_variants)
                          with values 0 (hom ref), 1 (het), 2 (hom alt), -1 (missing)
     """
-    samples = []
-    variant_ids = []
-    genotype_rows = []  # list of lists, one per variant (transposed later)
-
-    with open(filepath) as f:
-        for line in f:
-            if line.startswith("##"):
-                continue
-            if line.startswith("#CHROM"):
-                parts = line.strip().split("\t")
-                samples = parts[9:]
-                continue
-
-            parts = line.strip().split("\t")
-            chrom, pos, vid = parts[0], parts[1], parts[2]
-            if vid == ".":
-                vid = f"{chrom}:{pos}"
-            variant_ids.append(vid)
-
-            fmt_fields = parts[8].split(":")
-            if "GT" not in fmt_fields:
-                raise ValueError(
-                    "GT field not found in FORMAT column at variant %s "
-                    "(FORMAT=%s). Cannot parse genotypes." % (vid, parts[8])
-                )
-            gt_idx = fmt_fields.index("GT")
-
-            row = []
-            for sample_field in parts[9:]:
-                gt_str = sample_field.split(":")[gt_idx]
-                gt_str = gt_str.replace("|", "/")  # handle phased
-                if "." in gt_str:
-                    row.append(-1)
-                else:
-                    alleles = gt_str.split("/")
-                    row.append(int(alleles[0]) + int(alleles[1]))
-            genotype_rows.append(row)
-
-    if not samples:
-        raise ValueError("No samples found in VCF header")
-    if not genotype_rows:
-        raise ValueError("No variants found in VCF")
-
-    # Shape: (n_samples, n_variants)
-    geno_matrix = np.array(genotype_rows, dtype=np.int8).T
-    return samples, variant_ids, geno_matrix
+    return parse_vcf_matrix(filepath)
 
 
 def load_population_map(
@@ -677,11 +644,8 @@ def plot_heim_gauge(score: float, rating: str, output_path: Path) -> None:
 # ===================================================================
 
 def sha256_file(filepath: Path) -> str:
-    h = hashlib.sha256()
-    with open(filepath, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    """SHA-256 checksum — delegates to shared checksums module."""
+    return _sha256_file(filepath)
 
 
 def generate_report(
@@ -849,6 +813,12 @@ python equity_scorer.py --input %(input_name)s --output %(output_name)s
 - Corpas, M. (2026). ClawBio. https://github.com/ClawBio/ClawBio
 - Hudson, R.R., Slatkin, M. & Maddison, W.P. (1992). Estimation of levels of gene flow from DNA sequence data. Genetics, 132(2), 583-589.
 - The 1000 Genomes Project Consortium (2015). A global reference for human genetic variation. Nature, 526, 68-74.
+
+---
+
+## Disclaimer
+
+*%(disclaimer)s*
 """ % {
         "date": now,
         "input_name": input_path.name,
@@ -884,6 +854,7 @@ python equity_scorer.py --input %(input_name)s --output %(output_name)s
         "output_name": output_dir.name,
         "rep_warning_note": rep_warning_note,
         "het_source_note": het_source_note,
+        "disclaimer": _DISCLAIMER,
     }
     return report
 
@@ -1009,6 +980,21 @@ def run_vcf_pipeline(
     report_path = output_dir / "report.md"
     report_path.write_text(report)
 
+    # Standardised result.json envelope
+    write_result_json(
+        output_dir=output_dir,
+        skill="equity-scorer",
+        version="0.2.0",
+        summary={
+            "heim_score": heim_result["heim_score"],
+            "rating": heim_result["rating"],
+            "n_samples": heim_result["n_samples"],
+            "n_populations": heim_result["n_populations"],
+        },
+        data=heim_result,
+        input_checksum=sha256_file(str(vcf_path)) if vcf_path.exists() else "",
+    )
+
     print("\nDone.")
     print("  HEIM Score: %s/100 (%s)" % (heim_result["heim_score"], heim_result["rating"]))
     print("  Report: %s" % report_path)
@@ -1075,6 +1061,21 @@ def run_csv_pipeline(
     )
     report_path = output_dir / "report.md"
     report_path.write_text(report)
+
+    # Standardised result.json envelope
+    write_result_json(
+        output_dir=output_dir,
+        skill="equity-scorer",
+        version="0.2.0",
+        summary={
+            "heim_score": heim_result["heim_score"],
+            "rating": heim_result["rating"],
+            "n_samples": heim_result["n_samples"],
+            "n_populations": heim_result["n_populations"],
+        },
+        data=heim_result,
+        input_checksum=sha256_file(str(csv_path)) if csv_path.exists() else "",
+    )
 
     print("HEIM Score: %s/100 (%s)" % (heim_result["heim_score"], heim_result["rating"]))
     print("Report: %s" % report_path)

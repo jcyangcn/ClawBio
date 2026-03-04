@@ -43,3 +43,9 @@ jobs:
 
       - name: Run ClinPGx tests
         run: python -m pytest skills/clinpgx/tests/test_clinpgx.py -v
+
+      - name: Run GWAS PRS tests
+        run: python -m pytest skills/gwas-prs/tests/test_gwas_prs.py -v
+
+      - name: Run GWAS Lookup tests
+        run: python -m pytest skills/gwas-lookup/tests/test_gwas_lookup.py -v
