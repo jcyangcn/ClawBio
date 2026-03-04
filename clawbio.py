@@ -17,6 +17,7 @@ Importable:
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 import time
@@ -83,6 +84,165 @@ def print_boxed_header(title: str):
     print(f"{CYAN}╭{'─' * w}╮{RESET}")
     print(f"{CYAN}│  {BOLD}{title}{RESET}{CYAN}  │{RESET}")
     print(f"{CYAN}╰{'─' * w}╯{RESET}")
+
+
+def _parse_md_table(text: str, header_start: str) -> list[list[str]]:
+    """Extract data rows from a markdown table identified by its header."""
+    rows = []
+    found = False
+    for line in text.splitlines():
+        if header_start in line:
+            found = True
+            continue
+        if found:
+            if line.strip().startswith("| ---") or line.strip().startswith("|---"):
+                continue
+            if line.strip().startswith("|") and line.count("|") >= 3:
+                rows.append([c.strip() for c in line.split("|")[1:-1]])
+            elif rows:
+                break
+    return rows
+
+
+def format_pharmgx_preview(report_text: str, report_path: str):
+    """Render a rich, biologically insightful pharmgx report for the terminal."""
+    lines = report_text.splitlines()
+
+    # --- Extract metadata ---
+    meta = {}
+    for line in lines:
+        for key in ("Pharmacogenomic SNPs found", "Genes profiled",
+                     "Drugs assessed", "Input", "Format detected"):
+            if f"**{key}**" in line:
+                meta[key] = line.split(":", 1)[-1].strip().strip("`* ")
+
+    # --- Extract gene profile rows ---
+    gene_rows = _parse_md_table(report_text, "| Gene | Full Name |")
+
+    # --- Extract drug summary rows ---
+    summary = {}
+    for row in _parse_md_table(report_text, "| Category | Count |"):
+        if len(row) >= 2:
+            summary[row[0]] = row[1]
+
+    # --- Extract actionable alerts ---
+    avoid_drugs, caution_drugs = [], []
+    section = None
+    for line in lines:
+        if "AVOID / USE ALTERNATIVE:" in line:
+            section = "avoid"
+        elif "USE WITH CAUTION:" in line:
+            section = "caution"
+        elif line.startswith("---") or (line.startswith("##") and "Actionable" not in line):
+            section = None
+        elif section and line.strip().startswith("- **"):
+            m = re.match(r'- \*\*(.+?)\*\* \((.+?)\) \[(.+?)]: (.+)', line.strip())
+            if m:
+                entry = {"drug": m[1], "brand": m[2], "genes": m[3], "rec": m[4]}
+                (avoid_drugs if section == "avoid" else caution_drugs).append(entry)
+
+    # === RENDER ===
+    W = 60
+    snps = meta.get("Pharmacogenomic SNPs found", "?")
+    n_genes = meta.get("Genes profiled", "?")
+    n_drugs = meta.get("Drugs assessed", "?")
+    fmt = meta.get("Format detected", "unknown")
+
+    # ── Header ──
+    print(f"\n{CYAN}╭{'─' * W}╮{RESET}")
+    print(f"{CYAN}│{RESET}  {BOLD}{CYAN}ClawBio PharmGx Report{RESET}"
+          f"{' ' * (W - 24)}{CYAN}│{RESET}")
+    print(f"{CYAN}│{RESET}  {DIM}Source: Corpasome — real 23andMe genome (CC0){RESET}"
+          f"{' ' * (W - 48)}{CYAN}│{RESET}")
+    print(f"{CYAN}╰{'─' * W}╯{RESET}")
+    print()
+    print(f"  {BOLD}{n_genes}{RESET} genes  {DIM}·{RESET}  "
+          f"{BOLD}{snps}{RESET} SNPs  {DIM}·{RESET}  "
+          f"{BOLD}{n_drugs}{RESET} drugs  {DIM}·{RESET}  "
+          f"{DIM}{fmt} format{RESET}")
+
+    # ── Critical findings ──
+    if avoid_drugs:
+        print(f"\n  {BG_RED}{WHITE}{BOLD} {'▲ CRITICAL FINDING':^{W - 4}} {RESET}")
+        print(f"  {RED}{'─' * W}{RESET}")
+        for d in avoid_drugs:
+            print(f"    {RED}{BOLD}{d['drug']}{RESET} ({d['brand']})  "
+                  f"{DIM}[{d['genes']}]{RESET}")
+            if d["drug"].lower() == "warfarin":
+                print()
+                print(f"    {YELLOW}{BOLD}VKORC1{RESET}{YELLOW} rs9923231 {BOLD}TT{RESET}"
+                      f"  {DIM}→{RESET}  Both copies carry the sensitivity allele.")
+                print(f"    {DIM}This patient produces less vitamin K epoxide reductase,{RESET}")
+                print(f"    {DIM}making them hyper-responsive to warfarin's mechanism.{RESET}")
+                print()
+                print(f"    {YELLOW}{BOLD}CYP2C9{RESET}{YELLOW} *1/*2 {DIM}(rs1799853 CT){RESET}"
+                      f"  {DIM}→{RESET}  Intermediate Metabolizer.")
+                print(f"    {DIM}Warfarin is cleared ~40% more slowly than in *1/*1 carriers,{RESET}")
+                print(f"    {DIM}causing the drug to accumulate at standard doses.{RESET}")
+                print()
+                print(f"    {RED}{BOLD}Combined effect:{RESET}  "
+                      f"Standard doses risk {RED}{BOLD}life-threatening bleeding{RESET}.")
+                print(f"    CPIC guidelines recommend {BOLD}50–80% dose reduction{RESET} or")
+                print(f"    switching to a DOAC (apixaban, rivaroxaban).")
+            else:
+                print(f"    {d['rec']}")
+        print(f"  {RED}{'─' * W}{RESET}")
+
+    # ── Gene profile ──
+    print(f"\n  {CYAN}{BOLD}Gene Profile{RESET}")
+    print(f"  {DIM}{'─' * (W - 2)}{RESET}")
+    for row in gene_rows:
+        if len(row) < 4:
+            continue
+        gene, _, diplotype, phenotype = row[:4]
+        # Split off "(X/Y SNPs tested)" qualifier from diplotype for cleaner display
+        dip_match = re.match(r'^(.+?)\s*(\(\d/\d SNPs tested\))?$', diplotype)
+        dip_core = dip_match[1] if dip_match else diplotype
+        dip_note = f" {DIM}{dip_match[2]}{RESET}" if dip_match and dip_match[2] else ""
+        # Choose color by phenotype category
+        if "Unknown" in phenotype or "unmapped" in phenotype:
+            pc = YELLOW
+            phenotype_short = "Unknown"
+            extra = f"  {DIM}(needs clinical testing){RESET}"
+        elif "High" in phenotype:
+            pc, phenotype_short, extra = RED, phenotype, ""
+        elif "Poor" in phenotype:
+            pc, phenotype_short, extra = RED, phenotype, ""
+        elif "Intermediate" in phenotype:
+            pc, phenotype_short, extra = YELLOW, "Intermediate", ""
+        elif "Non-expressor" in phenotype:
+            pc, phenotype_short, extra = DIM, "Non-expressor", ""
+        else:
+            pc, phenotype_short, extra = GREEN, "Normal", ""
+        wmark = f"  {RED}← warfarin{RESET}" if gene in ("CYP2C9", "VKORC1") else ""
+        print(f"  {BOLD}{gene:<10}{RESET} {DIM}{dip_core:<12}{RESET}"
+              f" {pc}{phenotype_short}{RESET}{extra}{dip_note}{wmark}")
+
+    # ── Drug summary ──
+    print(f"\n  {CYAN}{BOLD}Drug Summary{RESET}")
+    print(f"  {DIM}{'─' * (W - 2)}{RESET}")
+    buckets = [
+        ("Avoid / use alternative", RED,    BOLD),
+        ("Use with caution",       YELLOW, ""),
+        ("Standard dosing",        GREEN,  ""),
+        ("Insufficient data",      DIM,    ""),
+    ]
+    for cat, color, bld in buckets:
+        count = summary.get(cat, "0")
+        b = BOLD if bld else ""
+        print(f"  {color}{b}■{RESET}  {color}{count:>2} {cat}{RESET}")
+
+    # ── Caution list ──
+    if caution_drugs:
+        print()
+        names = [f"{YELLOW}{BOLD}{d['drug']}{RESET}" for d in caution_drugs]
+        print(f"  {YELLOW}Caution:{RESET} {f'{DIM}, {RESET}'.join(names)}")
+
+    # ── Footer ──
+    print(f"\n  {DIM}Full report → {report_path}{RESET}")
+    print(f"  {DIM}Disclaimer: research/educational use only — not a medical device{RESET}")
+    print(f"{BOLD}{'━' * W}{RESET}")
+
 
 # --------------------------------------------------------------------------- #
 # Skills registry
@@ -410,15 +570,18 @@ def main():
             report = Path(result["output_dir"]) / "report.md"
             if report.exists():
                 text = report.read_text()
-                lines = text.splitlines()
-                print()
-                print_boxed_header("Report Preview")
-                for ln in lines[:40]:
-                    print(colorize_report_line(ln))
-                remaining = max(0, len(lines) - 40)
-                if remaining:
-                    print(f"\n  {DIM}... ({remaining} more lines in {report}){RESET}")
-                print(f"{BOLD}{'━' * 60}{RESET}")
+                if args.skill == "pharmgx":
+                    format_pharmgx_preview(text, str(report))
+                else:
+                    lines = text.splitlines()
+                    print()
+                    print_boxed_header("Report Preview")
+                    for ln in lines[:40]:
+                        print(colorize_report_line(ln))
+                    remaining = max(0, len(lines) - 40)
+                    if remaining:
+                        print(f"\n  {DIM}... ({remaining} more lines in {report}){RESET}")
+                    print(f"{BOLD}{'━' * 60}{RESET}")
         if not result["success"] and result["stderr"]:
             print(f"\n  {RED}Error:{RESET}\n{result['stderr'][-800:]}")
         sys.exit(0 if result["success"] else 1)
