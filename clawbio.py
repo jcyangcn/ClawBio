@@ -102,6 +102,7 @@ SKILLS = {
         "demo_args": ["--demo"],
         "description": "GWAS Lookup — federated variant query across 9 genomic databases",
         "allowed_extra_flags": {"--rsid", "--skip", "--no-figures", "--no-cache", "--max-hits"},
+        "no_input_required": True,  # uses --rsid instead of --input
     },
 }
 
@@ -192,7 +193,7 @@ def run_skill(
         cmd.extend(skill_info["demo_args"])
     elif input_path:
         cmd.extend(["--input", str(input_path)])
-    else:
+    elif not skill_info.get("no_input_required"):
         return {
             "skill": skill_name,
             "success": False,
