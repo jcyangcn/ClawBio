@@ -152,8 +152,8 @@ def format_pharmgx_preview(report_text: str, report_path: str):
     print(f"\n{CYAN}╭{'─' * W}╮{RESET}")
     print(f"{CYAN}│{RESET}  {BOLD}{CYAN}ClawBio PharmGx Report{RESET}"
           f"{' ' * (W - 24)}{CYAN}│{RESET}")
-    print(f"{CYAN}│{RESET}  {DIM}Source: Corpasome — real 23andMe genome (CC0){RESET}"
-          f"{' ' * (W - 48)}{CYAN}│{RESET}")
+    print(f"{CYAN}│{RESET}  {DIM}Corpasome (CC0) · doi:10.6084/m9.figshare.693052{RESET}"
+          f"{' ' * (W - 51)}{CYAN}│{RESET}")
     print(f"{CYAN}╰{'─' * W}╯{RESET}")
     print()
     print(f"  {BOLD}{n_genes}{RESET} genes  {DIM}·{RESET}  "
