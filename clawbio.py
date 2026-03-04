@@ -16,6 +16,7 @@ Importable:
 """
 
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -33,6 +34,55 @@ DEFAULT_OUTPUT_ROOT = CLAWBIO_DIR / "output"
 
 # Python binary — project standard
 PYTHON = "python3.11"
+
+# --------------------------------------------------------------------------- #
+# ANSI color support
+# --------------------------------------------------------------------------- #
+
+def _use_color() -> bool:
+    return sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+
+_COLOR = _use_color()
+
+BOLD    = "\033[1m"  if _COLOR else ""
+DIM     = "\033[2m"  if _COLOR else ""
+RED     = "\033[31m" if _COLOR else ""
+GREEN   = "\033[32m" if _COLOR else ""
+YELLOW  = "\033[33m" if _COLOR else ""
+CYAN    = "\033[36m" if _COLOR else ""
+WHITE   = "\033[37m" if _COLOR else ""
+BG_RED  = "\033[41m" if _COLOR else ""
+RESET   = "\033[0m"  if _COLOR else ""
+
+
+def colorize_report_line(line: str) -> str:
+    """Apply ANSI color to a report line based on clinical significance."""
+    stripped = line.strip()
+    if not stripped:
+        return line
+    if stripped.startswith("#"):
+        return f"{CYAN}{BOLD}{line}{RESET}"
+    upper = stripped.upper()
+    # Special: warfarin + avoid → red background
+    if "WARFARIN" in upper and "AVOID" in upper:
+        return f"{BG_RED}{WHITE}{BOLD}{line}{RESET}"
+    if "AVOID" in upper:
+        return f"{RED}{BOLD}{line}{RESET}"
+    if "CAUTION" in upper:
+        return f"{YELLOW}{line}{RESET}"
+    if "STANDARD" in upper or "| OK" in upper or "NORMAL" in upper:
+        return f"{GREEN}{line}{RESET}"
+    if stripped.startswith("---") or stripped.startswith("===") or stripped.startswith("| ---"):
+        return f"{DIM}{line}{RESET}"
+    return line
+
+
+def print_boxed_header(title: str):
+    """Print a Unicode rounded-box header."""
+    w = len(title) + 4
+    print(f"{CYAN}╭{'─' * w}╮{RESET}")
+    print(f"{CYAN}│  {BOLD}{title}{RESET}{CYAN}  │{RESET}")
+    print(f"{CYAN}╰{'─' * w}╯{RESET}")
 
 # --------------------------------------------------------------------------- #
 # Skills registry
@@ -113,16 +163,16 @@ SKILLS = {
 
 def list_skills() -> dict:
     """Print available skills and return the registry dict."""
-    print("ClawBio Skills")
-    print("=" * 55)
+    print(f"{BOLD}ClawBio Skills{RESET}")
+    print(f"{'═' * 55}")
     for name, info in SKILLS.items():
         script_exists = info["script"].exists()
-        status = "OK" if script_exists else "MISSING"
-        print(f"  {name:<15} {info['description']}")
-        print(f"  {'':15} script: {info['script'].name} [{status}]")
+        status = f"{GREEN}OK{RESET}" if script_exists else f"{RED}MISSING{RESET}"
+        print(f"  {BOLD}{name:<15}{RESET} {info['description']}")
+        print(f"  {'':15} {DIM}script: {info['script'].name}{RESET} [{status}]")
         print()
-    print(f"Run a skill:  python clawbio.py run <skill> --demo")
-    print(f"With input:   python clawbio.py run <skill> --input <file>")
+    print(f"{DIM}Run a skill:  python clawbio.py run <skill> --demo{RESET}")
+    print(f"{DIM}With input:   python clawbio.py run <skill> --input <file>{RESET}")
     return SKILLS
 
 
@@ -347,10 +397,10 @@ def main():
             sys.exit(0)
         print()
         if result["success"]:
-            print(f"  Status:   OK (exit {result['exit_code']})")
+            print(f"  {GREEN}{BOLD}Status:   OK{RESET} {DIM}(exit {result['exit_code']}){RESET}")
         else:
-            print(f"  Status:   FAILED (exit {result['exit_code']})")
-        print(f"  Duration: {result['duration_seconds']}s")
+            print(f"  {RED}{BOLD}Status:   FAILED{RESET} {DIM}(exit {result['exit_code']}){RESET}")
+        print(f"  {DIM}Duration: {result['duration_seconds']}s{RESET}")
         if result["output_dir"]:
             print(f"  Output:   {result['output_dir']}")
         if result["files"]:
@@ -361,15 +411,16 @@ def main():
             if report.exists():
                 text = report.read_text()
                 lines = text.splitlines()
-                preview = "\n".join(lines[:40])
+                print()
+                print_boxed_header("Report Preview")
+                for ln in lines[:40]:
+                    print(colorize_report_line(ln))
                 remaining = max(0, len(lines) - 40)
-                print(f"\n{'─' * 60}")
-                print(preview)
                 if remaining:
-                    print(f"\n  ... ({remaining} more lines in {report})")
-                print(f"{'─' * 60}")
+                    print(f"\n  {DIM}... ({remaining} more lines in {report}){RESET}")
+                print(f"{BOLD}{'━' * 60}{RESET}")
         if not result["success"] and result["stderr"]:
-            print(f"\n  Error:\n{result['stderr'][-800:]}")
+            print(f"\n  {RED}Error:{RESET}\n{result['stderr'][-800:]}")
         sys.exit(0 if result["success"] else 1)
     else:
         parser.print_help()
