@@ -342,6 +342,21 @@ See [docs/architecture.md](docs/architecture.md) for the full design.
 
 ---
 
+## For AI Agents
+
+ClawBio is designed to be discovered and used by AI coding agents, not just humans.
+
+| Resource | Purpose |
+|----------|---------|
+| [`llms.txt`](llms.txt) | Token-optimized project summary for any LLM ([llmstxt.org](https://llmstxt.org) standard) |
+| [`AGENTS.md`](AGENTS.md) | Universal guide for AI coding agents — setup, commands, style, structure, git workflow |
+| [`CLAUDE.md`](CLAUDE.md) | Claude-specific routing table, CLI reference, demo commands, safety rules |
+| [`skills/catalog.json`](skills/catalog.json) | Machine-readable skill index with trigger keywords, chaining partners, and demo commands |
+
+Agents can also run `python clawbio.py list` to discover available skills programmatically.
+
+---
+
 ## Community Wanted Skills 🦖
 
 We want skills from the bioinformatics community. If you work with genomics, proteomics, metabolomics, imaging, or clinical data — **wrap your pipeline as a skill**.
