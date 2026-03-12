@@ -45,10 +45,8 @@ from telegram.ext import (
 # Config
 # --------------------------------------------------------------------------- #
 
-_project_root = Path(__file__).resolve().parents[3]  # AGENTIC-AI/
-# Use local copy if available (avoids iCloud file-lock deadlocks under launchd)
-_dotenv_path = os.environ.get("DOTENV_PATH", str(_project_root / ".env"))
-load_dotenv(_dotenv_path)
+_project_root = Path(__file__).resolve().parent.parent  # ClawBio/
+load_dotenv(_project_root / ".env")
 load_dotenv()  # also check local .env (overrides)
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
