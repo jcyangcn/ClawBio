@@ -504,16 +504,18 @@ def test_load_data_accepts_direct_prefixed_gz_mtx_file(tmp_path: Path):
     matrix_dir = tmp_path / "prefixed_matrix"
     matrix_path = _build_10x_mtx_input(matrix_dir, compressed=True, prefix="sample_")
 
-    adata, input_path, is_demo, demo_source, input_source = module.load_data(
+    adata, input_path, is_demo, demo_source, input_source, latent_context = module.load_data(
         str(matrix_path),
         demo=False,
         random_state=0,
+        use_rep="auto",
     )
 
     assert adata.n_obs == 18
     assert adata.n_vars == 8
     assert input_path == matrix_path
     assert is_demo is False
+    assert latent_context["resolved_use_rep"] == ""
     assert demo_source is None
     assert input_source["format"] == "10x_mtx"
 

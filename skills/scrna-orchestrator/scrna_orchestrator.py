@@ -356,7 +356,7 @@ def load_data(
     demo: bool,
     random_state: int,
     *,
-    use_rep: str,
+    use_rep: str = "auto",
 ):
     """Load AnnData from supported input and resolve latent downstream mode."""
     sc = _import_scanpy()
