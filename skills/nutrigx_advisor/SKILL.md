@@ -1,3 +1,50 @@
+---
+name: nutrigx_advisor
+description: Personalised nutrigenomics report from consumer genetic data, with dietary and supplementation guidance generated locally.
+version: 0.1.0
+author: David de Lorenzo
+license: MIT
+tags: [nutrigenomics, nutrition, diet, genetics, 23andme, ancestrydna, vcf]
+metadata:
+  openclaw:
+    requires:
+      bins:
+        - python3
+      env: []
+      config: []
+    always: false
+    emoji: "🥗"
+    homepage: https://github.com/ClawBio/ClawBio
+    os: [darwin, linux]
+    install:
+      - kind: uv
+        package: pandas
+        bins: []
+      - kind: uv
+        package: numpy
+        bins: []
+      - kind: uv
+        package: matplotlib
+        bins: []
+      - kind: uv
+        package: seaborn
+        bins: []
+      - kind: uv
+        package: reportlab
+        bins: []
+    trigger_keywords:
+      - personalised nutrition
+      - nutrigenomics
+      - diet genetics
+      - what should I eat based on my DNA
+      - vitamin absorption genetics
+      - omega-3
+      - vitamin D
+      - caffeine metabolism
+      - lactose
+      - gluten
+---
+
 # NutriGx Advisor — Personalised Nutrition from Genetic Data
 
 **Skill ID**: `nutrigx-advisor`  
