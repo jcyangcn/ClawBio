@@ -173,9 +173,17 @@ def write_sample_manifest(output_dir: Path, sample_rows: list[dict[str, str]]) -
         "sample_id",
         "sample_name",
         "sample_project",
+        "sample_type",
+        "pair_id",
+        "sample_feature",
         "lane",
         "index",
         "index2",
+        "index_id",
+        "project_name",
+        "library_name",
+        "library_prep_kit_name",
+        "index_adapter_kit_name",
         "description",
         "ica_sample_id",
         "ica_analysis_status",
@@ -275,17 +283,32 @@ def write_markdown_report(
     )
 
     sample_lines = [
-        "| Sample ID | Sample Name | Project | Lane |",
-        "| --- | --- | --- | --- |",
+        "| Sample ID | Sample Name | Type | Project | Lane |",
+        "| --- | --- | --- | --- | --- |",
     ]
     for row in sample_rows:
         sample_lines.append(
             f"| {row['sample_id']} | {row['sample_name'] or '-'} | "
-            f"{row['sample_project'] or '-'} | {row['lane'] or '-'} |"
+            f"{row.get('sample_type') or '-'} | {row['sample_project'] or row.get('project_name') or '-'} | "
+            f"{row['lane'] or '-'} |"
         )
 
     qc_lines = []
-    for key in ("run_id", "instrument", "yield_gb", "percent_q30", "pf_reads", "cluster_density_k_mm2"):
+    for key in (
+        "run_id",
+        "instrument",
+        "analysis_software",
+        "workflow_version",
+        "yield_gb",
+        "percent_q30",
+        "percent_q30_read1",
+        "percent_q30_read2",
+        "pf_reads",
+        "percent_pf_reads",
+        "cluster_density_k_mm2",
+        "reported_sample_count",
+        "completed_samples",
+    ):
         if key in qc_summary:
             qc_lines.append(f"- **{key}**: {qc_summary[key]}")
     if not qc_lines:
@@ -318,6 +341,7 @@ def write_markdown_report(
             f"- **Bundle directory**: `{bundle.bundle_dir}`",
             f"- **Sample count**: {sample_summary['sample_count']}",
             f"- **Sample projects**: {', '.join(sample_summary['sample_projects']) or 'None'}",
+            f"- **Sample types**: {', '.join(sample_summary.get('sample_types', [])) or 'Unknown'}",
             "",
             "## Discovered Artifacts",
             "",

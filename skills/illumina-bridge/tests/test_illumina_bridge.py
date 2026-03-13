@@ -39,6 +39,48 @@ _RUNNER_SPEC.loader.exec_module(clawbio_runner)
 
 DEMO_BUNDLE = SKILL_DIR / "demo_bundle"
 
+BASESPACE_SAMPLE_SHEET = """[Header],
+FileFormatVersion,2
+RunName,Demo_Run
+InstrumentPlatform,NovaSeq
+AnalysisLocation,Cloud
+
+[BCLConvert_Data]
+Sample_ID,Index,Index2
+TumorA_dna,AAAACCCC,GGGGTTTT
+TumorB_rna,CCCCAAAA,TTTTGGGG
+
+[Cloud_TSO500S_Data]
+Sample_ID,Sample_Type,Pair_ID,Sample_Feature,Index_ID,Index,Index2
+TumorA_dna,DNA,TumorA,HRD,UDP0001,AAAACCCC,GGGGTTTT
+TumorB_rna,RNA,TumorB,,UDP0002,CCCCAAAA,TTTTGGGG
+
+[Cloud_Data]
+Sample_ID,ProjectName,LibraryName,LibraryPrepKitName,IndexAdapterKitName
+TumorA_dna,DemoProject,TumorA_dna_AAAACCCC_GGGGTTTT,TSO500_v2,TSO500v2_ForwardOrientation
+TumorB_rna,DemoProject,TumorB_rna_CCCCAAAA_TTTTGGGG,TSO500_v2,TSO500v2_ForwardOrientation
+"""
+
+METRICS_OUTPUT_TSV = """DRAGEN TruSight Oncology 500 v2.6.2 Analysis Software - Metrics Output
+
+[Header]
+Output Date\t2025-11-25
+Output Time\t10:24:49
+Workflow Version\t2.6.2.4
+
+[Run QC Metrics]
+Metric (UOM)\tLSL Guideline\tUSL Guideline\tValue
+PCT_PF_READS (%)\t55.0\tNA\t77.5
+PCT_Q30_R1 (%)\t80.0\tNA\t92.8
+PCT_Q30_R2 (%)\t80.0\tNA\t92.3
+
+[Analysis Status]
+\tTumorA_dna\tTumorB_rna
+COMPLETED_ALL_STEPS\tTRUE\tTRUE
+FAILED_STEPS\tNA\tNA
+STEPS_NOT_EXECUTED\tNA\tNA
+"""
+
 
 @pytest.fixture
 def copied_bundle(tmp_path):
@@ -80,6 +122,20 @@ def test_parse_sample_sheet_extracts_rows():
     assert rows[1]["sample_project"] == "ClawBioDemo"
 
 
+def test_parse_sample_sheet_merges_basespace_sections(tmp_path):
+    sample_sheet = tmp_path / "samplesheet.csv"
+    sample_sheet.write_text(BASESPACE_SAMPLE_SHEET, encoding="utf-8")
+    rows = parse_sample_sheet(sample_sheet)
+    assert len(rows) == 2
+    assert rows[0]["sample_id"] == "TumorA_dna"
+    assert rows[0]["sample_name"] == "TumorA"
+    assert rows[0]["sample_type"] == "DNA"
+    assert rows[0]["sample_feature"] == "HRD"
+    assert rows[0]["library_name"] == "TumorA_dna_AAAACCCC_GGGGTTTT"
+    assert rows[1]["sample_type"] == "RNA"
+    assert rows[1]["sample_project"] == "DemoProject"
+
+
 def test_parse_qc_metrics_json_normalizes_fixture():
     qc = parse_qc_metrics(DEMO_BUNDLE / "qc_metrics.json")
     assert qc["run_id"] == "demo-run-001"
@@ -87,11 +143,44 @@ def test_parse_qc_metrics_json_normalizes_fixture():
     assert qc["instrument"] == "NovaSeq X Plus"
 
 
+def test_parse_qc_metrics_tsv_normalizes_metrics_output(tmp_path):
+    metrics_tsv = tmp_path / "MetricsOutput.tsv"
+    metrics_tsv.write_text(METRICS_OUTPUT_TSV, encoding="utf-8")
+    qc = parse_qc_metrics(metrics_tsv)
+    assert qc["analysis_software"] == "DRAGEN TruSight Oncology 500 v2.6.2 Analysis Software - Metrics Output"
+    assert qc["workflow_version"] == "2.6.2.4"
+    assert qc["percent_pf_reads"] == 77.5
+    assert qc["percent_q30"] == 92.55
+    assert qc["completed_samples"] == 2
+    assert qc["reported_sample_count"] == 2
+
+
 def test_parse_qc_metrics_malformed_json_raises(tmp_path):
     bad_qc = tmp_path / "bad_qc.json"
     bad_qc.write_text("{not valid json", encoding="utf-8")
     with pytest.raises(ValueError):
         parse_qc_metrics(bad_qc)
+
+
+def test_discover_bundle_prefers_primary_result_vcf(tmp_path):
+    bundle = tmp_path / "bundle"
+    (bundle / "Results" / "TumorA" / "TumorA_dna").mkdir(parents=True)
+    (bundle / "Logs_Intermediates" / "TumorA" / "TumorA_dna").mkdir(parents=True)
+    (bundle / "samplesheet.csv").write_text(BASESPACE_SAMPLE_SHEET, encoding="utf-8")
+    (bundle / "MetricsOutput.tsv").write_text(METRICS_OUTPUT_TSV, encoding="utf-8")
+    preferred_vcf = bundle / "Results" / "TumorA" / "TumorA_dna" / "TumorA_dna.hard-filtered.vcf"
+    preferred_vcf.write_text("##fileformat=VCFv4.2\n", encoding="utf-8")
+    (bundle / "Results" / "TumorA" / "TumorA_dna" / "TumorA_dna.cnv.vcf").write_text(
+        "##fileformat=VCFv4.2\n",
+        encoding="utf-8",
+    )
+    (bundle / "Logs_Intermediates" / "TumorA" / "TumorA_dna" / "TumorA_dna.hard-filtered.vcf.gz").write_text(
+        "placeholder",
+        encoding="utf-8",
+    )
+
+    artifacts = discover_bundle_artifacts(bundle)
+    assert artifacts.vcf_path == preferred_vcf.resolve()
 
 
 def test_build_summary_and_data_is_deterministic(copied_bundle):
@@ -191,6 +280,31 @@ def test_import_bundle_demo_creates_standard_outputs(tmp_path):
     assert (output_dir / "result.json").exists()
     assert (output_dir / "tables" / "sample_manifest.csv").exists()
     assert (output_dir / "reproducibility" / "commands.sh").exists()
+
+
+def test_import_bundle_with_basespace_style_inputs_creates_standard_outputs(tmp_path):
+    bundle = tmp_path / "basespace_bundle"
+    (bundle / "Results" / "TumorA" / "TumorA_dna").mkdir(parents=True)
+    (bundle / "samplesheet.csv").write_text(BASESPACE_SAMPLE_SHEET, encoding="utf-8")
+    (bundle / "MetricsOutput.tsv").write_text(METRICS_OUTPUT_TSV, encoding="utf-8")
+    (bundle / "Results" / "TumorA" / "TumorA_dna" / "TumorA_dna.hard-filtered.vcf").write_text(
+        "##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "basespace_output"
+    result = illumina_bridge.import_bundle(
+        bundle_dir=bundle,
+        output_dir=output_dir,
+        metadata_provider_name="none",
+        allow_mock_metadata=False,
+    )
+    assert result["summary"]["platform"] == "illumina"
+    assert result["summary"]["sample_count"] == 2
+    assert (output_dir / "report.md").exists()
+    manifest_rows = list(csv.DictReader((output_dir / "tables" / "sample_manifest.csv").open(encoding="utf-8")))
+    assert manifest_rows[0]["sample_type"] == "DNA"
+    assert manifest_rows[0]["library_name"] == "TumorA_dna_AAAACCCC_GGGGTTTT"
 
 
 def test_clawbio_run_illumina_input_bundle_completes(tmp_path):

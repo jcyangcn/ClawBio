@@ -55,8 +55,8 @@ Illumina platforms and DRAGEN generate strong secondary-analysis outputs, but te
 | Format | Extension | Required Fields | Example |
 |--------|-----------|-----------------|---------|
 | DRAGEN bundle directory | directory | `SampleSheet.csv`, one `*.vcf`/`*.vcf.gz`, one QC file | `demo_bundle/` |
-| SampleSheet | `.csv` | `[Data]` section with `Sample_ID` | `SampleSheet.csv` |
-| QC metrics | `.json`, `.csv` | run and quality summary metrics | `qc_metrics.json` |
+| SampleSheet | `.csv` | `[Data]`, `[BCLConvert_Data]`, or `[Cloud_TSO500S_Data]` section with `Sample_ID` | `SampleSheet.csv` |
+| QC metrics | `.json`, `.csv`, `.tsv` | run and quality summary metrics | `qc_metrics.json`, `MetricsOutput.tsv` |
 
 ## Workflow
 
@@ -98,9 +98,9 @@ Expected output: a synthetic DRAGEN import with sample manifest, QC summary, res
 
 ## Algorithm / Methodology
 
-1. **Directory scan**: Prefer explicit overrides when present; otherwise auto-discover the first matching VCF, SampleSheet, and QC file using deterministic pattern order.
-2. **SampleSheet parsing**: Read the `[Data]` section when present and normalize `Sample_ID`, `Sample_Name`, `Sample_Project`, `Lane`, `index`, and `index2`.
-3. **QC normalization**: Accept JSON or CSV metrics files and map common Illumina/DRAGEN metric aliases into stable report keys such as `run_id`, `instrument`, `yield_gb`, and `percent_q30`.
+1. **Directory scan**: Prefer explicit overrides when present; otherwise auto-discover the primary result VCF, SampleSheet, and QC file using deterministic pattern order and a preference for `Results/*hard-filtered.vcf`.
+2. **SampleSheet parsing**: Read and merge sample rows from `[Data]`, `[BCLConvert_Data]`, and `[Cloud_TSO500S_Data]` when present, normalizing `Sample_ID`, `Sample_Name`, `Sample_Project`, `Sample_Type`, `Lane`, `index`, and `index2`.
+3. **QC normalization**: Accept JSON, CSV, or DRAGEN `MetricsOutput.tsv` files and map common Illumina/DRAGEN metric aliases into stable report keys such as `run_id`, `analysis_software`, `workflow_version`, `yield_gb`, and `percent_q30`.
 4. **Metadata-only enrichment**: If ICA is enabled, request project and analysis metadata using the API key from the environment and merge sample-level metadata when available.
 5. **Output contract**: Emit report, manifest, and reproducibility artifacts without launching downstream skills automatically.
 
