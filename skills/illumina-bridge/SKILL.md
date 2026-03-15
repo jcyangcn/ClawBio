@@ -131,7 +131,7 @@ output_directory/
 
 **Optional**:
 - `ILLUMINA_ICA_API_KEY` — enables metadata-only ICA enrichment
-- `ILLUMINA_ICA_BASE_URL` — override ICA API root if needed
+- `ILLUMINA_ICA_BASE_URL` — override the ICA API root with a trusted `https://*.illumina.com` endpoint if needed
 
 ## Safety
 

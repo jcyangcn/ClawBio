@@ -7,6 +7,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 try:
     import requests
@@ -84,23 +85,67 @@ class ICAMetadataProvider(BaseMetadataProvider):
         base_url: str | None = None,
         session: Any = None,
     ):
-        self.api_key = api_key if api_key is not None else os.environ.get("ILLUMINA_ICA_API_KEY", "")
-        self.base_url = (base_url or os.environ.get("ILLUMINA_ICA_BASE_URL") or DEFAULT_ICA_BASE_URL).rstrip("/")
+        self._initialization_warnings: list[str] = []
+        self.api_key = self._normalize_api_key(
+            api_key if api_key is not None else os.environ.get("ILLUMINA_ICA_API_KEY")
+        )
+        resolved_base_url = base_url if base_url is not None else os.environ.get("ILLUMINA_ICA_BASE_URL")
+        self.base_url = self._resolve_base_url(resolved_base_url)
         self.session = session
         if self.session is None and requests is not None:
             self.session = requests.Session()
-        if self.session is not None:
+        if self.session is not None and hasattr(self.session, "headers"):
             self.session.headers.update(
                 {
                     "Accept": ICA_ACCEPT_HEADER,
-                    "X-API-Key": self.api_key,
                 }
             )
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"base_url={self.base_url!r}, "
+            f"has_api_key={self.api_key is not None})"
+        )
+
+    @staticmethod
+    def _normalize_api_key(value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+    @staticmethod
+    def _is_allowed_base_url(candidate: str) -> bool:
+        parsed = urlparse(candidate)
+        host = parsed.hostname or ""
+        return parsed.scheme == "https" and (
+            host == "ica.illumina.com" or host.endswith(".illumina.com")
+        )
+
+    def _resolve_base_url(self, candidate: str | None) -> str:
+        normalized = (candidate or DEFAULT_ICA_BASE_URL).strip().rstrip("/")
+        if not normalized:
+            normalized = DEFAULT_ICA_BASE_URL
+        if self._is_allowed_base_url(normalized):
+            return normalized
+        self._initialization_warnings.append(
+            "ILLUMINA_ICA_BASE_URL is not a trusted Illumina HTTPS endpoint; "
+            f"falling back to {DEFAULT_ICA_BASE_URL}."
+        )
+        return DEFAULT_ICA_BASE_URL
+
+    def _result_warnings(self, warnings: list[str] | None = None) -> list[str]:
+        combined = list(self._initialization_warnings)
+        if warnings:
+            combined.extend(warnings)
+        return combined
 
     def _fetch_json(self, endpoint: str) -> dict[str, Any]:
         if self.session is None:
             raise RuntimeError("requests is not installed; ICA metadata lookup is unavailable.")
-        response = self.session.get(f"{self.base_url}{endpoint}", timeout=30)
+        headers = {"X-API-Key": self.api_key} if self.api_key else {}
+        response = self.session.get(f"{self.base_url}{endpoint}", timeout=30, headers=headers)
         response.raise_for_status()
         return response.json()
 
@@ -162,7 +207,7 @@ class ICAMetadataProvider(BaseMetadataProvider):
         project_id: str | None = None,
         run_id: str | None = None,
     ) -> MetadataEnrichmentResult:
-        warnings = warnings or []
+        warnings = self._result_warnings(warnings)
         return MetadataEnrichmentResult(
             provider="ica",
             status=status,
@@ -184,7 +229,9 @@ class ICAMetadataProvider(BaseMetadataProvider):
             return MetadataEnrichmentResult(
                 provider="ica",
                 status="skipped",
-                warnings=["ICA metadata provider requested without both project and run IDs."],
+                warnings=self._result_warnings(
+                    ["ICA metadata provider requested without both project and run IDs."]
+                ),
             )
 
         if not self.api_key:
@@ -203,14 +250,18 @@ class ICAMetadataProvider(BaseMetadataProvider):
             return MetadataEnrichmentResult(
                 provider="ica",
                 status="warning",
-                warnings=["ILLUMINA_ICA_API_KEY is not set; continuing without ICA metadata enrichment."],
+                warnings=self._result_warnings(
+                    ["ILLUMINA_ICA_API_KEY is not set; continuing without ICA metadata enrichment."]
+                ),
             )
 
         if self.session is None:
             return MetadataEnrichmentResult(
                 provider="ica",
                 status="warning",
-                warnings=["The optional 'requests' dependency is not installed; continuing without ICA metadata enrichment."],
+                warnings=self._result_warnings(
+                    ["The optional 'requests' dependency is not installed; continuing without ICA metadata enrichment."]
+                ),
             )
 
         try:
@@ -220,7 +271,7 @@ class ICAMetadataProvider(BaseMetadataProvider):
             return MetadataEnrichmentResult(
                 provider="ica",
                 status="warning",
-                warnings=[f"ICA metadata request failed: {exc}"],
+                warnings=self._result_warnings([f"ICA metadata request failed: {exc}"]),
             )
 
         combined = {

@@ -39,6 +39,36 @@ _RUNNER_SPEC.loader.exec_module(clawbio_runner)
 
 DEMO_BUNDLE = SKILL_DIR / "demo_bundle"
 
+
+class FakeResponse:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self.payload
+
+
+class FakeSession:
+    def __init__(self, responses=None):
+        self.headers = {}
+        self.responses = list(responses or [])
+        self.calls = []
+
+    def get(self, url, timeout, headers=None):
+        self.calls.append(
+            {
+                "url": url,
+                "timeout": timeout,
+                "headers": dict(headers or {}),
+            }
+        )
+        if not self.responses:
+            raise AssertionError(f"Unexpected GET request: {url}")
+        return self.responses.pop(0)
+
 BASESPACE_SAMPLE_SHEET = """[Header],
 FileFormatVersion,2
 RunName,Demo_Run
@@ -241,6 +271,7 @@ def test_ica_provider_merges_project_run_and_sample_metadata(copied_bundle):
 
 def test_ica_provider_missing_api_key_yields_warning(copied_bundle):
     provider = ICAMetadataProvider(api_key="")
+    assert provider.api_key is None
     result = provider.enrich(
         bundle_dir=copied_bundle,
         project_id="ica-project-demo",
@@ -265,6 +296,62 @@ def test_ica_provider_network_failure_yields_warning(copied_bundle, monkeypatch)
     )
     assert result.status == "warning"
     assert "network down" in result.warnings[0]
+
+
+def test_ica_provider_does_not_store_api_key_in_session_headers():
+    session = FakeSession()
+    provider = ICAMetadataProvider(api_key="super-secret-key", session=session)
+    assert provider.api_key == "super-secret-key"
+    assert session.headers["Accept"] == "application/vnd.illumina.v3+json"
+    assert "X-API-Key" not in session.headers
+
+
+def test_ica_provider_fetch_json_sends_api_key_per_request():
+    session = FakeSession([FakeResponse({"id": "project-1"})])
+    provider = ICAMetadataProvider(api_key="super-secret-key", session=session)
+    payload = provider._fetch_json("/api/projects/project-1")
+    assert payload["id"] == "project-1"
+    assert session.calls[0]["headers"]["X-API-Key"] == "super-secret-key"
+
+
+def test_ica_provider_repr_redacts_api_key():
+    provider = ICAMetadataProvider(api_key="super-secret-key")
+    rendered = repr(provider)
+    assert "super-secret-key" not in rendered
+    assert "has_api_key=True" in rendered
+
+
+def test_ica_provider_invalid_base_url_falls_back_with_warning(copied_bundle):
+    session = FakeSession(
+        [
+            FakeResponse({"id": "project-1", "name": "Demo Project", "status": "READY"}),
+            FakeResponse({"id": "run-1", "name": "Demo Run", "status": "SUCCEEDED", "samples": []}),
+        ]
+    )
+    provider = ICAMetadataProvider(
+        api_key="test-key",
+        base_url="http://example.com/ica/rest",
+        session=session,
+    )
+    assert provider.base_url == "https://ica.illumina.com/ica/rest"
+    result = provider.enrich(
+        bundle_dir=copied_bundle,
+        project_id="project-1",
+        run_id="run-1",
+    )
+    assert result.status == "enriched"
+    assert any("ILLUMINA_ICA_BASE_URL" in warning for warning in result.warnings)
+
+
+def test_ica_provider_accepts_trusted_illumina_base_url():
+    session = FakeSession()
+    provider = ICAMetadataProvider(
+        api_key="test-key",
+        base_url="https://tenant.illumina.com/ica/rest",
+        session=session,
+    )
+    assert provider.base_url == "https://tenant.illumina.com/ica/rest"
+    assert provider._initialization_warnings == []
 
 
 def test_import_bundle_demo_creates_standard_outputs(tmp_path):
