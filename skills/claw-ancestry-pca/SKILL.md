@@ -31,8 +31,10 @@ outputs:
 metadata:
   openclaw:
     category: bioinformatics
+    emoji: "🧬"
     homepage: https://github.com/ClawBio/ClawBio
     min_python: "3.9"
+    os: [darwin, linux]
     dependencies:
       - pandas
       - numpy

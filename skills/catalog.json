@@ -379,7 +379,7 @@
     {
       "name": "nutrigx_advisor",
       "cli_alias": "nutrigx",
-      "description": "",
+      "description": "Personalized nutrition reporting from consumer genetic data with nutrigenomic SNP interpretation and local report generation.",
       "version": "0.1.0",
       "status": "mvp",
       "has_script": true,
@@ -387,7 +387,13 @@
       "has_demo": true,
       "demo_command": "python clawbio.py run nutrigx --demo",
       "dependencies": [],
-      "tags": [],
+      "tags": [
+        "nutrigenomics",
+        "nutrition",
+        "diet",
+        "vitamins",
+        "genetic-report"
+      ],
       "trigger_keywords": [
         "nutrition",
         "nutrigenomics",
