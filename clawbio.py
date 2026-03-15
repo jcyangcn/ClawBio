@@ -439,6 +439,23 @@ SKILLS = {
             "--min-samples",
         },
     },
+    "diffviz": {
+        "script": SKILLS_DIR / "diff-visualizer" / "diff_visualizer.py",
+        "demo_args": ["--demo"],
+        "description": "Differential expression visualizer (bulk RNA-seq + scRNA downstream figure/report pack)",
+        "allowed_extra_flags": {
+            "--mode",
+            "--counts",
+            "--metadata",
+            "--adata",
+            "--top-genes",
+            "--label-top",
+            "--padj-threshold",
+            "--lfc-threshold",
+            "--min-basemean",
+        },
+        "accepts_genotypes": False,
+    },
 }
 
 # Skills that run in the full-profile pipeline (order matters)
@@ -856,6 +873,35 @@ def main():
     )
     run_parser.add_argument("--ica-project-id", default=None, help="ICA project ID for illumina skill")
     run_parser.add_argument("--ica-run-id", default=None, help="ICA analysis/run ID for illumina skill")
+    run_parser.add_argument("--counts", default=None, help="Counts matrix for rnaseq/diffviz bulk workflows")
+    run_parser.add_argument("--metadata", default=None, help="Sample metadata for rnaseq/diffviz bulk workflows")
+    run_parser.add_argument("--formula", default=None, help="Design formula for rnaseq skill")
+    run_parser.add_argument("--contrast", default=None, help="Contrast for rnaseq skill: factor,numerator,denominator")
+    run_parser.add_argument("--backend", default=None, help="Backend for rnaseq skill (auto|pydeseq2|simple)")
+    run_parser.add_argument("--min-count", type=int, default=None, help="Minimum count threshold for rnaseq skill")
+    run_parser.add_argument("--min-samples", type=int, default=None, help="Minimum samples threshold for rnaseq skill")
+    run_parser.add_argument("--mode", default=None, help="Mode for diffviz skill (auto|bulk|scrna)")
+    run_parser.add_argument("--adata", default=None, help="AnnData input for enhanced diffviz scRNA plots")
+    run_parser.add_argument("--top-genes", type=int, default=None, help="Top genes/markers to display in diffviz")
+    run_parser.add_argument("--label-top", type=int, default=None, help="Label top hits in diffviz plots")
+    run_parser.add_argument(
+        "--padj-threshold",
+        type=float,
+        default=None,
+        help="Adjusted p-value threshold for diffviz significance highlighting",
+    )
+    run_parser.add_argument(
+        "--lfc-threshold",
+        type=float,
+        default=None,
+        help="Absolute log fold-change threshold for diffviz significance highlighting",
+    )
+    run_parser.add_argument(
+        "--min-basemean",
+        type=float,
+        default=None,
+        help="Minimum baseMean retained in diffviz bulk display plots/tables",
+    )
     run_parser.add_argument("--method", default=None, help="Embedding backend (scrna-embedding skill)")
     run_parser.add_argument("--layer", default=None, help="Raw-count layer for `.h5ad` input (scrna-embedding skill)")
     run_parser.add_argument("--batch-key", default=None, help="obs batch column for integration (scrna-embedding skill)")
@@ -1012,6 +1058,34 @@ def main():
             extra.extend(["--ica-project-id", args.ica_project_id])
         if getattr(args, "ica_run_id", None):
             extra.extend(["--ica-run-id", args.ica_run_id])
+        if getattr(args, "counts", None):
+            extra.extend(["--counts", args.counts])
+        if getattr(args, "metadata", None):
+            extra.extend(["--metadata", args.metadata])
+        if getattr(args, "formula", None):
+            extra.extend(["--formula", args.formula])
+        if getattr(args, "contrast", None):
+            extra.extend(["--contrast", args.contrast])
+        if getattr(args, "backend", None):
+            extra.extend(["--backend", args.backend])
+        if getattr(args, "min_count", None) is not None:
+            extra.extend(["--min-count", str(args.min_count)])
+        if getattr(args, "min_samples", None) is not None:
+            extra.extend(["--min-samples", str(args.min_samples)])
+        if getattr(args, "mode", None):
+            extra.extend(["--mode", args.mode])
+        if getattr(args, "adata", None):
+            extra.extend(["--adata", args.adata])
+        if getattr(args, "top_genes", None) is not None:
+            extra.extend(["--top-genes", str(args.top_genes)])
+        if getattr(args, "label_top", None) is not None:
+            extra.extend(["--label-top", str(args.label_top)])
+        if getattr(args, "padj_threshold", None) is not None:
+            extra.extend(["--padj-threshold", str(args.padj_threshold)])
+        if getattr(args, "lfc_threshold", None) is not None:
+            extra.extend(["--lfc-threshold", str(args.lfc_threshold)])
+        if getattr(args, "min_basemean", None) is not None:
+            extra.extend(["--min-basemean", str(args.min_basemean)])
         if getattr(args, "method", None):
             extra.extend(["--method", args.method])
         if getattr(args, "layer", None):

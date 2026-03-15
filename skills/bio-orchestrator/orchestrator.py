@@ -134,6 +134,13 @@ KEYWORD_MAP: dict[str, str] = {
     "bar chart": "data-extractor",
     "scatter plot": "data-extractor",
     "meta-analysis": "data-extractor",
+    "visualize de results": "diff-visualizer",
+    "visualise de results": "diff-visualizer",
+    "de visualization": "diff-visualizer",
+    "differential expression visualization": "diff-visualizer",
+    "marker heatmap": "diff-visualizer",
+    "marker dotplot": "diff-visualizer",
+    "top genes heatmap": "diff-visualizer",
     "differential expression": "rnaseq-de",
     "deseq2": "rnaseq-de",
     "pydeseq2": "rnaseq-de",
@@ -230,6 +237,13 @@ def detect_skill_from_tabular_header(filepath: Path) -> str | None:
 
     headers = [h.strip() for h in first_line.split(sep)]
     header_set = set(headers)
+
+    if {"gene", "log2foldchange"} <= header_set and ({"padj", "pvalue"} & header_set):
+        return "diff-visualizer"
+    if {"cluster", "names", "scores"} <= header_set:
+        return "diff-visualizer"
+    if {"names", "scores"} <= header_set:
+        return "diff-visualizer"
 
     equity_markers = {"population", "ancestry", "superpopulation", "ethnicity", "country"}
     if header_set & equity_markers:
@@ -396,6 +410,7 @@ SKILL_REGISTRY_MAP: dict[str, str] = {
     "illumina-bridge": "illumina",
     "data-extractor": "data-extract",
     "rnaseq-de": "rnaseq",
+    "diff-visualizer": "diffviz",
 }
 
 

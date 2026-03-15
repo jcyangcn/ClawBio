@@ -2,6 +2,9 @@
 name: nutrigx-advisor
 description: Personalised nutrition report from consumer genetic data (23andMe, AncestryDNA, VCF) — interrogates nutritionally-relevant SNPs and generates actionable dietary guidance, all computed locally.
 version: 0.1.0
+author: David de Lorenzo
+license: MIT
+tags: [nutrigenomics, nutrition, diet, genetics, 23andme, ancestrydna, vcf]
 metadata:
   openclaw:
     requires:
@@ -12,10 +15,13 @@ metadata:
     always: false
     emoji: "🥦"
     homepage: https://github.com/ClawBio/ClawBio
-    os: [macos, linux]
+    os: [darwin, linux]
     install:
       - kind: pip
         package: pandas numpy matplotlib seaborn
+        bins: []
+      - kind: pip
+        package: reportlab
         bins: []
     trigger_keywords:
       - personalised nutrition
@@ -29,6 +35,9 @@ metadata:
       - lactose
       - omega-3
       - folate
+      - what should I eat based on my DNA
+      - vitamin absorption genetics
+      - gluten
 ---
 
 # NutriGx Advisor — Personalised Nutrition from Genetic Data
