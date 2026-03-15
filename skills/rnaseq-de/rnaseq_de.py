@@ -69,6 +69,7 @@ def load_metadata(path: Path) -> pd.DataFrame:
     metadata = metadata.copy()
     metadata["sample_id"] = metadata["sample_id"].astype(str)
     metadata = metadata.set_index("sample_id")
+    metadata.index.name = "sample_id"
     return metadata
 
 
@@ -84,6 +85,7 @@ def align_and_validate(
     if missing_samples:
         raise ValueError(f"Metadata missing samples: {missing_samples[:5]}")
     metadata = metadata.loc[counts.columns].copy()
+    metadata.index.name = "sample_id"
 
     for term in formula_terms:
         if term not in metadata.columns:
