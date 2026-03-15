@@ -150,6 +150,37 @@
       "chaining_partners": []
     },
     {
+      "name": "diff-visualizer",
+      "cli_alias": "diffviz",
+      "description": "Rich downstream visualisation and reporting for bulk RNA-seq differential expression and scRNA marker/contrast outputs.",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run diffviz --demo",
+      "dependencies": [],
+      "tags": [
+        "differential-expression",
+        "visualisation",
+        "rnaseq",
+        "scrna",
+        "volcano",
+        "heatmap"
+      ],
+      "trigger_keywords": [
+        "visualize de results",
+        "de visualization",
+        "marker heatmap",
+        "marker dotplot",
+        "top genes heatmap"
+      ],
+      "chaining_partners": [
+        "rnaseq-de",
+        "scrna-orchestrator"
+      ]
+    },
+    {
       "name": "drug-photo",
       "cli_alias": "drugphoto",
       "description": "Medication photo to personalised PGx dosage card via Claude vision — snap a pill, get genotype-informed guidance",
@@ -478,18 +509,27 @@
     },
     {
       "name": "rnaseq-de",
-      "cli_alias": null,
+      "cli_alias": "rnaseq",
       "description": "Differential expression analysis for bulk RNA-seq and pseudo-bulk count matrices with QC, PCA, and contrast testing.",
       "version": "0.1.0",
-      "status": "planned",
+      "status": "mvp",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/rnaseq-de/rnaseq_de.py --demo",
+      "demo_command": "python clawbio.py run rnaseq --demo",
       "dependencies": [],
       "tags": [],
-      "trigger_keywords": [],
-      "chaining_partners": []
+      "trigger_keywords": [
+        "differential expression",
+        "bulk rna",
+        "rna-seq",
+        "count matrix",
+        "deseq2",
+        "pydeseq2"
+      ],
+      "chaining_partners": [
+        "diff-visualizer"
+      ]
     },
     {
       "name": "scrna-embedding",

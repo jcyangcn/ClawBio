@@ -35,6 +35,7 @@ metadata:
     homepage: https://github.com/ClawBio/ClawBio
     os: [darwin, linux]
     min_python: "3.9"
+    os: [darwin, linux]
     dependencies:
       - pandas
       - numpy
