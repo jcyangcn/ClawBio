@@ -67,13 +67,17 @@ def _get_repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _get_skill_data_dir() -> Path:
+    return Path(__file__).resolve().parent / "data"
+
+
 def _resolve_geo_pickle(geo_id: str, verbose: bool) -> Path:
     pya.data.download_example_data(geo_id, verbose=verbose)
 
     candidates = [
         Path.cwd() / "pyaging_data" / f"{geo_id}.pkl",
-        _get_repo_root() / "pyaging_data" / f"{geo_id}.pkl",
-        Path(__file__).resolve().parent / "pyaging_data" / f"{geo_id}.pkl",
+        _get_skill_data_dir() / f"{geo_id}.pkl",
+        _get_repo_root() / "skills" / "methylation-clock" / "data" / f"{geo_id}.pkl",
     ]
 
     for path in candidates:
@@ -412,7 +416,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.demo:
-        demo_path = _get_repo_root() / "pyaging_data" / "GSE139307_small.pkl"
+        demo_path = _get_skill_data_dir() / "GSE139307_small.pkl"
         input_path = demo_path
         geo_id = None
     else:

@@ -76,7 +76,7 @@ methylation_clock_report/
 
 ```bash
 python skills/methylation-clock/methylation_clock.py \
-  --input pyaging_data/GSE139307_small.pkl \
+  --input skills/methylation-clock/data/GSE139307_small.pkl \
   --output /tmp/methylation_clock_demo
 ```
 

@@ -12,7 +12,7 @@ from methylation_clock import DEFAULT_CLOCKS, parse_clock_list, run_analysis
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_DIR.parents[1]
-FIXTURE = REPO_ROOT / "pyaging_data" / "GSE139307_small.pkl"
+FIXTURE = SKILL_DIR / "data" / "GSE139307_small.pkl"
 
 
 def test_parse_clock_list_defaults():

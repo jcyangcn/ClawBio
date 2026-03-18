@@ -146,7 +146,7 @@ For instant demos when the user has no data:
 | Synthetic patient (PRS, ~300 SNPs) | `skills/gwas-prs/demo_patient_prs.txt` | gwas-prs |
 | Curated PGS scores (6 traits) | `skills/gwas-prs/curated_scores.json` | gwas-prs |
 | GWAS Lookup demo (rs3798220, pre-fetched) | `--demo` flag | gwas-lookup |
-| Methylation demo subset (GSE139307, 2 samples) | `pyaging_data/GSE139307_small.pkl` | methylation-clock |
+| Methylation demo subset (GSE139307, 2 samples) | `skills/methylation-clock/data/GSE139307_small.pkl` | methylation-clock |
 | Profile report demo (full 4-skill profile) | `--demo` flag | profile-report |
 | UKB Navigator demo (blood pressure, pre-cached) | `--demo` flag | ukb-navigator |
 | Galaxy Bridge demo (FastQC, offline) | `--demo` flag | galaxy-bridge |
@@ -185,7 +185,7 @@ python skills/gwas-lookup/gwas_lookup.py --demo --output /tmp/gwas_lookup_demo
 
 # Methylation clock demo
 python skills/methylation-clock/methylation_clock.py \
-  --input pyaging_data/GSE139307_small.pkl --output /tmp/methylation_clock_demo
+  --input skills/methylation-clock/data/GSE139307_small.pkl --output /tmp/methylation_clock_demo
 
 # Profile report demo
 python skills/profile-report/profile_report.py --demo --output /tmp/profile_demo
