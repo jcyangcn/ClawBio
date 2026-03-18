@@ -32,28 +32,53 @@ metadata:
 
 # Methylation Clock
 
-## Why This Exists
+## Domain Decisions
 
-Epigenetic age analysis is often blocked by difficult preprocessing and model-specific input requirements.
-This skill standardizes a reliable PyAging workflow, from input loading through clock prediction, with reproducible outputs.
+Epigenetic age workflows are difficult to reproduce because preprocessing and clock inputs differ across tools and publications.
+This skill standardizes a PyAging-first pipeline from ingestion to report generation, with explicit reproducibility outputs.
 
-## Core Capabilities
+### Core Capabilities
 
-1. Accepts GEO accession input (`--geo-id`) and local methylation data files (`--input`).
-2. Applies notebook-aligned preprocessing (female derivation and EPICv2 aggregation).
-3. Converts tabular data to AnnData and runs one or multiple PyAging clocks.
-4. Exports clock predictions, missing-feature diagnostics, and metadata.
-5. Produces figures, markdown report, and reproducibility bundle.
+1. Accepts exactly one input source: GEO accession (`--geo-id`) or local methylation file (`--input`).
+2. Applies notebook-aligned preprocessing (female derivation and EPICv2 aggregation by default).
+3. Converts tabular data to AnnData and runs one or more methylation clocks.
+4. Exports predictions, missing-feature diagnostics, metadata, figures, and reproducibility artifacts.
 
-## Input Contract
+### Input Contract
 
 - Exactly one input source:
   - GEO accession with `--geo-id` (example: `GSE139307`)
   - Local file with `--input` (`.pkl`, `.pickle`, `.csv`, `.tsv`)
-- Output directory via `--output`
+- Required output directory via `--output`
 - Optional clock list via `--clocks`
 
-## Output Structure
+### Demo And Usage
+
+Install optional methylation-clock dependency (not part of the global base requirements):
+
+```bash
+pip install pyaging>=0.1
+```
+
+```bash
+# Demo
+python skills/methylation-clock/methylation_clock.py \
+  --input skills/methylation-clock/data/GSE139307_small.pkl \
+  --output /tmp/methylation_clock_demo
+
+# GEO input
+python skills/methylation-clock/methylation_clock.py \
+  --geo-id GSE139307 \
+  --output /tmp/methylation_clock_geo
+
+# Local methylation file
+python skills/methylation-clock/methylation_clock.py \
+  --input my_methylation.pkl \
+  --clocks Horvath2013,AltumAge,PCGrimAge,GrimAge2,DunedinPACE \
+  --output /tmp/methylation_clock_local
+```
+
+### Output Structure
 
 ```
 methylation_clock_report/
@@ -72,49 +97,15 @@ methylation_clock_report/
     └── checksums.sha256
 ```
 
-## Demo
+## Safety Rules
 
-```bash
-python skills/methylation-clock/methylation_clock.py \
-  --input skills/methylation-clock/data/GSE139307_small.pkl \
-  --output /tmp/methylation_clock_demo
-```
+1. ClawBio is local-first: user methylation data must remain on-device.
+2. The skill refuses non-empty output directories to avoid silent overwrite.
+3. Reports must include this disclaimer: "ClawBio is a research and educational tool. It is not a medical device and does not provide clinical diagnoses. Consult a healthcare professional before making any medical decisions."
 
-## Usage
+## Agent Boundary
 
-Install optional methylation-clock dependency (not part of the global base requirements):
-
-```bash
-pip install pyaging>=0.1
-```
-
-```bash
-python skills/methylation-clock/methylation_clock.py \
-  --geo-id GSE139307 \
-  --output /tmp/methylation_clock_geo
-
-python skills/methylation-clock/methylation_clock.py \
-  --input my_methylation.pkl \
-  --clocks Horvath2013,AltumAge,PCGrimAge,GrimAge2,DunedinPACE \
-  --output /tmp/methylation_clock_local
-```
-
-## Safety
-
-- Local-first processing.
-- Warns before writing into non-empty output directories.
-- Always includes ClawBio disclaimer in report.
-
-## Integration with Bio Orchestrator
-
-Triggered by terms such as:
-- epigenetic age
-- methylation clock
-- Horvath
-- GrimAge
-- DunedinPACE
-- GEO accession / GSE
-
-Can be chained with:
-- `rnaseq-de` for combined transcriptomic-aging analyses.
-- `equity-scorer` for demographic context across cohorts.
+1. Route methylation clock requests to `skills/methylation-clock/methylation_clock.py`.
+2. Do not infer clinical diagnosis or treatment from clock estimates.
+3. Trigger terms include: epigenetic age, methylation clock, Horvath, GrimAge, DunedinPACE, GEO, GSE.
+4. Valid downstream chaining: `rnaseq-de` for transcriptomic-aging contrasts and `equity-scorer` for cohort context.
