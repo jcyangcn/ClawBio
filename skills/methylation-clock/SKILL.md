@@ -82,6 +82,12 @@ python skills/methylation-clock/methylation_clock.py \
 
 ## Usage
 
+Install optional methylation-clock dependency (not part of the global base requirements):
+
+```bash
+pip install pyaging>=0.1
+```
+
 ```bash
 python skills/methylation-clock/methylation_clock.py \
   --geo-id GSE139307 \
