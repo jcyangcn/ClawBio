@@ -16,16 +16,16 @@ metadata:
     homepage: https://github.com/ClawBio/ClawBio
     os: [darwin, linux]
     install:
-      - kind: uv
+      - kind: pip
         package: pandas
         bins: []
-      - kind: uv
+      - kind: pip
         package: numpy
         bins: []
-      - kind: uv
+      - kind: pip
         package: matplotlib
         bins: []
-      - kind: uv
+      - kind: pip
         package: pyaging
         bins: []
 ---
