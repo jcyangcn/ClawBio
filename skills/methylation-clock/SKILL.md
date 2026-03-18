@@ -54,6 +54,8 @@ This skill standardizes a PyAging-first pipeline from ingestion to report genera
 
 ### Demo And Usage
 
+Demo fixture provenance and checksum are documented in `skills/methylation-clock/data/PROVENANCE.md`.
+
 Install optional methylation-clock dependency (not part of the global base requirements):
 
 ```bash
