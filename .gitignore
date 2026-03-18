@@ -16,4 +16,4 @@ skills/genome-compare/data/manuel_corpas_23andme.txt
 skills/pr-audit/
 data/
 !skills/methylation-clock/data/
-!skills/methylation-clock/data/GSE139307_small.pkl
+!skills/methylation-clock/data/GSE139307_small.csv.gz

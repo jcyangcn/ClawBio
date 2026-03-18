@@ -53,14 +53,18 @@ def _sha256(path: Path) -> str:
 
 
 def _load_dataframe(path: Path) -> pd.DataFrame:
-    suffix = path.suffix.lower()
-    if suffix in {".pkl", ".pickle"}:
+    suffixes = [s.lower() for s in path.suffixes]
+    if suffixes and suffixes[-1] in {".pkl", ".pickle"}:
         return pd.read_pickle(path)
-    if suffix == ".csv":
+    if suffixes[-2:] == [".csv", ".gz"]:
+        return pd.read_csv(path, compression="gzip")
+    if suffixes[-2:] == [".tsv", ".gz"]:
+        return pd.read_csv(path, sep="\t", compression="gzip")
+    if suffixes and suffixes[-1] == ".csv":
         return pd.read_csv(path)
-    if suffix == ".tsv":
+    if suffixes and suffixes[-1] == ".tsv":
         return pd.read_csv(path, sep="\t")
-    raise ValueError("Unsupported input format. Use .pkl, .pickle, .csv, or .tsv")
+    raise ValueError("Unsupported input format. Use .pkl, .pickle, .csv, .tsv, .csv.gz, or .tsv.gz")
 
 
 def _get_repo_root() -> Path:
@@ -390,7 +394,7 @@ def run_analysis(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Compute epigenetic age with PyAging methylation clocks")
-    parser.add_argument("--input", help="Local methylation file (.pkl/.pickle/.csv/.tsv)")
+    parser.add_argument("--input", help="Local methylation file (.pkl/.pickle/.csv/.tsv/.csv.gz/.tsv.gz)")
     parser.add_argument("--geo-id", help="GEO accession to download via PyAging (for example: GSE139307)")
     parser.add_argument("--output", required=True, help="Output directory")
     parser.add_argument("--clocks", help="Comma-separated clocks; defaults to core 5 clocks")
@@ -416,7 +420,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.demo:
-        demo_path = _get_skill_data_dir() / "GSE139307_small.pkl"
+        demo_path = _get_skill_data_dir() / "GSE139307_small.csv.gz"
         input_path = demo_path
         geo_id = None
     else:

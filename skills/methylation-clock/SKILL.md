@@ -48,7 +48,7 @@ This skill standardizes a PyAging-first pipeline from ingestion to report genera
 
 - Exactly one input source:
   - GEO accession with `--geo-id` (example: `GSE139307`)
-  - Local file with `--input` (`.pkl`, `.pickle`, `.csv`, `.tsv`)
+  - Local file with `--input` (`.pkl`, `.pickle`, `.csv`, `.tsv`, `.csv.gz`, `.tsv.gz`)
 - Required output directory via `--output`
 - Optional clock list via `--clocks`
 
@@ -65,7 +65,7 @@ pip install pyaging>=0.1
 ```bash
 # Demo
 python skills/methylation-clock/methylation_clock.py \
-  --input skills/methylation-clock/data/GSE139307_small.pkl \
+  --input skills/methylation-clock/data/GSE139307_small.csv.gz \
   --output /tmp/methylation_clock_demo
 
 # GEO input
