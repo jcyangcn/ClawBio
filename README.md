@@ -262,9 +262,16 @@ python clawbio.py run pharmgx --demo
 
 PharmGx demo runs in <2 seconds. Only needs Python 3.10+.
 
-### Use with Claude Code
+### Install as a Claude Code plugin
 
-Open the cloned repo as your working directory in [Claude Code](https://claude.ai/claude-code). The `CLAUDE.md` at the repo root teaches Claude how to route requests to skills automatically. All skills are available via `python clawbio.py run <skill> --demo`.
+Inside [Claude Code](https://claude.ai/claude-code):
+
+```
+/plugin marketplace add ClawBio/ClawBio
+/plugin install clawbio
+```
+
+All skills are then available as agent-routable commands. Alternatively, clone the repo and open it as your working directory in Claude Code; the `CLAUDE.md` at the repo root teaches Claude how to route requests to skills automatically.
 
 ### Try all skills
 
