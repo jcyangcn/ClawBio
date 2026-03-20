@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 28,
+  "skill_count": 30,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -94,7 +94,7 @@
     {
       "name": "claw-metagenomics",
       "cli_alias": "metagenomics",
-      "description": "Shotgun metagenomics profiling — taxonomy, resistome, and functional pathways",
+      "description": "Shotgun metagenomics profiling \u2014 taxonomy, resistome, and functional pathways",
       "version": "0.1.0",
       "status": "mvp",
       "has_script": true,
@@ -222,7 +222,7 @@
     {
       "name": "drug-photo",
       "cli_alias": "drugphoto",
-      "description": "Medication photo to personalised PGx dosage card via Claude vision — snap a pill, get genotype-informed guidance",
+      "description": "Medication photo to personalised PGx dosage card via Claude vision \u2014 snap a pill, get genotype-informed guidance",
       "version": "0.1.0",
       "status": "mvp",
       "has_script": false,
@@ -272,7 +272,7 @@
     {
       "name": "galaxy-bridge",
       "cli_alias": "galaxy",
-      "description": "Galaxy tool discovery, intelligent recommendation, and execution — 8,000+ bioinformatics tools from usegalaxy.org with multi-signal scoring and workflow suggestions",
+      "description": "Galaxy tool discovery, intelligent recommendation, and execution \u2014 8,000+ bioinformatics tools from usegalaxy.org with multi-signal scoring and workflow suggestions",
       "version": "0.2.0",
       "status": "mvp",
       "has_script": true,
@@ -340,7 +340,7 @@
     {
       "name": "gwas-lookup",
       "cli_alias": "gwas",
-      "description": "Federated variant lookup across 9 genomic databases — GWAS Catalog, Open Targets, PheWeb (UKB, FinnGen, BBJ), GTEx, eQTL Catalogue, and more.",
+      "description": "Federated variant lookup across 9 genomic databases \u2014 GWAS Catalog, Open Targets, PheWeb (UKB, FinnGen, BBJ), GTEx, eQTL Catalogue, and more.",
       "version": "0.1.0",
       "status": "mvp",
       "has_script": true,
@@ -440,7 +440,7 @@
     {
       "name": "nutrigx_advisor",
       "cli_alias": "nutrigx",
-      "description": "Personalised nutrition report from consumer genetic data (23andMe, AncestryDNA, VCF) — interrogates nutritionally-relevant SNPs and generates actionable dietary guidance, all computed locally.",
+      "description": "Personalised nutrition report from consumer genetic data (23andMe, AncestryDNA, VCF) \u2014 interrogates nutritionally-relevant SNPs and generates actionable dietary guidance, all computed locally.",
       "version": "0.1.0",
       "status": "mvp",
       "has_script": true,
@@ -494,7 +494,7 @@
     {
       "name": "pharmgx-reporter",
       "cli_alias": "pharmgx",
-      "description": "Pharmacogenomic report from DTC genetic data (23andMe/AncestryDNA) — 12 genes, 31 SNPs, 51 drugs",
+      "description": "Pharmacogenomic report from DTC genetic data (23andMe/AncestryDNA) \u2014 12 genes, 31 SNPs, 51 drugs",
       "version": "0.1.0",
       "status": "mvp",
       "has_script": true,
@@ -690,7 +690,7 @@
     {
       "name": "ukb-navigator",
       "cli_alias": null,
-      "description": "Semantic search across UK Biobank's 12,000+ data fields and publications — find the right variables for your research question.",
+      "description": "Semantic search across UK Biobank's 12,000+ data fields and publications \u2014 find the right variables for your research question.",
       "version": "0.1.0",
       "status": "mvp",
       "has_script": true,
@@ -721,6 +721,39 @@
       "tags": [],
       "trigger_keywords": [],
       "chaining_partners": []
+    },
+    {
+      "name": "pubmed-summariser",
+      "cli_alias": null,
+      "description": "Search PubMed for a gene name or disease term and generate a structured research briefing of the top recent English-language papers.",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/pubmed-summariser/pubmed_summariser.py --demo --output /tmp/pubmed_demo",
+      "dependencies": [
+        "requests"
+      ],
+      "tags": [
+        "pubmed",
+        "literature",
+        "genomics",
+        "research"
+      ],
+      "trigger_keywords": [
+        "pubmed",
+        "summarise papers",
+        "research briefing",
+        "papers about",
+        "recent studies",
+        "gene papers"
+      ],
+      "chaining_partners": [
+        "lit-synthesizer",
+        "gwas-lookup",
+        "gwas-prs"
+      ]
     }
   ]
 }
