@@ -56,8 +56,9 @@ class Spinner:
         sys.stderr.flush()
 
     def __enter__(self):
-        self._thread = threading.Thread(target=self._spin, daemon=True)
-        self._thread.start()
+        if sys.stderr.isatty():
+            self._thread = threading.Thread(target=self._spin, daemon=True)
+            self._thread.start()
         return self
 
     def __exit__(self, *_):
