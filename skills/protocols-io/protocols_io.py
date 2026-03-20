@@ -9,6 +9,7 @@ Usage:
     python protocols_io.py --login
     python protocols_io.py --search "RNA extraction"
     python protocols_io.py --protocol 30756
+    python protocols_io.py --protocol 30756 --pdf
     python protocols_io.py --steps 30756
     python protocols_io.py --demo
 """
@@ -538,12 +539,40 @@ def _slugify(text: str, max_len: int = 60) -> str:
     return s or "output"
 
 
-def _dump_markdown(md: str, label: str) -> None:
-    """Write markdown to an auto-named file in the current directory."""
-    slug = _slugify(label)
-    filename = f"{slug}.md"
-    Path(filename).write_text(md, encoding="utf-8")
-    print(f"  Saved to {filename}")
+
+def download_protocol_pdf(uri: str, output_path: Path | None = None) -> Path | None:
+    """
+    Download protocol PDF from https://www.protocols.io/view/{uri}.pdf
+    Returns the path written, or None on failure.
+    """
+    url = f"https://www.protocols.io/view/{uri}.pdf"
+    token = get_access_token()
+    hdrs: dict = {}
+    if token:
+        hdrs["Authorization"] = f"Bearer {token}"
+
+    try:
+        resp = requests.get(url, headers=hdrs, timeout=60, stream=True)
+    except requests.RequestException as e:
+        print(f"ERROR: PDF download failed: {e}", file=sys.stderr)
+        return None
+
+    if resp.status_code != 200:
+        print(f"ERROR: PDF request returned HTTP {resp.status_code} for {url}", file=sys.stderr)
+        return None
+
+    content_type = resp.headers.get("Content-Type", "")
+    if "pdf" not in content_type and not resp.content[:4] == b"%PDF":
+        print(f"ERROR: Response does not appear to be a PDF (Content-Type: {content_type})", file=sys.stderr)
+        return None
+
+    if output_path is None:
+        slug = _slugify(uri)
+        output_path = Path(f"{slug}.pdf")
+
+    output_path.write_bytes(resp.content)
+    print(f"  Saved PDF to {output_path}")
+    return output_path
 
 
 def _prompt_for_token() -> str | None:
@@ -566,7 +595,7 @@ def main() -> None:
     parser.add_argument("--protocol", type=str, help="Retrieve full protocol by ID, URI, or DOI")
     parser.add_argument("--steps", type=str, help="Retrieve protocol steps by ID, URI, or DOI")
     parser.add_argument("--demo", action="store_true", help="Run offline demo with pre-cached data")
-    parser.add_argument("--dump", action="store_true", help="Save output as a markdown file in the current directory")
+    parser.add_argument("--pdf", action="store_true", help="Download protocol as PDF (uses protocols.io PDF export)")
     parser.add_argument("--page-size", type=int, default=10, help="Results per page (1-100)")
     parser.add_argument("--page", type=int, default=1, help="Page number")
     parser.add_argument("--filter", type=str, default="public",
@@ -613,11 +642,26 @@ def main() -> None:
 
         report = format_search_results(data, args.search)
         print(report)
-        if args.dump:
-            _dump_markdown(report, f"search-{args.search}")
         return
 
     if args.protocol:
+        if args.pdf:
+            # Resolve URI slug first (needed for PDF URL)
+            with Spinner(f"Retrieving protocol metadata for {args.protocol}"):
+                data = get_protocol(args.protocol)
+            if not data:
+                print("ERROR: Could not retrieve protocol.", file=sys.stderr)
+                sys.exit(1)
+            p = data.get("payload", data.get("protocol", data))
+            uri = p.get("uri") or _parse_protocol_id(args.protocol)
+            title = p.get("title", args.protocol)
+            out_path = Path(f"{_slugify(title)}.pdf")
+            with Spinner(f"Downloading PDF for \"{title}\""):
+                result = download_protocol_pdf(uri, out_path)
+            if not result:
+                sys.exit(1)
+            return
+
         with Spinner(f"Retrieving protocol {args.protocol}"):
             data = get_protocol(args.protocol)
         if not data:
@@ -626,9 +670,6 @@ def main() -> None:
 
         report = format_protocol_detail(data)
         print(report)
-        if args.dump:
-            p = data.get("payload", data.get("protocol", data))
-            _dump_markdown(report, p.get("title", args.protocol))
         return
 
     if args.steps:
@@ -640,8 +681,6 @@ def main() -> None:
 
         report = format_steps(data, args.steps)
         print(report)
-        if args.dump:
-            _dump_markdown(report, f"steps-{args.steps}")
         return
 
     parser.print_help()
