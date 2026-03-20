@@ -28,7 +28,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 # ---------------------------------------------------------------------------
 _ESEARCH = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 _EFETCH  = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
-_PARAMS  = {"tool": "clawbio", "email": "clawbio@example.com"}
+_PARAMS  = {"tool": "clawbio", "email": "hello@clawbio.ai"}
 _TIMEOUT = 10  # seconds
 
 
