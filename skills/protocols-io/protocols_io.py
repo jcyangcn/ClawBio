@@ -524,9 +524,24 @@ def run_demo() -> None:
     pr_md = format_search_results(peer_reviewed_data, "RNA extraction (peer-reviewed)")
     print(pr_md)
 
+    cutoff_ts = 1546300800  # 2019-01-01 UTC
+    cutoff_str = "2019-01-01"
+    published_on_data = {
+        **demo_search,
+        "items": [p for p in demo_search.get("items", []) if (p.get("published_on") or 0) >= cutoff_ts],
+        "pagination": {
+            **demo_search.get("pagination", {}),
+            "total_results": sum(1 for p in demo_search.get("items", []) if (p.get("published_on") or 0) >= cutoff_ts),
+        },
+    }
+    print(f"\n--- Search Demo: \"RNA extraction\" --published-on {cutoff_str} ---\n")
+    po_md = format_search_results(published_on_data, f"RNA extraction (published on or after {cutoff_str})")
+    print(po_md)
+
     print("\n--- Protocol Detail Demo ---\n")
     detail_md = format_protocol_detail(demo_protocol)
     print(detail_md)
+
 
 
 # ---------------------------------------------------------------------------
