@@ -671,9 +671,9 @@ def main() -> None:
                     )
                     sys.exit(1)
 
-        # The protocols.io API uses 0-based page indexing when peer_reviewed=1
-        # but 1-based otherwise. Normalise so --page 1 always means first page.
-        effective_page = args.page - 1 if args.peer_reviewed else args.page
+        # The protocols.io API uses 0-based page indexing for all queries.
+        # Normalise so --page 1 always means first page.
+        effective_page = args.page - 1
 
         with Spinner(f"Searching protocols.io for \"{args.search}\""):
             data = search_protocols(
