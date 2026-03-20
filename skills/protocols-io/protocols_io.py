@@ -628,17 +628,34 @@ def main() -> None:
                 print("ERROR: Cannot search without an access token.", file=sys.stderr)
                 sys.exit(1)
 
+        # The protocols.io API uses 0-based page indexing when peer_reviewed=1
+        # but 1-based otherwise. Normalise so --page 1 always means first page.
+        effective_page = args.page - 1 if args.peer_reviewed else args.page
+
         with Spinner(f"Searching protocols.io for \"{args.search}\""):
             data = search_protocols(
                 args.search,
                 filter_type=args.filter,
                 page_size=args.page_size,
-                page_id=args.page,
+                page_id=effective_page,
                 peer_reviewed=args.peer_reviewed,
             )
         if not data:
             print("ERROR: Search failed.", file=sys.stderr)
             sys.exit(1)
+
+        items = data.get("items", [])
+        total = data.get("pagination", {}).get("total_results", 0)
+
+        if not items:
+            if total > 0:
+                print(
+                    f"No protocols returned for page {args.page} "
+                    f"({total} total results exist — try a different --page)."
+                )
+            else:
+                print("No protocols found matching your query and filters.")
+            return
 
         report = format_search_results(data, args.search)
         print(report)
