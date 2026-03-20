@@ -20,6 +20,8 @@ from protocols_io import (
     _load_demo_json,
     _parse_protocol_id,
     _RateLimiter,
+    _strip_html,
+    download_protocol_pdf,
     format_search_results,
     format_protocol_detail,
     format_steps,
@@ -420,3 +422,182 @@ def test_rate_limiter_waits_when_full(mock_sleep):
     lim.wait()
     lim.wait()
     assert mock_sleep.called
+
+
+# ---------------------------------------------------------------------------
+# Formatters — peer-reviewed badge
+# ---------------------------------------------------------------------------
+
+
+def test_format_search_results_peer_reviewed_badge():
+    """Peer-reviewed protocols show the ✅ badge; non-peer-reviewed do not."""
+    data = _load_demo_json("demo_search_results.json")
+    md = format_search_results(data, "RNA extraction")
+    # "Gene calling with Prodigal" has peer_reviewed=1 in demo data
+    assert "✅ Peer-reviewed method" in md
+
+
+def test_format_search_results_url_is_plain_text():
+    """URLs are rendered as plain text, not as markdown hyperlinks."""
+    data = _load_demo_json("demo_search_results.json")
+    md = format_search_results(data, "test")
+    # A markdown link would look like [url](url); plain text has no leading '['
+    assert "](https://www.protocols.io/view/" not in md
+    assert "https://www.protocols.io/view/" in md
+
+
+# ---------------------------------------------------------------------------
+# search_protocols — filter parameters forwarded to API
+# ---------------------------------------------------------------------------
+
+
+@patch("protocols_io.requests.get")
+def test_search_protocols_peer_reviewed_param(mock_get):
+    """peer_reviewed=1 is forwarded as a query param to the API."""
+    demo_data = _load_demo_json("demo_search_results.json")
+    mock_get.return_value = _mock_response(demo_data)
+
+    with patch("protocols_io.get_access_token", return_value="fake_token"), \
+         patch("protocols_io._rate_limiter", _unlimited_limiter()):
+        search_protocols("RNA extraction", peer_reviewed=1)
+
+    call_kwargs = mock_get.call_args[1]
+    assert call_kwargs["params"]["peer_reviewed"] == 1
+
+
+@patch("protocols_io.requests.get")
+def test_search_protocols_published_on_param(mock_get):
+    """published_on timestamp is forwarded as a query param to the API."""
+    demo_data = _load_demo_json("demo_search_results.json")
+    mock_get.return_value = _mock_response(demo_data)
+
+    ts = 1700000000
+    with patch("protocols_io.get_access_token", return_value="fake_token"), \
+         patch("protocols_io._rate_limiter", _unlimited_limiter()):
+        search_protocols("RNA extraction", published_on=ts)
+
+    call_kwargs = mock_get.call_args[1]
+    assert call_kwargs["params"]["published_on"] == ts
+
+
+@patch("protocols_io.requests.get")
+def test_search_protocols_no_optional_params_by_default(mock_get):
+    """peer_reviewed and published_on are absent from params when not supplied."""
+    demo_data = _load_demo_json("demo_search_results.json")
+    mock_get.return_value = _mock_response(demo_data)
+
+    with patch("protocols_io.get_access_token", return_value="fake_token"), \
+         patch("protocols_io._rate_limiter", _unlimited_limiter()):
+        search_protocols("RNA extraction")
+
+    call_kwargs = mock_get.call_args[1]
+    assert "peer_reviewed" not in call_kwargs["params"]
+    assert "published_on" not in call_kwargs["params"]
+
+
+# ---------------------------------------------------------------------------
+# _strip_html
+# ---------------------------------------------------------------------------
+
+
+def test_strip_html_removes_tags():
+    assert _strip_html("<b>Bold text</b>") == "Bold text"
+
+
+def test_strip_html_nested():
+    assert _strip_html("<div><span>Hello</span></div>") == "Hello"
+
+
+def test_strip_html_plain_passthrough():
+    assert _strip_html("No tags here") == "No tags here"
+
+
+def test_strip_html_empty():
+    assert _strip_html("") == ""
+
+
+# ---------------------------------------------------------------------------
+# download_protocol_pdf
+# ---------------------------------------------------------------------------
+
+
+@patch("protocols_io.requests.get")
+def test_download_protocol_pdf_success(mock_get, tmp_path):
+    """PDF bytes are written to the specified output path."""
+    fake_pdf = b"%PDF-1.4 fake content"
+    resp = MagicMock()
+    resp.status_code = 200
+    resp.headers = {"Content-Type": "application/pdf"}
+    resp.content = fake_pdf
+    mock_get.return_value = resp
+
+    out = tmp_path / "output.pdf"
+    with patch("protocols_io.get_access_token", return_value=None):
+        result = download_protocol_pdf("my-proto-abc123", output_path=out)
+
+    assert result == out
+    assert out.read_bytes() == fake_pdf
+
+
+@patch("protocols_io.requests.get")
+def test_download_protocol_pdf_http_error(mock_get, tmp_path):
+    """Non-200 HTTP response returns None."""
+    resp = MagicMock()
+    resp.status_code = 404
+    resp.headers = {}
+    mock_get.return_value = resp
+
+    with patch("protocols_io.get_access_token", return_value=None):
+        result = download_protocol_pdf("missing-proto", output_path=tmp_path / "out.pdf")
+
+    assert result is None
+
+
+@patch("protocols_io.requests.get")
+def test_download_protocol_pdf_not_pdf_content(mock_get, tmp_path):
+    """Response with non-PDF content type and non-PDF magic bytes returns None."""
+    resp = MagicMock()
+    resp.status_code = 200
+    resp.headers = {"Content-Type": "text/html"}
+    resp.content = b"<html>Not a PDF</html>"
+    mock_get.return_value = resp
+
+    with patch("protocols_io.get_access_token", return_value=None):
+        result = download_protocol_pdf("some-proto", output_path=tmp_path / "out.pdf")
+
+    assert result is None
+
+
+@patch("protocols_io.requests.get")
+def test_download_protocol_pdf_default_path(mock_get, tmp_path):
+    """When output_path is None, a slugified filename is used in cwd."""
+    fake_pdf = b"%PDF-1.4 data"
+    resp = MagicMock()
+    resp.status_code = 200
+    resp.headers = {"Content-Type": "application/pdf"}
+    resp.content = fake_pdf
+    mock_get.return_value = resp
+
+    import os
+    original_cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        with patch("protocols_io.get_access_token", return_value=None):
+            result = download_protocol_pdf("my-cool-protocol-xyz")
+        assert result is not None
+        assert result.suffix == ".pdf"
+        assert result.read_bytes() == fake_pdf
+    finally:
+        os.chdir(original_cwd)
+
+
+@patch("protocols_io.requests.get")
+def test_download_protocol_pdf_network_error(mock_get, tmp_path):
+    """Network exception returns None."""
+    import requests as req_lib
+    mock_get.side_effect = req_lib.RequestException("connection refused")
+
+    with patch("protocols_io.get_access_token", return_value=None):
+        result = download_protocol_pdf("some-proto", output_path=tmp_path / "out.pdf")
+
+    assert result is None
