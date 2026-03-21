@@ -157,14 +157,25 @@ pre .output { color: var(--muted); font-style: italic; }
 
 .soul-grid {
   display: grid; grid-template-columns: repeat(5, 1fr);
-  gap: 0.6rem; width: 100%; max-width: 800px; margin-top: 1rem;
+  gap: 0.6rem; width: 100%; max-width: 850px; margin-top: 1rem;
 }
 .soul-chip {
   background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 0.6rem 0.4rem;
+  border-radius: 10px; padding: 0.5rem 0.4rem 0.5rem;
   text-align: center; font-size: 0.82rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
 }
-.soul-chip .soul-emoji { font-size: 1.3rem; display: block; margin-bottom: 0.2rem; }
+.soul-portrait {
+  width: 52px; height: 52px; border-radius: 50%;
+  object-fit: cover; border: 2px solid var(--border);
+  background: var(--bg3);
+}
+.soul-initial {
+  width: 52px; height: 52px; border-radius: 50%;
+  border: 2px solid var(--border); background: var(--bg3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; font-weight: 700; color: var(--green);
+}
 .soul-chip .soul-name { font-weight: 600; font-size: 0.72rem; }
 
 .two-col {
@@ -351,26 +362,26 @@ pre .output { color: var(--muted); font-style: italic; }
   <div class="label">Generation Zero</div>
   <div class="title">20 Founders Who <span class="em">Shaped Humanity</span></div>
   <div class="soul-grid">
-    <div class="soul-chip"><span class="soul-emoji">&#x1F34E;</span><span class="soul-name">Einstein</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x2622;&#xFE0F;</span><span class="soul-name">Curie</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F4BB;</span><span class="soul-name">Turing</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F3A8;</span><span class="soul-name">Da Vinci</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F9EC;</span><span class="soul-name">Darwin</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F52C;</span><span class="soul-name">Franklin</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x26A1;</span><span class="soul-name">Tesla</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F3DB;&#xFE0F;</span><span class="soul-name">Hypatia</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F4D0;</span><span class="soul-name">Euler</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F48E;</span><span class="soul-name">Hodgkin</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F3B6;</span><span class="soul-name">Lamarr</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F9E0;</span><span class="soul-name">Cajal</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F30D;</span><span class="soul-name">Copernicus</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F451;</span><span class="soul-name">Cleopatra</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F3E5;</span><span class="soul-name">Nightingale</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F4A1;</span><span class="soul-name">Lovelace</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F9CA;</span><span class="soul-name">Anning</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x267E;&#xFE0F;</span><span class="soul-name">Noether</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F4DA;</span><span class="soul-name">Ibn Sina</span></div>
-    <div class="soul-chip"><span class="soul-emoji">&#x1F522;</span><span class="soul-name">Leibniz</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/einstein.jpg" alt="Einstein"><span class="soul-name">Einstein</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/curie.jpg" alt="Curie"><span class="soul-name">Curie</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/turing.jpg" alt="Turing"><span class="soul-name">Turing</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/davinci.jpg" alt="Da Vinci"><span class="soul-name">Da Vinci</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/darwin.jpg" alt="Darwin"><span class="soul-name">Darwin</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/franklin.jpg" alt="Franklin"><span class="soul-name">Franklin</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/tesla.jpg" alt="Tesla"><span class="soul-name">Tesla</span></div>
+    <div class="soul-chip"><div class="soul-initial">H</div><span class="soul-name">Hypatia</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/euler.jpg" alt="Euler"><span class="soul-name">Euler</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/hodgkin.jpg" alt="Hodgkin"><span class="soul-name">Hodgkin</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/lamarr.jpg" alt="Lamarr"><span class="soul-name">Lamarr</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/cajal.jpg" alt="Cajal"><span class="soul-name">Cajal</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/copernicus.jpg" alt="Copernicus"><span class="soul-name">Copernicus</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/cleopatra.jpg" alt="Cleopatra"><span class="soul-name">Cleopatra</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/nightingale.jpg" alt="Nightingale"><span class="soul-name">Nightingale</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/lovelace.jpg" alt="Lovelace"><span class="soul-name">Lovelace</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/anning.jpg" alt="Anning"><span class="soul-name">Anning</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/noether.jpg" alt="Noether"><span class="soul-name">Noether</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/ibnsina.jpg" alt="Ibn Sina"><span class="soul-name">Ibn Sina</span></div>
+    <div class="soul-chip"><img class="soul-portrait" src="portraits/leibniz.jpg" alt="Leibniz"><span class="soul-name">Leibniz</span></div>
   </div>
   <p style="margin-top:1.2rem; font-size:0.88rem; color:var(--muted); max-width:700px; text-align:center;">
     Scientists and inventors who shaped humanity for the better, turning intellectual history
