@@ -32,10 +32,13 @@ When the user asks a question, match it to a skill and act:
 | Galaxy, usegalaxy, tool shed, bioblend, "run on galaxy", galaxy tool, galaxy workflow, NGS pipeline | `skills/galaxy-bridge/` | Run `galaxy_bridge.py` |
 | Bulk RNA-seq, pseudo-bulk, differential expression, DESeq2, PyDESeq2, contrast, volcano plot | `skills/rnaseq-de/` | Run `rnaseq_de.py` |
 | protocols.io, protocol search, lab protocol, scientific methods, protocol DOI, protocol steps | `skills/protocols-io/` | Run `protocols_io.py` |
+| Soul to genome, compile soul, synthetic genome, Genomebook compile, character genome | `skills/soul2dna/` | Run `soul2dna.py` |
+| Genome compatibility, mating pairs, heterozygosity, Genomebook match, breeding pairs | `skills/genome-match/` | Run `genome_match.py` |
+| Recombination, offspring, breed, meiosis, next generation, Genomebook breed | `skills/recombinator/` | Run `recombinator.py` |
 
 ## How to Use a Skill
 
-### Skills with Python scripts (pharmgx-reporter, equity-scorer, nutrigx_advisor, scrna-orchestrator, bio-orchestrator, clinpgx, gwas-prs, gwas-lookup, profile-report, ukb-navigator, galaxy-bridge, rnaseq-de, methylation-clock, protocols-io)
+### Skills with Python scripts (pharmgx-reporter, equity-scorer, nutrigx_advisor, scrna-orchestrator, bio-orchestrator, clinpgx, gwas-prs, gwas-lookup, profile-report, ukb-navigator, galaxy-bridge, rnaseq-de, methylation-clock, protocols-io, soul2dna, genome-match, recombinator)
 1. Read the skill's `SKILL.md` for domain context
 2. Run the Python script with correct CLI arguments (see below)
 3. Show the user the output — open any generated figures and explain results
@@ -139,6 +142,19 @@ python skills/protocols-io/protocols_io.py --search "CRISPR gene editing"
 python skills/protocols-io/protocols_io.py --protocol <id_or_uri_or_doi>
 python skills/protocols-io/protocols_io.py --steps <id_or_uri>
 python skills/protocols-io/protocols_io.py --demo
+
+# Soul2DNA — compile SOUL.md profiles to synthetic genomes
+python skills/soul2dna/soul2dna.py --demo
+python skills/soul2dna/soul2dna.py
+
+# GenomeMatch — score genetic compatibility across all M x F pairings
+python skills/genome-match/genome_match.py --demo
+python skills/genome-match/genome_match.py --generation 0 --top 10
+
+# Recombinator — breed offspring via meiotic recombination
+python skills/recombinator/recombinator.py --demo
+python skills/recombinator/recombinator.py \
+  --father einstein-g0 --mother anning-g0 --offspring 3 --generation 1
 ```
 
 ## Demo Data
@@ -165,6 +181,9 @@ For instant demos when the user has no data:
 | UKB Navigator demo (blood pressure, pre-cached) | `--demo` flag | ukb-navigator |
 | Galaxy Bridge demo (FastQC, offline) | `--demo` flag | galaxy-bridge |
 | Protocols.io demo (RNA extraction, pre-cached) | `--demo` flag | protocols-io |
+| Soul2DNA demo (20 historical figures) | `--demo` flag | soul2dna |
+| GenomeMatch demo (generation-0 pairings) | `--demo` flag | genome-match |
+| Recombinator demo (Einstein x Anning, 3 offspring) | `--demo` flag | recombinator |
 
 
 ### Demo Commands
@@ -226,6 +245,15 @@ python skills/protocols-io/protocols_io.py --demo
 
 # Protocols.io search
 python skills/protocols-io/protocols_io.py --search "RNA extraction"
+
+# Soul2DNA demo
+python skills/soul2dna/soul2dna.py --demo
+
+# GenomeMatch demo
+python skills/genome-match/genome_match.py --demo
+
+# Recombinator demo
+python skills/recombinator/recombinator.py --demo
 
 ```
 
