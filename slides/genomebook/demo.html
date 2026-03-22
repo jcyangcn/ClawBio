@@ -241,6 +241,12 @@ function showTab(name) {
   document.getElementById('tab-overview').style.display = name === 'overview' ? '' : 'none';
   document.getElementById('tab-drift').style.display = name === 'drift' ? '' : 'none';
   document.getElementById('tab-charts').style.display = name === 'charts' ? '' : 'none';
+  // Re-render charts after tab becomes visible (canvas needs non-zero dimensions)
+  setTimeout(() => {
+    if (name === 'overview') renderOverview();
+    if (name === 'drift') { renderDrift(); }
+    if (name === 'charts') { renderCharts(); }
+  }, 50);
 }
 
 // ── Overview tab ──
