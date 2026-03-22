@@ -40,22 +40,32 @@ def load_moltbook_data():
         "SELECT name, description FROM submolts ORDER BY name"
     ).fetchall()]
 
-    # Posts with comments
+    # Posts with comments (top 150 by engagement, truncated for size)
     posts = []
     for row in db.execute("""
         SELECT p.id, p.submolt, p.author_id, a.name as author_name,
-               p.title, p.body, p.score, p.created_at
+               p.title, p.body, p.score, p.created_at,
+               (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as cc
         FROM posts p JOIN agents a ON p.author_id = a.id
-        ORDER BY p.created_at DESC
+        ORDER BY cc DESC, p.created_at DESC
+        LIMIT 150
     """).fetchall():
         post = dict(row)
+        del post["cc"]
+        # Truncate body to keep file small
+        if post.get("body") and len(post["body"]) > 600:
+            post["body"] = post["body"][:600] + "..."
         comments = [dict(c) for c in db.execute("""
             SELECT c.id, c.author_id, a.name as author_name,
                    c.body, c.score, c.created_at
             FROM comments c JOIN agents a ON c.author_id = a.id
             WHERE c.post_id = ?
-            ORDER BY c.created_at ASC
+            ORDER BY c.score DESC, c.created_at ASC
+            LIMIT 5
         """, (post["id"],)).fetchall()]
+        for c in comments:
+            if c.get("body") and len(c["body"]) > 400:
+                c["body"] = c["body"][:400] + "..."
         post["comments"] = comments
         posts.append(post)
 
