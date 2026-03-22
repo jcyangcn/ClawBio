@@ -116,32 +116,55 @@ def compute_observatory(log_entries, genomes_by_gen):
             freqs.append(freq)
         allele_freqs[locus] = freqs
 
-    # Mutation burden (from log)
+    # Mutation burden (computed from genomes directly)
     mutation_total = []
     mutation_disease = []
     mutation_protective = []
     mutation_neutral = []
     for gen in generations:
-        entry = log_by_gen.get(gen, {})
-        mt = entry.get("mutation_types", {})
-        mutation_total.append(entry.get("total_mutations", 0))
-        mutation_disease.append(mt.get("disease_risk", 0))
-        mutation_protective.append(mt.get("protective", 0))
-        mutation_neutral.append(mt.get("neutral", 0))
+        mt_total = 0
+        mt_dis = 0
+        mt_prot = 0
+        mt_neut = 0
+        for g in genomes_by_gen[gen]:
+            for m in g.get("mutations", []):
+                mt_total += 1
+                mt = m.get("type", "neutral")
+                if mt == "disease_risk":
+                    mt_dis += 1
+                elif mt == "protective":
+                    mt_prot += 1
+                else:
+                    mt_neut += 1
+        mutation_total.append(mt_total)
+        mutation_disease.append(mt_dis)
+        mutation_protective.append(mt_prot)
+        mutation_neutral.append(mt_neut)
 
-    # Disease prevalence
+    # Condition burden (computed from genomes directly)
+    condition_total = []
+    for gen in generations:
+        ct = sum(len(g.get("clinical_history", [])) for g in genomes_by_gen[gen])
+        condition_total.append(ct)
+
+    # Disease prevalence (computed from genomes directly)
     all_diseases = set()
-    for entry in log_entries:
-        all_diseases.update(entry.get("disease_prevalence", {}).keys())
+    for gen_genomes in genomes_by_gen.values():
+        for g in gen_genomes:
+            for cond in g.get("clinical_history", []):
+                all_diseases.add(cond["name"])
     all_diseases = sorted(all_diseases)
 
     disease_prevalence = {}
     for disease in all_diseases:
         counts = []
         for gen in generations:
-            entry = log_by_gen.get(gen, {})
-            dp = entry.get("disease_prevalence", {})
-            counts.append(dp.get(disease, 0))
+            count = 0
+            for g in genomes_by_gen[gen]:
+                for cond in g.get("clinical_history", []):
+                    if cond["name"] == disease:
+                        count += 1
+            counts.append(count)
         disease_prevalence[disease] = counts
 
     # Heterozygosity
@@ -199,6 +222,7 @@ def compute_observatory(log_entries, genomes_by_gen):
             "protective": mutation_protective,
             "neutral": mutation_neutral,
         },
+        "condition_burden": condition_total,
         "disease_prevalence": disease_prevalence,
         "diversity_index": diversity,
         "mating_log": mating_log,

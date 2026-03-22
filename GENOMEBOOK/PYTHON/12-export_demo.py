@@ -359,17 +359,35 @@ function renderOverview() {{
     '<div class="stat-box"><div class="stat-val">' + offspringPosts + '</div><div class="stat-lbl">Offspring Posts</div></div>' +
     '<div class="stat-box"><div class="stat-val">' + (MOLTBOOK.agents || []).length + '</div><div class="stat-lbl">Agents</div></div>' +
     '</div>' +
-    '<div class="chart-card"><div class="chart-title">Population Size + Health</div><canvas id="c-pop"></canvas></div>' +
-    '<div class="chart-card"><div class="chart-title">Heterozygosity (Genetic Diversity)</div><canvas id="c-div"></canvas></div>';
+    '<div class="chart-card"><div class="chart-title">Population Growth</div><canvas id="c-pop"></canvas></div>' +
+    '<div class="chart-card"><div class="chart-title">Health Trajectory</div><canvas id="c-health"></canvas></div>' +
+    '<div class="chart-card"><div class="chart-title">Heterozygosity (Genetic Diversity)</div><canvas id="c-div"></canvas></div>' +
+    '<div class="chart-card"><div class="chart-title">Condition Burden (total clinical conditions per generation)</div><canvas id="c-cond"></canvas></div>' +
+    '<div class="chart-card"><div class="chart-title">Mutation Burden</div><canvas id="c-mut-ov"></canvas></div>';
 
   setTimeout(() => {{
+    const gens = OBS.generations.map(String);
     if (OBS.population_by_gen) drawLine(document.getElementById('c-pop'), [
-      {{ data: OBS.population_by_gen, color: '#58a6ff', label: 'Population' }},
-      {{ data: OBS.health_trajectory.means, color: '#3fb950', label: 'Avg Health' }},
-    ], OBS.generations.map(String));
+      {{ data: OBS.population_by_gen, color: '#58a6ff', label: 'Population Size' }},
+    ], gens);
+    if (OBS.health_trajectory) drawLine(document.getElementById('c-health'), [
+      {{ data: OBS.health_trajectory.means, color: '#3fb950', label: 'Mean' }},
+      {{ data: OBS.health_trajectory.mins, color: '#f85149', label: 'Min' }},
+      {{ data: OBS.health_trajectory.maxs, color: '#58a6ff', label: 'Max' }},
+    ], gens);
     if (OBS.diversity_index) drawLine(document.getElementById('c-div'), [
       {{ data: OBS.diversity_index, color: '#e3b341', label: 'Heterozygosity' }},
-    ], OBS.generations.map(String));
+    ], gens);
+    if (OBS.condition_burden) drawLine(document.getElementById('c-cond'), [
+      {{ data: OBS.condition_burden, color: '#f85149', label: 'Total Conditions' }},
+    ], gens);
+    const mb = OBS.mutation_burden;
+    if (mb) drawLine(document.getElementById('c-mut-ov'), [
+      {{ data: mb.total, color: '#8b949e', label: 'Total' }},
+      {{ data: mb.disease_risk, color: '#f85149', label: 'Disease' }},
+      {{ data: mb.protective, color: '#3fb950', label: 'Protective' }},
+      {{ data: mb.neutral, color: '#e3b341', label: 'Neutral' }},
+    ], gens);
   }}, 100);
 }}
 
@@ -427,15 +445,53 @@ function drawSelectedTrait() {{
 // ── Charts tab ──
 function renderCharts() {{
   if (!OBS) return;
-  let html = '<div class="chart-card" style="margin-top:0.8rem"><div class="chart-title">Mutation Burden</div><canvas id="c-mut"></canvas></div>';
+  const gens = OBS.generations.map(String);
+
+  // Build disease prevalence charts
+  let diseaseHtml = '';
+  const dp = OBS.disease_prevalence || {{}};
+  const diseaseNames = Object.keys(dp).filter(d => {{
+    const counts = dp[d];
+    return counts && counts.some(c => c > 0);
+  }});
+
+  let html = '<div class="chart-card" style="margin-top:0.8rem"><div class="chart-title">Mutation Burden by Type</div><canvas id="c-mut"></canvas></div>';
+  html += '<div class="chart-card"><div class="chart-title">Condition Burden (total clinical conditions)</div><canvas id="c-cond2"></canvas></div>';
+
+  if (diseaseNames.length > 0) {{
+    html += '<div class="chart-card"><div class="chart-title">Disease Prevalence by Condition</div><canvas id="c-disease"></canvas></div>';
+  }}
+
+  html += '<div class="chart-card"><div class="chart-title">Sex Ratio (proportion male)</div><canvas id="c-sex"></canvas></div>';
+
   document.getElementById('tab-charts').innerHTML = html;
+
   setTimeout(() => {{
     const mb = OBS.mutation_burden;
     if (mb) drawLine(document.getElementById('c-mut'), [
       {{ data: mb.total, color: '#8b949e', label: 'Total' }},
       {{ data: mb.disease_risk, color: '#f85149', label: 'Disease' }},
       {{ data: mb.protective, color: '#3fb950', label: 'Protective' }},
-    ], OBS.generations.map(String));
+      {{ data: mb.neutral, color: '#e3b341', label: 'Neutral' }},
+    ], gens);
+
+    if (OBS.condition_burden) drawLine(document.getElementById('c-cond2'), [
+      {{ data: OBS.condition_burden, color: '#f85149', label: 'Total Conditions' }},
+    ], gens);
+
+    if (diseaseNames.length > 0) {{
+      const dColors = ['#f85149','#bc8cff','#e3b341','#58a6ff','#f778ba','#3fb950','#8b949e','#ffa657','#d2a8ff','#39d353'];
+      const datasets = diseaseNames.slice(0, 8).map((d, i) => ({{
+        data: dp[d],
+        color: dColors[i % dColors.length],
+        label: d.replace(/_/g, ' ').substring(0, 20),
+      }}));
+      drawLine(document.getElementById('c-disease'), datasets, gens);
+    }}
+
+    if (OBS.sex_ratios) drawLine(document.getElementById('c-sex'), [
+      {{ data: OBS.sex_ratios, color: '#58a6ff', label: 'Male ratio' }},
+    ], gens);
   }}, 100);
 }}
 
