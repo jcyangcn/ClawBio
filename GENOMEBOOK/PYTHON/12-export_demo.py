@@ -18,6 +18,7 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 DATA = BASE / "DATA"
 DB_PATH = DATA / "moltbook.db"
+GENOMES_DIR = DATA / "GENOMES"
 OBSERVATORY_JSON = DATA / "observatory.json"
 DEFAULT_OUTPUT = BASE.parent / "slides" / "genomebook" / "demo.html"
 
@@ -80,12 +81,131 @@ def load_observatory():
     return None
 
 
-def build_static_html(moltbook, observatory):
+def load_genome_nodes():
+    """Load compact genome data for phylogeny + PCA."""
+    from importlib.util import spec_from_file_location, module_from_spec
+    import math
+
+    genomes = []
+    for gf in sorted(GENOMES_DIR.glob("*.genome.json")):
+        g = json.load(open(gf))
+        genomes.append(g)
+
+    if len(genomes) < 3:
+        return [], []
+
+    # Build nodes for phylogeny
+    nodes = []
+    for g in genomes:
+        traits = g.get("trait_scores", {})
+        top3 = sorted(traits.items(), key=lambda x: x[1], reverse=True)[:3]
+        bot2 = sorted(traits.items(), key=lambda x: x[1])[:2]
+        name = g.get("name", g["id"])
+        if len(name) > 45:
+            name = name[:42] + "..."
+        nodes.append({
+            "id": g["id"], "name": name,
+            "gen": g.get("generation", 0),
+            "sex": g.get("sex", "?"),
+            "health": round(g.get("health_score", 1.0), 2),
+            "conditions": len(g.get("clinical_history", [])),
+            "mutations": len(g.get("mutations", [])),
+            "top": ", ".join(f"{t.replace('_',' ')}: {s:.2f}" for t, s in top3),
+            "weak": ", ".join(f"{t.replace('_',' ')}: {s:.2f}" for t, s in bot2),
+            "parents": g.get("parents", [None, None]),
+            "ancestry": g.get("ancestry", ""),
+        })
+
+    # PCA computation (pure Python)
+    all_traits = sorted(set(t for g in genomes for t in g.get("trait_scores", {}).keys()))
+    data_matrix = [[g.get("trait_scores", {}).get(t, 0.5) for t in all_traits] for g in genomes]
+    n = len(data_matrix)
+    m = len(all_traits)
+
+    means = [sum(data_matrix[i][j] for i in range(n)) / n for j in range(m)]
+    centered = [[data_matrix[i][j] - means[j] for j in range(m)] for i in range(n)]
+
+    cov = [[0.0] * m for _ in range(m)]
+    for i in range(m):
+        for j in range(i, m):
+            s = sum(centered[k][i] * centered[k][j] for k in range(n))
+            cov[i][j] = s / (n - 1) if n > 1 else 0
+            cov[j][i] = cov[i][j]
+
+    import random as _rnd
+    _rnd.seed(42)
+    def _power(matrix, iters=200):
+        dim = len(matrix)
+        v = [_rnd.gauss(0, 1) for _ in range(dim)]
+        norm = math.sqrt(sum(x * x for x in v))
+        v = [x / norm for x in v]
+        ev = 0
+        for _ in range(iters):
+            nv = [sum(matrix[i][j] * v[j] for j in range(dim)) for i in range(dim)]
+            norm = math.sqrt(sum(x * x for x in nv))
+            if norm < 1e-10:
+                break
+            v = [x / norm for x in nv]
+            ev = norm
+        return v, ev
+
+    pc1, ev1 = _power(cov)
+    deflated = [[cov[i][j] - ev1 * pc1[i] * pc1[j] for j in range(m)] for i in range(m)]
+    pc2, ev2 = _power(deflated)
+    total_var = sum(cov[i][i] for i in range(m))
+    var_exp = [round(ev1 / total_var * 100, 1), round(ev2 / total_var * 100, 1)]
+
+    pca_points = []
+    genome_map = {g["id"]: g for g in genomes}
+    for i, g in enumerate(genomes):
+        x = round(sum(centered[i][j] * pc1[j] for j in range(m)), 4)
+        y = round(sum(centered[i][j] * pc2[j] for j in range(m)), 4)
+
+        # Trace founder lineage
+        founders = set()
+        queue = [g["id"]]
+        visited = set()
+        while queue:
+            gid = queue.pop(0)
+            if gid in visited:
+                continue
+            visited.add(gid)
+            gg = genome_map.get(gid)
+            if not gg:
+                continue
+            if gg.get("generation", 0) == 0:
+                parts = gg.get("name", "").split()
+                founders.add(parts[-1] if parts else gid)
+            else:
+                for pid in gg.get("parents", []):
+                    if pid:
+                        queue.append(pid)
+        primary = sorted(founders)[0] if founders else "?"
+
+        name = g.get("name", g["id"])
+        if len(name) > 45:
+            name = name[:42] + "..."
+        top3 = sorted(g.get("trait_scores", {}).items(), key=lambda x: x[1], reverse=True)[:3]
+        pca_points.append({
+            "x": x, "y": y, "id": g["id"], "name": name,
+            "gen": g.get("generation", 0), "sex": g.get("sex", "?"),
+            "health": round(g.get("health_score", 1.0), 2),
+            "primary_ancestor": primary,
+            "top_traits": ", ".join(f"{t.replace('_',' ')}: {s:.2f}" for t, s in top3),
+        })
+
+    return nodes, pca_points, var_exp, all_traits
+
+
+def build_static_html(moltbook, observatory, genome_nodes=None, pca_points=None, var_exp=None):
     """Build a self-contained HTML demo page."""
 
     # Ensure no raw newlines break the inline <script> JS
     moltbook_json = json.dumps(moltbook, indent=None, default=str, ensure_ascii=True)
     obs_json = json.dumps(observatory, indent=None, default=str, ensure_ascii=True) if observatory else "null"
+    nodes_json = json.dumps(genome_nodes or [], default=str, ensure_ascii=True)
+    pca_json = json.dumps(pca_points or [], default=str, ensure_ascii=True)
+    var_exp_json = json.dumps(var_exp or [0, 0])
 
     return f'''<!DOCTYPE html>
 <html lang="en">
@@ -241,11 +361,15 @@ canvas {{ width: 100% !important; height: 180px !important; }}
     <div class="tab active" onclick="showTab('overview')">Overview</div>
     <div class="tab" onclick="showTab('drift')">Trait Drift</div>
     <div class="tab" onclick="showTab('charts')">Charts</div>
+    <div class="tab" onclick="showTab('phylogeny')">Phylogeny</div>
+    <div class="tab" onclick="showTab('pca')">PCA</div>
   </div>
   <div class="panel-scroll">
     <div id="tab-overview"></div>
     <div id="tab-drift" style="display:none"></div>
     <div id="tab-charts" style="display:none"></div>
+    <div id="tab-phylogeny" style="display:none"></div>
+    <div id="tab-pca" style="display:none"><canvas id="pca-canvas" style="width:100%;height:calc(100vh - 200px)"></canvas></div>
   </div>
 </div>
 
@@ -254,6 +378,9 @@ canvas {{ width: 100% !important; height: 180px !important; }}
 <script>
 // ── Inline data (baked at export time) ──
 const MOLTBOOK = {moltbook_json};
+const GENOME_NODES = {nodes_json};
+const PCA_POINTS = {pca_json};
+const VAR_EXP = {var_exp_json};
 const OBS = {obs_json};
 
 // ── State ──
@@ -327,14 +454,17 @@ function esc(s) {{ if (!s) return ''; const d = document.createElement('div'); d
 function showTab(name) {{
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => {{ if(t.textContent.toLowerCase().includes(name.substring(0,4))) t.classList.add('active'); }});
-  document.getElementById('tab-overview').style.display = name === 'overview' ? '' : 'none';
-  document.getElementById('tab-drift').style.display = name === 'drift' ? '' : 'none';
-  document.getElementById('tab-charts').style.display = name === 'charts' ? '' : 'none';
-  // Re-render charts after tab becomes visible (canvas needs non-zero dimensions)
+  ['overview','drift','charts','phylogeny','pca'].forEach(t => {{
+    const el = document.getElementById('tab-' + t);
+    if (el) el.style.display = t === name ? '' : 'none';
+  }});
+  // Re-render after tab becomes visible (canvas needs non-zero dimensions)
   setTimeout(() => {{
     if (name === 'overview') renderOverview();
-    if (name === 'drift') {{ renderDrift(); }}
-    if (name === 'charts') {{ renderCharts(); }}
+    if (name === 'drift') renderDrift();
+    if (name === 'charts') renderCharts();
+    if (name === 'phylogeny') renderPhylogeny();
+    if (name === 'pca') renderPCA();
   }}, 50);
 }}
 
@@ -551,6 +681,112 @@ function drawLine(canvas, datasets, labels) {{
   }}
 }}
 
+// ── Phylogeny tab ──
+function renderPhylogeny() {{
+  const container = document.getElementById('tab-phylogeny');
+  if (!GENOME_NODES || GENOME_NODES.length === 0) {{ container.innerHTML = '<div style="padding:2rem;color:var(--muted)">No genome data.</div>'; return; }}
+
+  const byGen = {{}};
+  for (const n of GENOME_NODES) {{
+    if (!byGen[n.gen]) byGen[n.gen] = [];
+    byGen[n.gen].push(n);
+  }}
+  const gens = Object.keys(byGen).map(Number).sort((a,b) => a - b);
+
+  let html = '<div style="margin:0.8rem 0; font-size:0.78rem; color:var(--muted);">' + GENOME_NODES.length + ' agents across ' + gens.length + ' generations. Hover for details.</div>';
+
+  for (const gen of gens) {{
+    const agents = byGen[gen];
+    html += '<div style="display:flex;align-items:flex-start;padding:0.3rem 0;min-height:40px;">';
+    html += '<div style="width:60px;flex-shrink:0;font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;padding-top:0.5rem;font-weight:700;">Gen ' + gen + '<br><span style="color:var(--green)">' + agents.length + '</span></div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:0.3rem;flex:1;">';
+    for (const n of agents) {{
+      const barColor = n.health >= 0.85 ? 'var(--green)' : n.health >= 0.7 ? 'var(--blue)' : n.health >= 0.5 ? 'var(--orange)' : 'var(--red)';
+      const sexBorder = n.sex === 'Male' ? 'border-left:3px solid var(--blue)' : 'border-left:3px solid #f778ba';
+      const shortName = n.name.length > 20 ? n.name.substring(0, 18) + '...' : n.name;
+      html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.4rem;font-size:0.65rem;min-width:100px;max-width:150px;cursor:pointer;' + sexBorder + '" title="' + esc(n.name) + '\\nHealth: ' + n.health + '\\nStrengths: ' + esc(n.top) + '\\nWeaknesses: ' + esc(n.weak) + '">';
+      html += '<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(shortName) + '</div>';
+      html += '<div style="height:2px;margin-top:0.2rem;background:var(--bg3);border-radius:1px;"><div style="height:100%;width:' + (n.health * 100) + '%;background:' + barColor + ';border-radius:1px;"></div></div>';
+      html += '</div>';
+    }}
+    html += '</div></div>';
+  }}
+
+  container.innerHTML = html;
+}}
+
+// ── PCA tab ──
+function renderPCA() {{
+  const canvas = document.getElementById('pca-canvas');
+  if (!canvas || !PCA_POINTS || PCA_POINTS.length === 0) return;
+
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = canvas.offsetWidth * 2;
+  const H = canvas.height = canvas.offsetHeight * 2;
+  ctx.scale(2, 2);
+  const w = W / 2, h = H / 2;
+  ctx.clearRect(0, 0, w, h);
+
+  const pad = {{ top: 20, right: 20, bottom: 30, left: 44 }};
+  const pw = w - pad.left - pad.right;
+  const ph = h - pad.top - pad.bottom;
+
+  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+  for (const p of PCA_POINTS) {{ xMin = Math.min(xMin, p.x); xMax = Math.max(xMax, p.x); yMin = Math.min(yMin, p.y); yMax = Math.max(yMax, p.y); }}
+  const xPad = (xMax - xMin) * 0.08 || 1; const yPad = (yMax - yMin) * 0.08 || 1;
+  xMin -= xPad; xMax += xPad; yMin -= yPad; yMax += yPad;
+
+  // Grid
+  ctx.strokeStyle = '#21262d'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {{
+    const y = pad.top + ph * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+    const x = pad.left + pw * i / 4;
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + ph); ctx.stroke();
+  }}
+
+  // Axis labels
+  ctx.fillStyle = '#8b949e'; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('PC1 (' + VAR_EXP[0] + '%)', w / 2, h - 5);
+  ctx.save(); ctx.translate(12, h / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillText('PC2 (' + VAR_EXP[1] + '%)', 0, 0); ctx.restore();
+
+  const GEN_COLORS = ['#3fb950','#58a6ff','#bc8cff','#e3b341','#f85149','#f778ba','#8b949e','#39d353','#d2a8ff','#ffa657'];
+
+  for (const p of PCA_POINTS) {{
+    const sx = pad.left + (p.x - xMin) / (xMax - xMin) * pw;
+    const sy = pad.top + (1 - (p.y - yMin) / (yMax - yMin)) * ph;
+    const color = GEN_COLORS[p.gen % GEN_COLORS.length];
+    const hex = color.replace('#', '');
+    const cr = parseInt(hex.substr(0, 2), 16); const cg = parseInt(hex.substr(2, 2), 16); const cb = parseInt(hex.substr(4, 2), 16);
+
+    ctx.beginPath();
+    ctx.arc(sx, sy, p.gen === 0 ? 6 : 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',0.7)';
+    ctx.fill();
+
+    if (p.gen === 0) {{
+      ctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',0.9)';
+      ctx.font = '8px system-ui'; ctx.textAlign = 'left';
+      const label = p.name.split(' ').pop() || p.name;
+      ctx.fillText(label, sx + 8, sy + 3);
+    }}
+  }}
+
+  // Legend
+  const usedGens = [...new Set(PCA_POINTS.map(p => p.gen))].sort((a,b) => a - b);
+  let lx = pad.left;
+  ctx.font = '9px system-ui';
+  for (const g of usedGens) {{
+    const color = GEN_COLORS[g % GEN_COLORS.length];
+    ctx.fillStyle = color;
+    ctx.fillRect(lx, 3, 8, 8);
+    ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
+    ctx.fillText('Gen ' + g, lx + 11, 10);
+    lx += 50;
+  }}
+}}
+
 // ── Init ──
 renderFilters();
 renderFeed('all');
@@ -569,8 +805,9 @@ def main():
 
     moltbook = load_moltbook_data()
     observatory = load_observatory()
+    genome_nodes, pca_points, var_exp, trait_names = load_genome_nodes()
 
-    html = build_static_html(moltbook, observatory)
+    html = build_static_html(moltbook, observatory, genome_nodes, pca_points, var_exp)
 
     out_path = Path(args.output)
     out_path.write_text(html)
