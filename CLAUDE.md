@@ -140,6 +140,7 @@ python skills/rnaseq-de/rnaseq_de.py \
 python skills/protocols-io/protocols_io.py --login
 python skills/protocols-io/protocols_io.py --search "CRISPR gene editing"
 python skills/protocols-io/protocols_io.py --protocol <id_or_uri_or_doi>
+python skills/protocols-io/protocols_io.py --protocol <id_or_uri_or_doi> --pdf
 python skills/protocols-io/protocols_io.py --steps <id_or_uri>
 python skills/protocols-io/protocols_io.py --demo
 

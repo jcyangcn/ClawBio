@@ -9,6 +9,7 @@ Usage:
     python protocols_io.py --login
     python protocols_io.py --search "RNA extraction"
     python protocols_io.py --protocol 30756
+    python protocols_io.py --protocol 30756 --pdf
     python protocols_io.py --steps 30756
     python protocols_io.py --demo
 """
@@ -55,8 +56,9 @@ class Spinner:
         sys.stderr.flush()
 
     def __enter__(self):
-        self._thread = threading.Thread(target=self._spin, daemon=True)
-        self._thread.start()
+        if sys.stderr.isatty():
+            self._thread = threading.Thread(target=self._spin, daemon=True)
+            self._thread.start()
         return self
 
     def __exit__(self, *_):
@@ -257,18 +259,22 @@ def search_protocols(
     page_size: int = 10,
     page_id: int = 1,
     order_field: str = "activity",
+    peer_reviewed: int | None = None,
+    published_on: int | None = None,
 ) -> dict | None:
     """Search protocols.io for protocols matching a keyword query."""
-    return _api_get(
-        f"{API_V3}/protocols",
-        params={
-            "filter": filter_type,
-            "key": query,
-            "order_field": order_field,
-            "page_size": page_size,
-            "page_id": page_id,
-        },
-    )
+    params: dict = {
+        "filter": filter_type,
+        "key": query,
+        "order_field": order_field,
+        "page_size": page_size,
+        "page_id": page_id,
+    }
+    if peer_reviewed is not None:
+        params["peer_reviewed"] = peer_reviewed
+    if published_on is not None:
+        params["published_on"] = published_on
+    return _api_get(f"{API_V3}/protocols", params=params)
 
 
 def _parse_protocol_id(raw: str) -> str:
@@ -331,17 +337,20 @@ def format_search_results(data: dict, query: str) -> str:
         creator = p.get("creator", {}).get("name", "Unknown")
         published = p.get("published_on")
         pub_str = datetime.fromtimestamp(published, tz=timezone.utc).strftime("%Y-%m-%d") if published else "Draft"
-        n_steps = p.get("number_of_steps", "?")
+        n_steps = p.get("number_of_steps") or p.get("stats", {}).get("number_of_steps", "?")
         url = f"https://www.protocols.io/view/{uri}" if uri else ""
 
+        peer_reviewed = p.get("peer_reviewed")
         lines.append(f"## {i}. {title}\n")
+        if peer_reviewed == 1:
+            lines.append(f"- ✅ Peer-reviewed method")
         lines.append(f"- **Creator**: {creator}")
         lines.append(f"- **Published**: {pub_str}")
         lines.append(f"- **Steps**: {n_steps}")
         if doi:
             lines.append(f"- **DOI**: {doi}")
         if url:
-            lines.append(f"- **URL**: [{url}]({url})")
+            lines.append(f"- **URL**: {url}")
         lines.append("")
 
     lines.append(f"\n---\n{DISCLAIMER}")
@@ -375,12 +384,13 @@ def format_protocol_detail(data: dict) -> str:
     if doi:
         lines.append(f"- **DOI**: {doi}")
     if url:
-        lines.append(f"- **URL**: [{url}]({url})")
+        lines.append(f"- **URL**: {url}")
 
     stats = p.get("stats", {})
-    if stats:
+    n_steps = stats.get("number_of_steps") or p.get("number_of_steps", "?")
+    if stats or p.get("number_of_steps"):
         lines.append(f"- **Views**: {stats.get('number_of_views', '?')} | "
-                      f"**Steps**: {stats.get('number_of_steps', '?')} | "
+                      f"**Steps**: {n_steps} | "
                       f"**Exports**: {stats.get('number_of_exports', '?')}")
 
     lines.append("")
@@ -415,7 +425,7 @@ def format_protocol_detail(data: dict) -> str:
         for j, s in enumerate(steps, 1):
             section = s.get("section")
             if section:
-                lines.append(f"### {section}\n")
+                lines.append(f"### {_strip_html(section)}\n")
             step_text = s.get("step", "")
             if isinstance(step_text, str) and step_text.startswith("{"):
                 try:
@@ -431,9 +441,21 @@ def format_protocol_detail(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _strip_html(text: str) -> str:
+    """Remove HTML tags from a string."""
+    import re
+    return re.sub(r"<[^>]+>", "", text).strip()
+
+
 def format_steps(data: dict, protocol_id: str) -> str:
     """Render protocol steps as markdown."""
-    steps = data.get("steps", [])
+    # v4 /steps endpoint returns steps as a list under "payload";
+    # fall back to "steps" key for backward-compat with mocked/demo data.
+    payload = data.get("payload")
+    if isinstance(payload, list):
+        steps = payload
+    else:
+        steps = data.get("steps", [])
     lines = [
         f"# Protocol Steps — {protocol_id}\n",
         f"**{len(steps)} steps**\n",
@@ -441,7 +463,7 @@ def format_steps(data: dict, protocol_id: str) -> str:
     for j, s in enumerate(steps, 1):
         section = s.get("section")
         if section:
-            lines.append(f"### {section}\n")
+            lines.append(f"### {_strip_html(section)}\n")
         components = s.get("components", [])
         step_text = ""
         for comp in components:
@@ -486,13 +508,40 @@ def run_demo() -> None:
     demo_search = _load_demo_json("demo_search_results.json")
     demo_protocol = _load_demo_json("demo_protocol.json")
 
-    print("\n--- Search Demo: \"RNA extraction\" ---\n")
+    print("\n--- Search Demo: \"RNA extraction\" (all results) ---\n")
     search_md = format_search_results(demo_search, "RNA extraction")
     print(search_md)
+
+    print("\n--- Search Demo: \"RNA extraction\" --peer-reviewed ---\n")
+    peer_reviewed_data = {
+        **demo_search,
+        "items": [p for p in demo_search.get("items", []) if p.get("peer_reviewed") == 1],
+        "pagination": {
+            **demo_search.get("pagination", {}),
+            "total_results": sum(1 for p in demo_search.get("items", []) if p.get("peer_reviewed") == 1),
+        },
+    }
+    pr_md = format_search_results(peer_reviewed_data, "RNA extraction (peer-reviewed)")
+    print(pr_md)
+
+    cutoff_ts = 1546300800  # 2019-01-01 UTC
+    cutoff_str = "2019-01-01"
+    published_on_data = {
+        **demo_search,
+        "items": [p for p in demo_search.get("items", []) if (p.get("published_on") or 0) >= cutoff_ts],
+        "pagination": {
+            **demo_search.get("pagination", {}),
+            "total_results": sum(1 for p in demo_search.get("items", []) if (p.get("published_on") or 0) >= cutoff_ts),
+        },
+    }
+    print(f"\n--- Search Demo: \"RNA extraction\" --published-on {cutoff_str} ---\n")
+    po_md = format_search_results(published_on_data, f"RNA extraction (published on or after {cutoff_str})")
+    print(po_md)
 
     print("\n--- Protocol Detail Demo ---\n")
     detail_md = format_protocol_detail(demo_protocol)
     print(detail_md)
+
 
 
 # ---------------------------------------------------------------------------
@@ -509,12 +558,40 @@ def _slugify(text: str, max_len: int = 60) -> str:
     return s or "output"
 
 
-def _dump_markdown(md: str, label: str) -> None:
-    """Write markdown to an auto-named file in the current directory."""
-    slug = _slugify(label)
-    filename = f"{slug}.md"
-    Path(filename).write_text(md, encoding="utf-8")
-    print(f"  Saved to {filename}")
+
+def download_protocol_pdf(uri: str, output_path: Path | None = None) -> Path | None:
+    """
+    Download protocol PDF from https://www.protocols.io/view/{uri}.pdf
+    Returns the path written, or None on failure.
+    """
+    url = f"https://www.protocols.io/view/{uri}.pdf"
+    token = get_access_token()
+    hdrs: dict = {}
+    if token:
+        hdrs["Authorization"] = f"Bearer {token}"
+
+    try:
+        resp = requests.get(url, headers=hdrs, timeout=60, stream=True)
+    except requests.RequestException as e:
+        print(f"ERROR: PDF download failed: {e}", file=sys.stderr)
+        return None
+
+    if resp.status_code != 200:
+        print(f"ERROR: PDF request returned HTTP {resp.status_code} for {url}", file=sys.stderr)
+        return None
+
+    content_type = resp.headers.get("Content-Type", "")
+    if "pdf" not in content_type and not resp.content[:4] == b"%PDF":
+        print(f"ERROR: Response does not appear to be a PDF (Content-Type: {content_type})", file=sys.stderr)
+        return None
+
+    if output_path is None:
+        slug = _slugify(uri)
+        output_path = Path(f"{slug}.pdf")
+
+    output_path.write_bytes(resp.content)
+    print(f"  Saved PDF to {output_path}")
+    return output_path
 
 
 def _prompt_for_token() -> str | None:
@@ -537,12 +614,17 @@ def main() -> None:
     parser.add_argument("--protocol", type=str, help="Retrieve full protocol by ID, URI, or DOI")
     parser.add_argument("--steps", type=str, help="Retrieve protocol steps by ID, URI, or DOI")
     parser.add_argument("--demo", action="store_true", help="Run offline demo with pre-cached data")
-    parser.add_argument("--dump", action="store_true", help="Save output as a markdown file in the current directory")
+    parser.add_argument("--pdf", action="store_true", help="Download protocol as PDF (uses protocols.io PDF export)")
     parser.add_argument("--page-size", type=int, default=10, help="Results per page (1-100)")
     parser.add_argument("--page", type=int, default=1, help="Page number")
     parser.add_argument("--filter", type=str, default="public",
                         choices=["public", "user_public", "user_private", "shared_with_user"],
                         help="Protocol filter type")
+    parser.add_argument("--peer-reviewed", action="store_const", const=1, default=None,
+                        help="Filter to peer-reviewed protocols only (omit to show all)")
+    parser.add_argument("--published-on", type=str, default=None,
+                        help="Filter to protocols published on or after this date "
+                             "(Unix timestamp or YYYY-MM-DD)")
 
     args = parser.parse_args()
 
@@ -568,24 +650,79 @@ def main() -> None:
                 print("ERROR: Cannot search without an access token.", file=sys.stderr)
                 sys.exit(1)
 
+        # Parse --published-on: accept Unix timestamp int or YYYY-MM-DD string
+        published_on: int | None = None
+        if args.published_on:
+            raw = args.published_on.strip()
+            if raw.isdigit():
+                published_on = int(raw)
+            else:
+                try:
+                    published_on = int(
+                        datetime.strptime(raw, "%Y-%m-%d")
+                        .replace(tzinfo=timezone.utc)
+                        .timestamp()
+                    )
+                except ValueError:
+                    print(
+                        f"ERROR: --published-on value '{raw}' must be a Unix timestamp "
+                        "or YYYY-MM-DD date.",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+
+        # The protocols.io API uses 0-based page indexing for all queries.
+        # Normalise so --page 1 always means first page.
+        effective_page = args.page - 1
+
         with Spinner(f"Searching protocols.io for \"{args.search}\""):
             data = search_protocols(
                 args.search,
                 filter_type=args.filter,
                 page_size=args.page_size,
-                page_id=args.page,
+                page_id=effective_page,
+                peer_reviewed=args.peer_reviewed,
+                published_on=published_on,
             )
         if not data:
             print("ERROR: Search failed.", file=sys.stderr)
             sys.exit(1)
 
+        items = data.get("items", [])
+        total = data.get("pagination", {}).get("total_results", 0)
+
+        if not items:
+            if total > 0:
+                print(
+                    f"No protocols returned for page {args.page} "
+                    f"({total} total results exist — try a different --page)."
+                )
+            else:
+                print("No protocols found matching your query and filters.")
+            return
+
         report = format_search_results(data, args.search)
         print(report)
-        if args.dump:
-            _dump_markdown(report, f"search-{args.search}")
         return
 
     if args.protocol:
+        if args.pdf:
+            # Resolve URI slug first (needed for PDF URL)
+            with Spinner(f"Retrieving protocol metadata for {args.protocol}"):
+                data = get_protocol(args.protocol)
+            if not data:
+                print("ERROR: Could not retrieve protocol.", file=sys.stderr)
+                sys.exit(1)
+            p = data.get("payload", data.get("protocol", data))
+            uri = p.get("uri") or _parse_protocol_id(args.protocol)
+            title = p.get("title", args.protocol)
+            out_path = Path(f"{_slugify(title)}.pdf")
+            with Spinner(f"Downloading PDF for \"{title}\""):
+                result = download_protocol_pdf(uri, out_path)
+            if not result:
+                sys.exit(1)
+            return
+
         with Spinner(f"Retrieving protocol {args.protocol}"):
             data = get_protocol(args.protocol)
         if not data:
@@ -594,9 +731,6 @@ def main() -> None:
 
         report = format_protocol_detail(data)
         print(report)
-        if args.dump:
-            p = data.get("payload", data.get("protocol", data))
-            _dump_markdown(report, p.get("title", args.protocol))
         return
 
     if args.steps:
@@ -608,8 +742,6 @@ def main() -> None:
 
         report = format_steps(data, args.steps)
         print(report)
-        if args.dump:
-            _dump_markdown(report, f"steps-{args.steps}")
         return
 
     parser.print_help()
