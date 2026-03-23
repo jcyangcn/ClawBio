@@ -772,6 +772,12 @@ def main() -> None:
 
         report = format_search_results(data, args.search)
         print(report)
+        if output_dir:
+            output_dir.mkdir(parents=True, exist_ok=True)
+            report_file = output_dir / "report.md"
+            report_file.write_text(report)
+            _write_reproducibility(args, output_dir, [report_file])
+            print(f"  Saved to {report_file}")
         return
 
     if args.protocol:
@@ -781,21 +787,23 @@ def main() -> None:
             print("ERROR: Could not retrieve protocol.", file=sys.stderr)
             sys.exit(1)
 
+        report = format_protocol_detail(data)
+        print(report)
         if output_dir:
             p = data.get("payload", data.get("protocol", data))
             uri = p.get("uri") or _parse_protocol_id(args.protocol)
             title = p.get("title", args.protocol)
             output_dir.mkdir(parents=True, exist_ok=True)
+            report_file = output_dir / "report.md"
+            report_file.write_text(report)
+            print(f"  Saved report to {report_file}")
             out_path = output_dir / f"{_slugify(title)}.pdf"
             with Spinner(f"Downloading PDF for \"{title}\""):
-                result = download_protocol_pdf(uri, out_path)
-            if not result:
-                sys.exit(1)
-            _write_reproducibility(args, output_dir, [out_path])
-            return
-
-        report = format_protocol_detail(data)
-        print(report)
+                pdf_result = download_protocol_pdf(uri, out_path)
+            output_files = [report_file]
+            if pdf_result:
+                output_files.append(out_path)
+            _write_reproducibility(args, output_dir, output_files)
         return
 
     if args.steps:
@@ -807,6 +815,12 @@ def main() -> None:
 
         report = format_steps(data, args.steps)
         print(report)
+        if output_dir:
+            output_dir.mkdir(parents=True, exist_ok=True)
+            report_file = output_dir / "report.md"
+            report_file.write_text(report)
+            _write_reproducibility(args, output_dir, [report_file])
+            print(f"  Saved to {report_file}")
         return
 
     parser.print_help()
