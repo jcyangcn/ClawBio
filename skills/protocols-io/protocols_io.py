@@ -9,7 +9,7 @@ Usage:
     python protocols_io.py --login
     python protocols_io.py --search "RNA extraction"
     python protocols_io.py --protocol 30756
-    python protocols_io.py --protocol 30756 --pdf
+    python protocols_io.py --protocol 30756 --output /tmp/protocols_io
     python protocols_io.py --steps 30756
     python protocols_io.py --demo
 """
