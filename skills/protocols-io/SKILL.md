@@ -66,7 +66,7 @@ When the user asks about scientific protocols or protocols.io:
 1. **Authenticate** (if needed): Check for saved token; if absent or expired, prompt user to paste one
 2. **Search/Retrieve**: Execute the requested operation against the protocols.io API
 3. **Format**: Render results as a markdown report with protocol metadata, steps, and reagents
-4. **Output**: Print to terminal, optionally save as markdown with `--dump`
+4. **Output**: Print to terminal as markdown
 
 ## CLI Reference
 
@@ -86,8 +86,8 @@ python skills/protocols-io/protocols_io.py --search "RNA extraction" --filter us
 # Retrieve a protocol by ID, URI, or DOI
 python skills/protocols-io/protocols_io.py --protocol 30756
 
-# Download protocol as PDF
-python skills/protocols-io/protocols_io.py --protocol 30756 --pdf
+# Download protocol as PDF (saved to output dir)
+python skills/protocols-io/protocols_io.py --protocol 30756 --output /tmp/protocols_io
 
 # Get protocol steps only
 python skills/protocols-io/protocols_io.py --steps 30756
@@ -126,7 +126,7 @@ Expected output: a search results report for "RNA extraction" with 5 pre-cached 
 3. **Retrieve**: `GET /api/v4/protocols/<id>?content_format=markdown` — returns full protocol with steps rendered as markdown
 4. **Steps**: `GET /api/v4/protocols/<id>/steps?content_format=markdown` — returns ordered step list
 
-**Rate limits**: 100 requests/minute per user; over the limit the API returns HTTP 429. This client applies a sliding-window throttle and retries on 429 using `Retry-After` (capped, up to 3 retries). The `/view/[protocol-uri].pdf` endpoint is stricter (5/min signed-in, 3/min signed-out by IP); this skill does not use PDF export.
+**Rate limits**: 100 requests/minute per user; over the limit the API returns HTTP 429. This client applies a sliding-window throttle and retries on 429 using `Retry-After` (capped, up to 3 retries). The `/view/[protocol-uri].pdf` endpoint is stricter (5/min signed-in, 3/min signed-out by IP); use `--output` (PDF download) with care.
 
 ## Example Queries
 

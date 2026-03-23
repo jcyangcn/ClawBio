@@ -144,7 +144,7 @@ python skills/protocols-io/protocols_io.py --search "RNA extraction" --published
 python skills/protocols-io/protocols_io.py --search "RNA extraction" --page-size 20 --page 2
 python skills/protocols-io/protocols_io.py --search "RNA extraction" --filter user_private
 python skills/protocols-io/protocols_io.py --protocol <id_or_uri_or_doi>
-python skills/protocols-io/protocols_io.py --protocol <id_or_uri_or_doi> --pdf
+python skills/protocols-io/protocols_io.py --protocol <id_or_uri_or_doi> --output /tmp/protocols_io
 python skills/protocols-io/protocols_io.py --steps <id_or_uri>
 python skills/protocols-io/protocols_io.py --demo
 

@@ -617,7 +617,6 @@ def main() -> None:
     parser.add_argument("--protocol", type=str, help="Retrieve full protocol by ID, URI, or DOI")
     parser.add_argument("--steps", type=str, help="Retrieve protocol steps by ID, URI, or DOI")
     parser.add_argument("--demo", action="store_true", help="Run offline demo with pre-cached data")
-    parser.add_argument("--pdf", action="store_true", help="Download protocol as PDF (uses protocols.io PDF export)")
     parser.add_argument("--page-size", type=int, default=10, help="Results per page (1-100)")
     parser.add_argument("--page", type=int, default=1, help="Page number")
     parser.add_argument("--filter", type=str, default="public",
@@ -628,8 +627,11 @@ def main() -> None:
     parser.add_argument("--published-on", type=str, default=None,
                         help="Filter to protocols published on or after this date "
                              "(Unix timestamp or YYYY-MM-DD)")
+    parser.add_argument("--output", type=str, default=None,
+                        help="Directory to save outputs (PDFs, reports)")
 
     args = parser.parse_args()
+    output_dir = Path(args.output) if args.output else None
 
     if args.demo:
         run_demo()
@@ -709,28 +711,23 @@ def main() -> None:
         return
 
     if args.protocol:
-        if args.pdf:
-            # Resolve URI slug first (needed for PDF URL)
-            with Spinner(f"Retrieving protocol metadata for {args.protocol}"):
-                data = get_protocol(args.protocol)
-            if not data:
-                print("ERROR: Could not retrieve protocol.", file=sys.stderr)
-                sys.exit(1)
-            p = data.get("payload", data.get("protocol", data))
-            uri = p.get("uri") or _parse_protocol_id(args.protocol)
-            title = p.get("title", args.protocol)
-            out_path = Path(f"{_slugify(title)}.pdf")
-            with Spinner(f"Downloading PDF for \"{title}\""):
-                result = download_protocol_pdf(uri, out_path)
-            if not result:
-                sys.exit(1)
-            return
-
         with Spinner(f"Retrieving protocol {args.protocol}"):
             data = get_protocol(args.protocol)
         if not data:
             print("ERROR: Could not retrieve protocol.", file=sys.stderr)
             sys.exit(1)
+
+        if output_dir:
+            p = data.get("payload", data.get("protocol", data))
+            uri = p.get("uri") or _parse_protocol_id(args.protocol)
+            title = p.get("title", args.protocol)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            out_path = output_dir / f"{_slugify(title)}.pdf"
+            with Spinner(f"Downloading PDF for \"{title}\""):
+                result = download_protocol_pdf(uri, out_path)
+            if not result:
+                sys.exit(1)
+            return
 
         report = format_protocol_detail(data)
         print(report)
