@@ -202,7 +202,8 @@ def compile_genome(soul_data, registry):
 
 def main():
     registry = load_trait_registry()
-    soul_files = sorted(SOULS_DIR.glob("*.soul.md"))
+    soul_files = sorted(f for f in SOULS_DIR.glob("*.soul.md")
+                        if not re.match(r"g\d+", f.stem))
 
     if not soul_files:
         print(f"ERROR: No .soul.md files found in {SOULS_DIR}")

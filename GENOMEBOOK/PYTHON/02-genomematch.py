@@ -24,13 +24,36 @@ DISEASE_REGISTRY = DATA / "disease_registry.json"
 
 
 def load_genomes(generation=0, genome_dir=None):
-    """Load all genomes for a given generation."""
+    """Load all genomes for a given generation.
+
+    Uses filename prefix to narrow file scanning:
+      - Gen 0: files NOT starting with 'g' (e.g. darwin-g0.genome.json)
+      - Gen N: files starting with 'gN-' (e.g. g1-001-abc123.genome.json)
+    Falls back to full scan if prefix matching finds nothing.
+    """
     gdir = genome_dir or GENOMES_DIR
     genomes = {}
-    for gf in sorted(Path(gdir).glob("*.genome.json")):
+
+    # Fast path: match by filename prefix
+    if generation == 0:
+        candidates = [gf for gf in sorted(Path(gdir).glob("*.genome.json"))
+                       if not gf.name.startswith("g") or gf.name.startswith("g0")]
+    else:
+        prefix = f"g{generation}-"
+        candidates = sorted(Path(gdir).glob(f"{prefix}*.genome.json"))
+
+    for gf in candidates:
         g = json.load(open(gf))
         if g["generation"] == generation:
             genomes[g["id"]] = g
+
+    # Fallback: full scan if prefix matching found nothing
+    if not genomes:
+        for gf in sorted(Path(gdir).glob("*.genome.json")):
+            g = json.load(open(gf))
+            if g["generation"] == generation:
+                genomes[g["id"]] = g
+
     return genomes
 
 
