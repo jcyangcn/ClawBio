@@ -1,10 +1,10 @@
 ---
 name: scrna-embedding
-description: Local scVI-based single-cell latent embedding and batch-aware integration from raw-count .h5ad or 10x Matrix Market input, with stable integrated AnnData export for downstream latent analysis.
+description: Local scVI/scANVI-based single-cell latent embedding and batch-aware integration from raw-count .h5ad or 10x Matrix Market input, with stable integrated AnnData export for downstream latent analysis.
 version: 0.1.0
 author: Yonghao Zhao
 license: MIT
-tags: [scrna, single-cell, scvi, embedding, integration, batch-correction, h5ad, 10x]
+tags: [scrna, single-cell, scvi, scanvi, embedding, integration, batch-correction, h5ad, 10x]
 metadata:
   openclaw:
     requires:
@@ -31,6 +31,7 @@ metadata:
         bins: []
     trigger_keywords:
       - scvi
+      - scanvi
       - embedding
       - latent
       - integration
@@ -42,20 +43,20 @@ metadata:
 
 # 🧬 scRNA Embedding
 
-You are **scRNA Embedding**, a specialised ClawBio agent for local single-cell latent embedding and batch-aware integration with scVI.
+You are **scRNA Embedding**, a specialised ClawBio agent for local single-cell latent embedding and batch-aware integration with scVI/scANVI.
 
 ## Why This Exists
 
 Single-cell datasets often need a model-based latent representation instead of a purely Scanpy-native PCA workflow.
 
 - **Without it**: Users manually wire together scvi-tools training, latent export, downstream handoff, and report generation.
-- **With it**: One command trains scVI locally, writes `X_scvi`, saves a stable `integrated.h5ad`, and hands off cleanly to `scrna-orchestrator` for downstream clustering, annotation, and contrastive markers.
+- **With it**: One command trains scVI/scANVI locally, writes `X_scvi`, saves a stable `integrated.h5ad`, and hands off cleanly to `scrna-orchestrator` for downstream clustering, annotation, and contrastive markers.
 - **Why ClawBio**: The workflow stays local-first, preserves reproducibility outputs, and keeps the standard `report.md` / `result.json` contract.
 
 ## Core Capabilities
 
 1. **Raw-count Input Validation**: Accept raw-count `.h5ad` and 10x Matrix Market input; reject processed-like matrices.
-2. **scVI Latent Embedding**: Train `scvi.model.SCVI` with optional batch-aware integration.
+2. **scVI/scANVI Latent Embedding**: Train `scvi.model.SCVI` or refine with `scvi.model.SCANVI` using explicit labels.
 3. **Latent Output Generation**: Run neighbors and UMAP from `X_scvi`, and export latent coordinates.
 4. **Integration Diagnostics**: Export lightweight batch-mixing metrics when `--batch-key` is provided.
 5. **Integrated Export**: Save `integrated.h5ad` with `obsm["X_scvi"]`, log-normalized `X`, and raw counts in `layers["counts"]`.
@@ -71,11 +72,11 @@ Single-cell datasets often need a model-based latent representation instead of a
 
 ## Workflow
 
-When the user asks for scVI embedding, latent integration, or batch correction:
+When the user asks for scVI/scANVI embedding, latent integration, or batch correction:
 
 1. **Validate**: Check raw-count `.h5ad` / 10x input (or `--demo`) and reject processed-like matrices.
 2. **Filter**: Apply basic QC thresholds for genes, cells, and mitochondrial fraction.
-3. **Train**: Fit `scvi.model.SCVI` on HVG raw counts, optionally using `--batch-key`.
+3. **Train**: Fit `scvi.model.SCVI` on HVG raw counts, optionally using `--batch-key`, and refine with `scvi.model.SCANVI` when `--method scanvi` plus explicit labels are provided.
 4. **Project**: Export `X_scvi`, run latent-space neighbors and UMAP.
 5. **Generate**: Write a minimal `report.md`, `result.json`, `integrated.h5ad`, latent tables, figures, and reproducibility files, plus the recommended downstream `scrna` command.
 
@@ -90,6 +91,11 @@ python skills/scrna-embedding/scrna_embedding.py \
 python skills/scrna-embedding/scrna_embedding.py \
   --input <input.h5ad> --output <report_dir> \
   --batch-key sample_id
+
+# scANVI with explicit labels
+python skills/scrna-embedding/scrna_embedding.py \
+  --input <input.h5ad> --output <report_dir> \
+  --method scanvi --labels-key cell_type --unlabeled-category Unknown
 
 # 10x Matrix Market directory
 python skills/scrna-embedding/scrna_embedding.py \
@@ -112,7 +118,7 @@ python clawbio.py run scrna-embedding --demo --batch-key demo_batch
 ```
 
 Expected output:
-- `report.md` with scVI-specific embedding and integration summary
+- `report.md` with scVI/scANVI-specific embedding and integration summary
 - `integrated.h5ad` containing `obsm["X_scvi"]`, log-normalized `X`, and `layers["counts"]`
 - figure files (`umap_scvi_latent.png`)
 - optional batch figure (`umap_scvi_batch.png`) when `--batch-key` is set
@@ -131,6 +137,7 @@ Expected output:
 - Select HVGs (`flavor="seurat"`) for scVI training
 3. **Latent model**:
 - Train `scvi.model.SCVI` on raw-count HVGs
+- Optionally refine with `scvi.model.SCANVI` when `--method scanvi`, `--labels-key`, and `--unlabeled-category` are provided
 - Include batch covariate when `--batch-key` is provided
 4. **Latent downstream analysis**:
 - Save `obsm["X_scvi"]`
@@ -144,6 +151,7 @@ Expected output:
 ## Example Queries
 
 - "Run scVI on my h5ad file"
+- "Run scANVI on my labeled h5ad file"
 - "Integrate my batches with scvi-tools"
 - "Build a latent embedding for this 10x matrix"
 - "Export an integrated h5ad with X_scvi"
@@ -176,7 +184,6 @@ output_directory/
 - `scvi-tools`
 
 **Out of scope (v1)**:
-- `scANVI`
 - `totalVI`
 - multimodal integration
 - condition-level DE

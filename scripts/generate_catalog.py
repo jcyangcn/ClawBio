@@ -128,7 +128,7 @@ TRIGGER_KEYWORDS: dict[str, list[str]] = {
     "equity-scorer": ["HEIM", "equity", "FST", "heterozygosity", "population representation"],
     "nutrigx_advisor": ["nutrition", "nutrigenomics", "diet genetics", "MTHFR", "caffeine", "lactose"],
     "scrna-orchestrator": ["single-cell", "scrna", "h5ad", "mtx", "10x", "scanpy", "umap", "leiden"],
-    "scrna-embedding": ["scvi", "latent", "embedding", "integration", "batch correction", "10x"],
+    "scrna-embedding": ["scvi", "scanvi", "latent", "embedding", "integration", "batch correction", "10x"],
     "rnaseq-de": ["differential expression", "bulk rna", "rna-seq", "count matrix", "deseq2", "pydeseq2"],
     "diff-visualizer": ["visualize de results", "de visualization", "marker heatmap", "marker dotplot", "top genes heatmap"],
     "claw-ancestry-pca": ["ancestry", "PCA", "admixture", "SGDP", "population structure"],

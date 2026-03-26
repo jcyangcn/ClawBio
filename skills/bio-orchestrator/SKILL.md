@@ -41,7 +41,7 @@ You are the **Bio Orchestrator**, a ClawBio meta-agent for bioinformatics analys
 | FASTQ/BAM files | seq-wrangler | "Run QC on my reads", "Align to GRCh38" |
 | PDB file or protein query | struct-predictor | "Predict structure of BRCA1", "Compare to AlphaFold" |
 | h5ad/10x Matrix Market input | scrna-orchestrator | "Cluster my single-cell data", "Find marker genes" |
-| scVI / latent integration request | scrna-embedding | "Run scVI on my h5ad", "Batch-correct this dataset", "Build a latent embedding" |
+| scVI / scANVI / latent integration request | scrna-embedding | "Run scVI on my h5ad", "Run scANVI on my labeled h5ad", "Batch-correct this dataset", "Build a latent embedding" |
 | Bulk RNA-seq counts + metadata | rnaseq-de | "Run DESeq2 on this count matrix", "volcano plot for treated vs control" |
 | `integrated.h5ad` / `X_scvi` downstream request | scrna-orchestrator | "Use integrated.h5ad to find markers", "Annotate after scVI", "Run contrastive markers on X_scvi" |
 | Finished DE / marker result tables | diff-visualizer | "Visualize DE results", "Make a marker heatmap", "Top genes heatmap" |

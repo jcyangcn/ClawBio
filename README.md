@@ -142,7 +142,7 @@ report/
 | [Galaxy Bridge](skills/galaxy-bridge/) | **MVP** | Search, run, and chain 8,000+ Galaxy bioinformatics tools |
 | [RNA-seq DE](skills/rnaseq-de/) | **MVP** | Bulk/pseudo-bulk differential expression with QC + PCA + contrasts |
 | [Methylation Clock](skills/methylation-clock/) | **MVP** | Epigenetic age from methylation arrays with PyAging clocks |
-| [scRNA Embedding](skills/scrna-embedding/) | **MVP** | scVI latent embedding, batch integration, and stable `integrated.h5ad` export for downstream latent analysis |
+| [scRNA Embedding](skills/scrna-embedding/) | **MVP** | scVI/scANVI latent embedding, batch integration, and stable `integrated.h5ad` export for downstream latent analysis |
 | [scRNA Orchestrator](skills/scrna-orchestrator/) | **MVP** | Scanpy automation: QC, optional doublet detection, clustering, markers, annotation, latent downstream mode, contrastive markers |
 | [Diff Visualizer](skills/diff-visualizer/) | **MVP** | Rich downstream visualisation for bulk RNA-seq DE and scRNA marker/contrast outputs |
 | [Proteomics DE](skills/proteomics-de/) | **MVP** | Differential expression for label-free quantitative (LFQ) intensity data (MaxQuant, DIA-NN) |

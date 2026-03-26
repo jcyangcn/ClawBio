@@ -328,11 +328,13 @@ SKILLS = {
     "scrna-embedding": {
         "script": SKILLS_DIR / "scrna-embedding" / "scrna_embedding.py",
         "demo_args": ["--demo"],
-        "description": "scRNA Embedding (scVI latent embedding, optional batch integration, stable integrated h5ad export)",
+        "description": "scRNA Embedding (scVI/scANVI latent embedding, optional batch integration, stable integrated h5ad export)",
         "allowed_extra_flags": {
             "--method",
             "--layer",
             "--batch-key",
+            "--labels-key",
+            "--unlabeled-category",
             "--min-genes",
             "--min-cells",
             "--max-mt-pct",
@@ -967,6 +969,12 @@ def main():
     run_parser.add_argument("--method", default=None, help="Embedding backend (scrna-embedding skill)")
     run_parser.add_argument("--layer", default=None, help="Raw-count layer for `.h5ad` input (scrna-embedding skill)")
     run_parser.add_argument("--batch-key", default=None, help="obs batch column for integration (scrna-embedding skill)")
+    run_parser.add_argument("--labels-key", default=None, help="obs label column for scANVI (scrna-embedding skill)")
+    run_parser.add_argument(
+        "--unlabeled-category",
+        default=None,
+        help="Category value representing unlabeled cells for scANVI (scrna-embedding skill)",
+    )
     run_parser.add_argument("--min-genes", type=int, default=None, help="Minimum genes per cell (scrna/scrna-embedding skill)")
     run_parser.add_argument("--min-cells", type=int, default=None, help="Minimum cells per gene (scrna/scrna-embedding skill)")
     run_parser.add_argument(
@@ -1179,6 +1187,10 @@ def main():
             extra.extend(["--layer", args.layer])
         if getattr(args, "batch_key", None):
             extra.extend(["--batch-key", args.batch_key])
+        if getattr(args, "labels_key", None):
+            extra.extend(["--labels-key", args.labels_key])
+        if getattr(args, "unlabeled_category", None):
+            extra.extend(["--unlabeled-category", args.unlabeled_category])
         if getattr(args, "min_genes", None) is not None:
             extra.extend(["--min-genes", str(args.min_genes)])
         if getattr(args, "min_cells", None) is not None:
