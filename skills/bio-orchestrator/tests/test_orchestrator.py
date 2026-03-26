@@ -120,6 +120,7 @@ class TestDetectSkillFromQuery:
         ("What is the equity score?", "equity-scorer"),
         ("Run polygenic risk score", "gwas-prs"),
         ("Look up rs12345", "gwas-lookup"),
+        ("Run scanvi on my h5ad", "scrna-embedding"),
         ("Show me differential expression", "rnaseq-de"),
         ("Predict protein structure", "struct-predictor"),
         ("Search pubmed for papers", "lit-synthesizer"),

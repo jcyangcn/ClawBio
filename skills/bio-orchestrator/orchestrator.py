@@ -66,6 +66,7 @@ KEYWORD_MAP: dict[str, str] = {
     "dragen": "illumina-bridge",
     "illumina": "illumina-bridge",
     "scvi": "scrna-embedding",
+    "scanvi": "scrna-embedding",
     "batch correction": "scrna-embedding",
     "batch integration": "scrna-embedding",
     "integration": "scrna-embedding",

@@ -35,7 +35,7 @@
 
 - [vcf-annotator](skills/vcf-annotator/SKILL.md): VEP, ClinVar, gnomAD variant annotation
 - [lit-synthesizer](skills/lit-synthesizer/SKILL.md): PubMed/bioRxiv literature search and LLM summarisation
-- [scrna-embedding](skills/scrna-embedding/SKILL.md): scVI latent embedding, batch integration, and stable integrated.h5ad export
+- [scrna-embedding](skills/scrna-embedding/SKILL.md): scVI/scANVI latent embedding, batch integration, and stable integrated.h5ad export
 - [scrna-orchestrator](skills/scrna-orchestrator/SKILL.md): Scanpy single-cell RNA-seq automation with latent downstream mode and contrastive markers
 - [struct-predictor](skills/struct-predictor/SKILL.md): AlphaFold/Boltz protein structure prediction
 - [repro-enforcer](skills/repro-enforcer/SKILL.md): Conda/Singularity/Nextflow reproducibility export

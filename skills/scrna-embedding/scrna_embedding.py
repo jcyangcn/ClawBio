@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ClawBio scRNA Embedding — scVI latent embedding and integration."""
+"""ClawBio scRNA Embedding — scVI/scANVI latent embedding and integration."""
 
 from __future__ import annotations
 
@@ -30,6 +30,13 @@ from clawbio.common.scrna_io import compute_input_checksum, load_count_adata
 EMBEDDING_ARTIFACT_KEY = "clawbio_scrna_embedding"
 DEFAULT_DOWNSTREAM_REP = "X_scvi"
 DEFAULT_COUNTS_LAYER = "counts"
+
+
+def model_display_name(method: str) -> str:
+    """Return the user-facing model name for a backend identifier."""
+    if method == "scanvi":
+        return "scANVI"
+    return "scVI"
 
 
 def _import_scanpy():
@@ -116,7 +123,7 @@ def build_demo_adata(random_state: int):
 
 def load_demo_adata(random_state: int):
     """Load deterministic local synthetic demo data."""
-    return build_demo_adata(random_state), "synthetic_scvi_demo"
+    return build_demo_adata(random_state), "synthetic_scrna_embedding_demo"
 
 
 def load_data(input_path: str | None, demo: bool, random_state: int, layer: str | None):
@@ -151,8 +158,18 @@ def ensure_output_dir(output_dir: Path) -> None:
 
 def validate_args(args: argparse.Namespace) -> None:
     """Validate basic CLI invariants."""
-    if args.method != "scvi":
+    if args.method not in {"scvi", "scanvi"}:
         raise ValueError(f"Unsupported embedding method: {args.method}")
+    if args.method == "scanvi":
+        if not args.labels_key:
+            raise ValueError("--labels-key is required when --method scanvi.")
+        if not args.unlabeled_category:
+            raise ValueError("--unlabeled-category is required when --method scanvi.")
+    else:
+        if args.labels_key:
+            raise ValueError("--labels-key is only supported when --method scanvi.")
+        if args.unlabeled_category:
+            raise ValueError("--unlabeled-category is only supported when --method scanvi.")
     if args.latent_dim < 2:
         raise ValueError("--latent-dim must be >= 2.")
     if args.max_epochs < 1:
@@ -235,6 +252,57 @@ def prepare_batch_obs(adata, batch_key: str | None) -> tuple[Any, str]:
     return adata, batch_key
 
 
+def prepare_label_obs(
+    adata,
+    *,
+    method: str,
+    labels_key: str | None,
+    unlabeled_category: str | None,
+) -> tuple[Any, dict[str, Any]]:
+    """Validate and standardize label metadata for scANVI."""
+    adata = adata.copy()
+    empty_info = {
+        "labels_key": "",
+        "unlabeled_category": "",
+        "n_unlabeled_cells": 0,
+        "unlabeled_category_present": False,
+        "observed_labels": [],
+    }
+    if method != "scanvi":
+        return adata, empty_info
+
+    assert labels_key is not None
+    assert unlabeled_category is not None
+    if labels_key not in adata.obs.columns:
+        available_cols = ", ".join(sorted(map(str, adata.obs.columns.tolist())))
+        raise ValueError(
+            f"Labels key not found in adata.obs: {labels_key}. Available columns: {available_cols}."
+        )
+
+    raw_labels = adata.obs[labels_key]
+    if raw_labels.isna().any():
+        raise ValueError(
+            f"Labels column '{labels_key}' contains missing values. "
+            "Encode unlabeled cells explicitly and set --unlabeled-category to that value."
+        )
+
+    normalized_labels = raw_labels.astype(str)
+    observed_labels = list(pd.Index(pd.unique(normalized_labels), dtype="object"))
+    categories = observed_labels.copy()
+    if unlabeled_category not in categories:
+        categories.append(unlabeled_category)
+
+    adata.obs[labels_key] = pd.Categorical(normalized_labels, categories=categories)
+    n_unlabeled_cells = int((normalized_labels == unlabeled_category).sum())
+    return adata, {
+        "labels_key": labels_key,
+        "unlabeled_category": unlabeled_category,
+        "n_unlabeled_cells": n_unlabeled_cells,
+        "unlabeled_category_present": n_unlabeled_cells > 0,
+        "observed_labels": observed_labels,
+    }
+
+
 def infer_model_device(model) -> str:
     """Infer the device that a trained scVI model used."""
     device = getattr(model, "device", None)
@@ -277,6 +345,69 @@ def train_scvi_model(
     return model, infer_model_device(model)
 
 
+def train_scanvi_model(
+    scvi_model,
+    *,
+    adata_model,
+    labels_key: str,
+    unlabeled_category: str,
+    max_epochs: int,
+    accelerator: str,
+):
+    """Refine a trained SCVI model with scANVI supervision."""
+    scvi = _import_scvi()
+
+    model = scvi.model.SCANVI.from_scvi_model(
+        scvi_model,
+        adata=adata_model,
+        labels_key=labels_key,
+        unlabeled_category=unlabeled_category,
+    )
+    model.train(
+        max_epochs=max_epochs,
+        accelerator=accelerator,
+        enable_progress_bar=False,
+    )
+    return model, infer_model_device(model)
+
+
+def train_embedding_model(
+    adata_model,
+    *,
+    method: str,
+    batch_key: str | None,
+    labels_key: str | None,
+    unlabeled_category: str | None,
+    latent_dim: int,
+    max_epochs: int,
+    accelerator: str,
+    random_state: int,
+):
+    """Train the requested latent model and return the fitted model/device."""
+    scvi_model, accelerator_used = train_scvi_model(
+        adata_model,
+        batch_key=batch_key,
+        latent_dim=latent_dim,
+        max_epochs=max_epochs,
+        accelerator=accelerator,
+        random_state=random_state,
+    )
+    if method == "scvi":
+        return scvi_model, accelerator_used
+
+    assert labels_key is not None
+    assert unlabeled_category is not None
+    scanvi_model, accelerator_used = train_scanvi_model(
+        scvi_model,
+        adata_model=adata_model,
+        labels_key=labels_key,
+        unlabeled_category=unlabeled_category,
+        max_epochs=max_epochs,
+        accelerator=accelerator,
+    )
+    return scanvi_model, accelerator_used
+
+
 def run_latent_embedding(
     adata_norm_full,
     latent: np.ndarray,
@@ -294,10 +425,18 @@ def run_latent_embedding(
     return adata_latent
 
 
-def prepare_latent_plot_labels(adata, *, batch_key: str) -> tuple[Any, str]:
+def prepare_latent_plot_labels(
+    adata,
+    *,
+    batch_key: str,
+    labels_key: str = "",
+) -> tuple[Any, str]:
     """Pick or derive a categorical obs column for the latent UMAP legend."""
     sc = _import_scanpy()
 
+    if labels_key and labels_key in adata.obs.columns:
+        adata.obs[labels_key] = adata.obs[labels_key].astype(str)
+        return adata, labels_key
     if "demo_truth" in adata.obs.columns:
         adata.obs["demo_truth"] = adata.obs["demo_truth"].astype(str)
         return adata, "demo_truth"
@@ -404,10 +543,11 @@ def plot_core_figures(
     adata,
     figures_dir: Path,
     *,
+    method: str,
     batch_key: str,
     latent_color_key: str,
 ) -> list[Path]:
-    """Create scVI latent-space plots."""
+    """Create latent-space plots for the selected embedding backend."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -415,6 +555,7 @@ def plot_core_figures(
 
     sc = _import_scanpy()
     figures_dir.mkdir(parents=True, exist_ok=True)
+    method_name = model_display_name(method)
 
     created: list[Path] = []
 
@@ -422,7 +563,7 @@ def plot_core_figures(
         adata,
         color=latent_color_key,
         legend_loc="right margin",
-        title=f"scVI latent UMAP ({latent_color_key})",
+        title=f"{method_name} latent UMAP ({latent_color_key})",
         show=False,
     )
     plt.tight_layout()
@@ -436,7 +577,7 @@ def plot_core_figures(
             adata,
             color=batch_key,
             legend_loc="right margin",
-            title=f"scVI latent UMAP ({batch_key})",
+            title=f"{method_name} latent UMAP ({batch_key})",
             show=False,
         )
         plt.tight_layout()
@@ -478,6 +619,8 @@ def write_integrated_h5ad(
         "params": {
             "method": params["method"],
             "batch_key": params["batch_key"],
+            "labels_key": params["labels_key"],
+            "unlabeled_category": params["unlabeled_category"],
             "latent_dim": params["latent_dim"],
             "n_neighbors": params["n_neighbors"],
         },
@@ -495,6 +638,7 @@ def render_report(
     qc_stats: dict[str, int],
     n_hvg: int,
     params: dict[str, Any],
+    label_info: dict[str, Any],
     accelerator_used: str,
     batch_key: str,
     latent_color_key: str,
@@ -502,6 +646,7 @@ def render_report(
     downstream_command: str,
 ) -> Path:
     """Create markdown report.md."""
+    method_name = model_display_name(params["method"])
     header = generate_report_header(
         title="scRNA Embedding Report",
         skill_name="scrna-embedding",
@@ -511,6 +656,9 @@ def render_report(
             "Input format": input_source["format"] if input_source else "demo",
             "Method": params["method"],
             "Batch key": batch_key or "none",
+            "Labels key": label_info["labels_key"] or "none",
+            "Unlabeled category": label_info["unlabeled_category"] or "none",
+            "Unlabeled cells (after QC)": str(label_info["n_unlabeled_cells"]),
             "Cells (before QC)": str(qc_stats["n_cells_before"]),
             "Cells (after QC)": str(qc_stats["n_cells_after"]),
             "Genes (after QC)": str(qc_stats["n_genes_after"]),
@@ -524,9 +672,25 @@ def render_report(
     batch_section = ""
     if batch_key:
         batch_section = (
-            "![scVI Batch UMAP](figures/umap_scvi_batch.png)\n"
+            f"![{method_name} Batch UMAP](figures/umap_scvi_batch.png)\n"
             f"- Figure file: `figures/umap_scvi_batch.png`\n"
             f"- Colored by: `{batch_key}`\n\n"
+        )
+
+    label_section = ""
+    if label_info["labels_key"]:
+        unlabeled_note = (
+            f"Observed **{label_info['n_unlabeled_cells']}** cells matching "
+            f"`{label_info['unlabeled_category']}` after QC."
+            if label_info["unlabeled_category_present"]
+            else f"No cells matched `{label_info['unlabeled_category']}` after QC; "
+            "the run proceeded with fully labeled cells."
+        )
+        label_section = (
+            "## Label Metadata\n\n"
+            f"- Labels key: `{label_info['labels_key']}`\n"
+            f"- Unlabeled category: `{label_info['unlabeled_category']}`\n"
+            f"- {unlabeled_note}\n\n"
         )
 
     body = f"""## Summary
@@ -542,12 +706,12 @@ def render_report(
 
 ## Core Figures
 
-![scVI Latent UMAP](figures/umap_scvi_latent.png)
+![{method_name} Latent UMAP](figures/umap_scvi_latent.png)
 - Figure file: `figures/umap_scvi_latent.png`
 - Colored by: `{latent_color_key}`
 
 {batch_section}
-## Tables
+{label_section}## Tables
 
 - `tables/latent_embeddings.csv`
 {f"- `tables/{batch_metrics_path.name}`" if batch_metrics_path is not None else ""}
@@ -567,10 +731,11 @@ def render_report(
 - Input validation: raw-count `.h5ad` or 10x Matrix Market input only
 - QC/filtering: `min_genes={params["min_genes"]}`, `min_cells={params["min_cells"]}`, `max_mt_pct={params["max_mt_pct"]}`
 - HVG selection: `n_top_hvg={params["n_top_hvg"]}`
-- Embedding method: `scvi.model.SCVI`
+- Embedding method: `{params["model_class"]}`
 - Training: `latent_dim={params["latent_dim"]}`, `max_epochs={params["max_epochs"]}`, `accelerator={params["accelerator"]}`
+- Labels: `labels_key={label_info["labels_key"] or "none"}`, `unlabeled_category={label_info["unlabeled_category"] or "none"}`
 - Neighbors graph: `use_rep="X_scvi"`, `n_neighbors={params["n_neighbors"]}`
-- Visualization labels: latent UMAP uses `{latent_color_key}`; if no annotation exists, `scvi_latent_group` is derived from the scVI graph for display only
+- Visualization labels: latent UMAP uses `{latent_color_key}`; if no annotation exists, `scvi_latent_group` is derived from the latent graph for display only
 - Output focus: latent embedding export, stable integrated artifact generation, and optional batch-view diagnostics only
 
 ## Reproducibility
@@ -616,6 +781,10 @@ def write_reproducibility(
         cmd_parts.extend(["--layer", args.layer])
     if args.batch_key:
         cmd_parts.extend(["--batch-key", args.batch_key])
+    if args.labels_key:
+        cmd_parts.extend(["--labels-key", args.labels_key])
+    if args.unlabeled_category:
+        cmd_parts.extend(["--unlabeled-category", args.unlabeled_category])
 
     defaults = {
         "--min-genes": 200,
@@ -699,7 +868,7 @@ dependencies:
 
 
 def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
-    """Run the full scVI embedding pipeline."""
+    """Run the full scVI/scANVI embedding pipeline."""
     validate_args(args)
 
     output_dir = Path(args.output)
@@ -723,12 +892,21 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
         max_mt_pct=args.max_mt_pct,
     )
     adata_qc, batch_key = prepare_batch_obs(adata_qc, batch_key)
+    adata_qc, label_info = prepare_label_obs(
+        adata_qc,
+        method=args.method,
+        labels_key=args.labels_key,
+        unlabeled_category=args.unlabeled_category,
+    )
     adata_norm_full, adata_model, n_hvg = prepare_training_data(adata_qc, args.n_top_hvg)
     adata_model, _ = prepare_batch_obs(adata_model, batch_key)
 
-    model, accelerator_used = train_scvi_model(
+    model, accelerator_used = train_embedding_model(
         adata_model,
+        method=args.method,
         batch_key=batch_key or None,
+        labels_key=label_info["labels_key"] or None,
+        unlabeled_category=label_info["unlabeled_category"] or None,
         latent_dim=args.latent_dim,
         max_epochs=args.max_epochs,
         accelerator=args.accelerator,
@@ -744,6 +922,7 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
     adata_latent, latent_color_key = prepare_latent_plot_labels(
         adata_latent,
         batch_key=batch_key,
+        labels_key=label_info["labels_key"],
     )
 
     table_paths = write_tables(
@@ -769,13 +948,17 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
     figure_paths = plot_core_figures(
         adata_latent,
         figures_dir,
+        method=args.method,
         batch_key=batch_key,
         latent_color_key=latent_color_key,
     )
     params = {
         "method": args.method,
+        "model_class": "scvi.model.SCANVI" if args.method == "scanvi" else "scvi.model.SCVI",
         "layer": args.layer or "",
         "batch_key": batch_key,
+        "labels_key": label_info["labels_key"],
+        "unlabeled_category": label_info["unlabeled_category"],
         "min_genes": args.min_genes,
         "min_cells": args.min_cells,
         "max_mt_pct": args.max_mt_pct,
@@ -801,6 +984,7 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
         qc_stats=qc_stats,
         n_hvg=n_hvg,
         params=params,
+        label_info=label_info,
         accelerator_used=accelerator_used,
         batch_key=batch_key,
         latent_color_key=latent_color_key,
@@ -818,6 +1002,10 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
             "method": args.method,
             "input_format": input_source["format"] if input_source else "demo",
             "batch_key": batch_key,
+            "labels_key": label_info["labels_key"],
+            "unlabeled_category": label_info["unlabeled_category"],
+            "n_unlabeled_cells": label_info["n_unlabeled_cells"],
+            "unlabeled_category_present": label_info["unlabeled_category_present"],
             "cells_before_qc": qc_stats["n_cells_before"],
             "cells_after_qc": qc_stats["n_cells_after"],
             "genes_after_qc": qc_stats["n_genes_after"],
@@ -833,6 +1021,11 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
             "layer": args.layer or "",
             "input_format": input_source["format"] if input_source else "demo",
             "batch_key": batch_key,
+            "labels_key": label_info["labels_key"],
+            "unlabeled_category": label_info["unlabeled_category"],
+            "n_unlabeled_cells": label_info["n_unlabeled_cells"],
+            "unlabeled_category_present": label_info["unlabeled_category_present"],
+            "observed_labels": label_info["observed_labels"],
             "cells_before_qc": qc_stats["n_cells_before"],
             "cells_after_qc": qc_stats["n_cells_after"],
             "genes_after_qc": qc_stats["n_genes_after"],
@@ -875,7 +1068,7 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "ClawBio scRNA Embedding — scVI latent embedding and batch-aware diagnostics"
+            "ClawBio scRNA Embedding — scVI/scANVI latent embedding and batch-aware diagnostics"
         ),
     )
     parser.add_argument(
@@ -885,15 +1078,21 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output", "-o", default="scrna_embedding_report", help="Output directory")
     parser.add_argument("--demo", action="store_true", help="Run local synthetic demo data")
-    parser.add_argument("--method", choices=("scvi",), default="scvi", help="Embedding backend")
+    parser.add_argument("--method", choices=("scvi", "scanvi"), default="scvi", help="Embedding backend")
     parser.add_argument("--layer", default=None, help="Raw-count layer to use for `.h5ad` input")
     parser.add_argument("--batch-key", default=None, help="obs column for batch-aware integration")
+    parser.add_argument("--labels-key", default=None, help="obs column with labels for scANVI")
+    parser.add_argument(
+        "--unlabeled-category",
+        default=None,
+        help="Category value representing unlabeled cells for scANVI",
+    )
     parser.add_argument("--min-genes", type=int, default=200, help="Minimum genes per cell")
     parser.add_argument("--min-cells", type=int, default=3, help="Minimum cells per gene")
     parser.add_argument("--max-mt-pct", type=float, default=20.0, help="Maximum mitochondrial percentage")
     parser.add_argument("--n-top-hvg", type=int, default=2000, help="Number of highly variable genes")
-    parser.add_argument("--latent-dim", type=int, default=10, help="Latent dimensionality for scVI")
-    parser.add_argument("--max-epochs", type=int, default=20, help="Maximum scVI training epochs")
+    parser.add_argument("--latent-dim", type=int, default=10, help="Latent dimensionality for scVI/scANVI")
+    parser.add_argument("--max-epochs", type=int, default=20, help="Maximum scVI/scANVI training epochs")
     parser.add_argument("--n-neighbors", type=int, default=15, help="Neighbors for graph construction")
     parser.add_argument("--random-state", type=int, default=0, help="Random seed")
     parser.add_argument(

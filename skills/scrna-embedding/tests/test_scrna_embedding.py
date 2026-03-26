@@ -96,10 +96,23 @@ def _build_input_matrix() -> tuple[np.ndarray, list[str], pd.DataFrame]:
     return np.vstack(rows), genes, obs
 
 
-def _build_h5ad_input(path: Path, *, with_counts_layer: bool = False, processed_x: bool = False) -> None:
+def _build_h5ad_input(
+    path: Path,
+    *,
+    with_counts_layer: bool = False,
+    processed_x: bool = False,
+    label_column: str | None = None,
+    unlabeled_category: str | None = None,
+    unlabeled_stride: int | None = None,
+) -> None:
     from anndata import AnnData  # type: ignore
 
     x, genes, obs = _build_input_matrix()
+    if label_column:
+        labels = obs["truth"].astype(str).copy()
+        if unlabeled_category and unlabeled_stride:
+            labels.iloc[::unlabeled_stride] = unlabeled_category
+        obs[label_column] = labels
     var = pd.DataFrame(index=pd.Index(genes, dtype="object"))
     matrix = x.astype(np.float32) if processed_x else x.astype(np.int32)
     adata = AnnData(X=matrix, obs=obs, var=var)
@@ -262,6 +275,105 @@ def test_h5ad_input_runs_with_batch_key(tmp_path: Path):
     assert "scvi_latent_group" in latent_table.columns
 
 
+def test_scanvi_h5ad_input_runs_with_partial_unlabeled_cells(tmp_path: Path):
+    _require_scvi_stack()
+    input_path = tmp_path / "scanvi_input.h5ad"
+    output_dir = tmp_path / "scanvi_output"
+    _build_h5ad_input(
+        input_path,
+        label_column="cell_label",
+        unlabeled_category="Unknown",
+        unlabeled_stride=5,
+    )
+
+    result = _run_cmd(
+        [
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_dir),
+            "--method",
+            "scanvi",
+            "--labels-key",
+            "cell_label",
+            "--unlabeled-category",
+            "Unknown",
+            "--batch-key",
+            "batch",
+            "--max-epochs",
+            "2",
+            "--accelerator",
+            "cpu",
+            "--min-genes",
+            "1",
+            "--min-cells",
+            "1",
+        ]
+    )
+    assert result.returncode == 0, result.stderr
+
+    payload = json.loads((output_dir / "result.json").read_text())
+    assert payload["summary"]["method"] == "scanvi"
+    assert payload["summary"]["labels_key"] == "cell_label"
+    assert payload["summary"]["unlabeled_category"] == "Unknown"
+    assert payload["summary"]["n_unlabeled_cells"] > 0
+    assert payload["summary"]["unlabeled_category_present"] is True
+    assert payload["summary"]["latent_plot_color_by"] == "cell_label"
+
+    report_text = (output_dir / "report.md").read_text(encoding="utf-8")
+    assert "Observed **" in report_text
+    assert "`Unknown` after QC" in report_text
+
+    from anndata import read_h5ad  # type: ignore
+
+    integrated = read_h5ad(output_dir / "integrated.h5ad")
+    params = integrated.uns["clawbio_scrna_embedding"]["params"]
+    assert params["method"] == "scanvi"
+    assert params["labels_key"] == "cell_label"
+    assert params["unlabeled_category"] == "Unknown"
+
+
+def test_scanvi_all_labeled_input_runs_and_reports_no_unlabeled_cells(tmp_path: Path):
+    _require_scvi_stack()
+    input_path = tmp_path / "scanvi_all_labeled.h5ad"
+    output_dir = tmp_path / "scanvi_all_labeled_output"
+    _build_h5ad_input(input_path, label_column="cell_label")
+
+    result = _run_cmd(
+        [
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_dir),
+            "--method",
+            "scanvi",
+            "--labels-key",
+            "cell_label",
+            "--unlabeled-category",
+            "Unknown",
+            "--batch-key",
+            "batch",
+            "--max-epochs",
+            "2",
+            "--accelerator",
+            "cpu",
+            "--min-genes",
+            "1",
+            "--min-cells",
+            "1",
+        ]
+    )
+    assert result.returncode == 0, result.stderr
+
+    payload = json.loads((output_dir / "result.json").read_text())
+    assert payload["summary"]["method"] == "scanvi"
+    assert payload["summary"]["n_unlabeled_cells"] == 0
+    assert payload["summary"]["unlabeled_category_present"] is False
+
+    report_text = (output_dir / "report.md").read_text(encoding="utf-8")
+    assert "No cells matched `Unknown` after QC" in report_text
+
+
 def test_layer_allows_processed_x_when_raw_counts_layer_is_selected(tmp_path: Path):
     _require_scvi_stack()
     input_path = tmp_path / "layered.h5ad"
@@ -418,9 +530,122 @@ def test_clawbio_runner_accepts_whitelisted_embedding_flags(tmp_path: Path):
     assert (output_dir / "result.json").exists()
 
 
+def test_scanvi_requires_labels_key(tmp_path: Path):
+    _require_scvi_stack()
+    output_dir = tmp_path / "scanvi_missing_labels_key"
+    result = _run_cmd(
+        [
+            "--demo",
+            "--output",
+            str(output_dir),
+            "--method",
+            "scanvi",
+            "--unlabeled-category",
+            "Unknown",
+        ]
+    )
+    assert result.returncode != 0
+    assert "--labels-key is required when --method scanvi." in result.stderr
+
+
+def test_scanvi_requires_unlabeled_category(tmp_path: Path):
+    _require_scvi_stack()
+    output_dir = tmp_path / "scanvi_missing_unlabeled"
+    result = _run_cmd(
+        [
+            "--demo",
+            "--output",
+            str(output_dir),
+            "--method",
+            "scanvi",
+            "--labels-key",
+            "demo_truth",
+        ]
+    )
+    assert result.returncode != 0
+    assert "--unlabeled-category is required when --method scanvi." in result.stderr
+
+
+def test_scanvi_rejects_missing_labels_column(tmp_path: Path):
+    _require_scvi_stack()
+    input_path = tmp_path / "scanvi_bad_labels_key.h5ad"
+    output_dir = tmp_path / "scanvi_bad_labels_key_output"
+    _build_h5ad_input(input_path)
+
+    result = _run_cmd(
+        [
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_dir),
+            "--method",
+            "scanvi",
+            "--labels-key",
+            "missing_label",
+            "--unlabeled-category",
+            "Unknown",
+            "--min-genes",
+            "1",
+            "--min-cells",
+            "1",
+        ]
+    )
+    assert result.returncode != 0
+    assert "Labels key not found in adata.obs: missing_label." in result.stderr
+
+
+def test_scvi_rejects_scanvi_only_label_flags(tmp_path: Path):
+    _require_scvi_stack()
+    output_dir = tmp_path / "scvi_bad_label_flags"
+    result = _run_cmd(
+        [
+            "--demo",
+            "--output",
+            str(output_dir),
+            "--labels-key",
+            "demo_truth",
+        ]
+    )
+    assert result.returncode != 0
+    assert "--labels-key is only supported when --method scanvi." in result.stderr
+
+
+def test_clawbio_runner_accepts_scanvi_flags(tmp_path: Path):
+    _require_scvi_stack()
+    output_dir = tmp_path / "clawbio_scanvi_output"
+    result = _run_clawbio_cmd(
+        [
+            "--demo",
+            "--output",
+            str(output_dir),
+            "--method",
+            "scanvi",
+            "--labels-key",
+            "demo_truth",
+            "--unlabeled-category",
+            "Unknown",
+            "--latent-dim",
+            "6",
+            "--max-epochs",
+            "2",
+            "--accelerator",
+            "cpu",
+            "--min-genes",
+            "1",
+            "--min-cells",
+            "1",
+        ]
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads((output_dir / "result.json").read_text())
+    assert payload["summary"]["method"] == "scanvi"
+    assert payload["summary"]["labels_key"] == "demo_truth"
+
+
 def test_orchestrator_routes_embedding_keywords_to_new_skill():
     module = _load_orchestrator_module()
     assert module.detect_skill_from_query("Run scvi batch correction on my h5ad") == "scrna-embedding"
+    assert module.detect_skill_from_query("Run scanvi on my labeled h5ad") == "scrna-embedding"
     assert module.detect_skill_from_query("Build a latent embedding for this single-cell dataset") == "scrna-embedding"
     assert module.detect_skill_from_query("Cluster my h5ad and find marker genes") == "scrna-orchestrator"
     assert module.detect_skill_from_query("Use integrated.h5ad with X_scvi to find markers") == "scrna-orchestrator"
