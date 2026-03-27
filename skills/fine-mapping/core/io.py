@@ -122,7 +122,15 @@ def load_ld(path: Path, n_variants: int) -> np.ndarray:
     if path.suffix == ".npy":
         R = np.load(path)
     else:
-        R = pd.read_csv(path, sep=None, header=None, engine="python").values
+        # Detect whether the file has a string header row (e.g. rsIDs) and skip it
+        peek = pd.read_csv(path, sep=None, header=None, engine="python", nrows=1)
+        first_val = str(peek.iloc[0, 0])
+        try:
+            float(first_val)
+            hdr = None
+        except ValueError:
+            hdr = 0  # first row is a header — skip it
+        R = pd.read_csv(path, sep=None, header=hdr, index_col=None, engine="python").values
 
     R = np.asarray(R, dtype=float)
 
