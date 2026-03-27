@@ -66,7 +66,7 @@ GWAS identifies associated loci, not causal variants. A single GWAS signal can c
 1. **Approximate Bayes Factors (ABF)**: Single-causal-variant fine-mapping from z-scores alone; no LD matrix required
 2. **SuSiE (Sum of Single Effects)**: Multi-signal fine-mapping with LD using the iterative Bayesian stepwise selection algorithm; wraps `polyfun` if installed, falls back to a pure-Python SuSiE implementation
 3. **Credible sets**: 95% and 99% credible sets computed from PIPs; reports size, coverage, and lead variant
-4. **Visualisation**: Locus PIP plot (colour-coded by LD r²), regional association plot overlaid with PIPs, credible set summary table
+4. **Visualisation**: Locus PIP plot (colour-coded by LD r²), regional association plot overlaid with PIPs (optionally with a gene track fetched from Ensembl), credible set summary table
 5. **LD computation**: Optionally computes LD from a PLINK .bed file in the locus window; or accepts a pre-computed LD matrix
 
 ## Input Formats
@@ -109,6 +109,10 @@ python skills/fine-mapping/fine_mapping.py \
 # Set maximum number of causal signals (SuSiE L parameter)
 python skills/fine-mapping/fine_mapping.py \
   --sumstats locus.tsv --ld ld_matrix.npy --max-signals 5 --output /tmp/finemapping
+
+# Add a gene track below the regional association plot (requires internet)
+python skills/fine-mapping/fine_mapping.py \
+  --sumstats locus.tsv --ld ld_matrix.npy --gene-track --output /tmp/finemapping
 
 # Demo mode (synthetic 200-variant locus, two causal signals)
 python skills/fine-mapping/fine_mapping.py --demo --output /tmp/finemapping_demo
