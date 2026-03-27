@@ -472,7 +472,7 @@ def _plot_ld_heatmap(R, df, credible_sets, figures_dir, plt, mcolors):
     tick_step = max(1, len(pos_plot) // n_ticks)
     tick_positions = list(range(0, len(pos_plot), tick_step))
     if "pos" in df.columns and df["pos"].notna().all():
-        tick_labels = [f"{pos_plot[i]/1e6:.2f}Mb" for i in tick_positions]
+        tick_labels = [f"{pos_plot[i]/1e6:.2f}" for i in tick_positions]
     else:
         tick_labels = [str(idx[i]) for i in tick_positions]
 
