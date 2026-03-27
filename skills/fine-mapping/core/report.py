@@ -398,6 +398,10 @@ def _plot_regional_association(df, credible_sets, figures_dir, plt, gene_track: 
         lead_idx = int(df["pip"].idxmax())
         ax.scatter(x[lead_idx], log_p[lead_idx], marker="x", s=80, c="#D55E00",
                    linewidths=1.5, zorder=4, label=f"Lead ({df.loc[lead_idx, 'rsid']})")
+        ax.annotate(df.loc[lead_idx, "rsid"],
+                    xy=(x[lead_idx], log_p[lead_idx]),
+                    xytext=(6, 3), textcoords="offset points",
+                    fontsize=7, color="#D55E00")
         ax.legend(fontsize=8)
 
     ax.set_ylabel(r"–log$_{10}$($p$)")
