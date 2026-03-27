@@ -42,7 +42,8 @@ def load_sumstats(path: Path, chr_: str | None = None, start: int | None = None,
                  "effect_allele": "a1", "other_allele": "a2",
                  "effect_size": "beta", "standard_error": "se",
                  "zscore": "z", "z_score": "z",
-                 "chromosome": "chr", "position": "pos", "bp": "pos"})
+                 "chromosome": "chr", "position": "pos", "bp": "pos",
+                 "pval": "p", "p_value": "p", "pvalue": "p", "p.value": "p"})
 
     has_z = "z" in raw.columns
     has_beta_se = ("beta" in raw.columns and "se" in raw.columns)
