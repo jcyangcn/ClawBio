@@ -396,8 +396,8 @@ def _plot_regional_association(df, credible_sets, figures_dir, plt, gene_track: 
 
     if "pip" in df.columns and df["pip"].notna().any():
         lead_idx = int(df["pip"].idxmax())
-        ax.scatter(x[lead_idx], log_p[lead_idx], marker="x", s=80, c="#D55E00",
-                   linewidths=1.5, zorder=4, label=f"Lead ({df.loc[lead_idx, 'rsid']})")
+        ax.scatter(x[lead_idx], log_p[lead_idx], s=15, c="#D55E00",
+                   edgecolors="none", zorder=4, label=f"Lead ({df.loc[lead_idx, 'rsid']})")
         ax.annotate(df.loc[lead_idx, "rsid"],
                     xy=(x[lead_idx], log_p[lead_idx]),
                     xytext=(6, 3), textcoords="offset points",
