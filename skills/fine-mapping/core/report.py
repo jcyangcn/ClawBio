@@ -228,7 +228,8 @@ def _plot_pip_locus(df, credible_sets, R, figures_dir, plt, mcolors):
     """PIP locus plot, variants coloured by LD r² to lead variant."""
     fig, ax = plt.subplots(figsize=(10, 4))
 
-    x = df["pos"].values if "pos" in df.columns and df["pos"].notna().all() else np.arange(len(df))
+    has_pos = "pos" in df.columns and df["pos"].notna().all()
+    x = df["pos"].values / 1e6 if has_pos else np.arange(len(df))
     pip = df["pip"].values
 
     # Compute LD r² to lead variant
@@ -257,7 +258,7 @@ def _plot_pip_locus(df, credible_sets, R, figures_dir, plt, mcolors):
 
     ax.set_ylim(-0.02, 1.05)
     ax.axhline(0.5, color="#D55E00", linestyle="--", linewidth=0.8, alpha=0.6, label="PIP = 0.5")
-    ax.set_xlabel("Position" if "pos" in df.columns else "Variant index")
+    ax.set_xlabel("Position (Mb)" if has_pos else "Variant index")
     ax.set_ylabel("Posterior Inclusion Probability (PIP)")
     ax.set_title("Fine-mapping Locus Plot (PIP)")
     ax.legend(fontsize=8)
@@ -359,13 +360,16 @@ def _plot_regional_association(df, credible_sets, figures_dir, plt, gene_track: 
     has_pos = "pos" in df.columns and df["pos"].notna().all()
     has_chr = "chr" in df.columns and df["chr"].notna().any()
 
-    x = df["pos"].values if has_pos else np.arange(len(df))
+    x_bp = df["pos"].values if has_pos else np.arange(len(df))
+    x = x_bp / 1e6 if has_pos else x_bp
     x_min, x_max = float(x.min()), float(x.max())
 
     genes = []
     if gene_track and has_pos and has_chr:
         chrom = df["chr"].dropna().iloc[0]
-        genes = _fetch_genes(chrom, int(x_min), int(x_max))
+        x_min_bp, x_max_bp = float(x_bp.min()), float(x_bp.max())
+        genes = _fetch_genes(chrom, int(x_min_bp), int(x_max_bp))
+        genes = [{**g, "start": g["start"] / 1e6, "end": g["end"] / 1e6} for g in genes]
 
     if genes:
         rows: list[float] = []
@@ -402,9 +406,9 @@ def _plot_regional_association(df, credible_sets, figures_dir, plt, gene_track: 
     if ax_gene is not None:
         ax.tick_params(axis="x", labelbottom=False)
         _plot_gene_track(ax_gene, genes, x_min, x_max)
-        ax_gene.set_xlabel("Position" if has_pos else "Variant index")
+        ax_gene.set_xlabel("Position (Mb)" if has_pos else "Variant index")
     else:
-        ax.set_xlabel("Position" if has_pos else "Variant index")
+        ax.set_xlabel("Position (Mb)" if has_pos else "Variant index")
 
     fig.savefig(figures_dir / "regional_association.png", dpi=150)
     plt.close(fig)
@@ -484,8 +488,8 @@ def _plot_ld_heatmap(R, df, credible_sets, figures_dir, plt, mcolors):
     if subsampled:
         title += f" — subsampled to {len(idx)} of {p} variants"
     ax.set_title(title, fontsize=10)
-    ax.set_xlabel("Variants" if "pos" not in df.columns else "Position")
-    ax.set_ylabel("Variants" if "pos" not in df.columns else "Position")
+    ax.set_xlabel("Variants" if "pos" not in df.columns else "Position (Mb)")
+    ax.set_ylabel("Variants" if "pos" not in df.columns else "Position (Mb)")
 
     # Legend for credible sets
     seen = {}
