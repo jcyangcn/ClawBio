@@ -279,6 +279,13 @@ def _plot_regional_association(df, credible_sets, figures_dir, plt):
     with np.errstate(divide="ignore"):
         log_p = -np.log10(np.where(p > 0, p, 1e-300))
     ax.scatter(x, log_p, s=15, c="#31688e", edgecolors="none", alpha=0.8)
+
+    if "pip" in df.columns and df["pip"].notna().any():
+        lead_idx = int(df["pip"].idxmax())
+        ax.scatter(x[lead_idx], log_p[lead_idx], marker="x", s=80, c="#D55E00",
+                   linewidths=1.5, zorder=4, label=f"Lead ({df.loc[lead_idx, 'rsid']})")
+        ax.legend(fontsize=8)
+
     ax.set_xlabel("Position")
     ax.set_ylabel("–log₁₀(p)")
     ax.set_title("Regional Association")
