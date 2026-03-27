@@ -271,21 +271,38 @@ def _plot_pip_locus(df, credible_sets, R, figures_dir, plt, mcolors):
 
 
 def _fetch_genes(chrom: str, start: int, end: int) -> list[dict]:
-    """Fetch gene annotations from Ensembl REST API. Returns [] on any failure."""
-    try:
-        import urllib.request, json as _json
-        chrom_clean = str(chrom).lstrip("chr")
-        url = (
-            f"https://rest.ensembl.org/overlap/region/human/"
-            f"{chrom_clean}:{start}-{end}"
-            f"?feature=gene;content-type=application/json"
-        )
-        req = urllib.request.Request(url, headers={"User-Agent": "ClawBio/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            genes = _json.loads(resp.read())
-        return [g for g in genes if g.get("feature_type") == "gene"]
-    except Exception:
-        return []
+    """Fetch gene annotations from Ensembl REST API. Returns [] on any failure.
+
+    Respects Ensembl rate limits (55,000 req/hr; HTTP 429 + Retry-After header).
+    Retries up to 3 times on 429; gives up immediately on any other error.
+    """
+    import json as _json
+    import time
+    import urllib.error
+    import urllib.request
+
+    chrom_clean = str(chrom).lstrip("chr")
+    url = (
+        f"https://rest.ensembl.org/overlap/region/human/"
+        f"{chrom_clean}:{start}-{end}"
+        f"?feature=gene;content-type=application/json"
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "ClawBio/1.0"})
+
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                genes = _json.loads(resp.read())
+            return [g for g in genes if g.get("feature_type") == "gene"]
+        except urllib.error.HTTPError as exc:
+            if exc.code == 429:
+                retry_after = float(exc.headers.get("Retry-After", 1))
+                time.sleep(retry_after)
+                continue
+            return []
+        except Exception:
+            return []
+    return []
 
 
 def _plot_gene_track(ax, genes: list[dict], x_min: float, x_max: float) -> None:
