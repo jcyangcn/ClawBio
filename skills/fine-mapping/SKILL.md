@@ -179,7 +179,8 @@ output_directory/
 ├── results.json                 # Machine-readable PIPs + credible sets
 ├── figures/
 │   ├── pip_locus_plot.png       # Per-variant PIP coloured by LD r²
-│   └── regional_association.png # -log10(p) + PIP overlay
+│   ├── regional_association.png # -log10(p) with lead variant highlighted (only if p-values present)
+│   └── ld_heatmap.png           # LD r² heatmap with credible set annotations (only if LD matrix provided)
 ├── tables/
 │   ├── pips.tsv                 # rsid, chr, pos, pip, cs_membership
 │   └── credible_sets.tsv        # cs_id, size, coverage, lead_rsid, variants
