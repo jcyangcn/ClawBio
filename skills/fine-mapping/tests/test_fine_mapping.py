@@ -505,3 +505,154 @@ class TestRunFinemapping:
         )
         # Only ~25% of the 200-variant locus falls in this window
         assert results["n_variants"] < 200
+
+    def test_gene_track_param_accepted(self, tmp_path):
+        """run_finemapping accepts gene_track=True without error (figures skipped)."""
+        results = fine_mapping.run_finemapping(
+            sumstats_path=None,
+            ld_path=None,
+            output_dir=tmp_path,
+            demo=True,
+            make_figures=False,
+            gene_track=True,
+        )
+        assert "method" in results
+
+
+# ---------------------------------------------------------------------------
+# TestGeneTrack
+# ---------------------------------------------------------------------------
+
+
+class TestGeneTrack:
+    """Tests for gene track fetching and rendering."""
+
+    def test_fetch_genes_returns_empty_on_network_error(self):
+        """_fetch_genes returns [] when the network request fails."""
+        from core.report import _fetch_genes
+        from unittest.mock import patch
+
+        with patch("urllib.request.urlopen", side_effect=OSError("network error")):
+            result = _fetch_genes("1", 1_000_000, 2_000_000)
+        assert result == []
+
+    def test_fetch_genes_filters_to_gene_feature_type(self):
+        """_fetch_genes drops non-gene features (e.g. transcripts)."""
+        import json
+        from core.report import _fetch_genes
+        from unittest.mock import MagicMock, patch
+
+        mock_data = [
+            {"feature_type": "gene", "gene_id": "ENSG001",
+             "start": 1000, "end": 2000, "strand": 1},
+            {"feature_type": "transcript", "gene_id": "ENSG001",
+             "start": 1000, "end": 2000, "strand": 1},
+        ]
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps(mock_data).encode()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            result = _fetch_genes("1", 1_000_000, 2_000_000)
+
+        assert len(result) == 1
+        assert result[0]["feature_type"] == "gene"
+
+    def test_fetch_genes_strips_chr_prefix(self):
+        """_fetch_genes strips 'chr' prefix from chromosome before building URL."""
+        import json
+        from core.report import _fetch_genes
+        from unittest.mock import MagicMock, call, patch
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps([]).encode()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+
+        captured = {}
+
+        def capture_urlopen(req, **kwargs):
+            captured["url"] = req.full_url
+            return mock_resp
+
+        with patch("urllib.request.urlopen", side_effect=capture_urlopen):
+            _fetch_genes("chr7", 1_000_000, 2_000_000)
+
+        assert "/7:" in captured["url"], "chr prefix should be stripped from URL"
+
+    def test_plot_gene_track_renders_without_error(self):
+        """_plot_gene_track draws strand-aware gene arrows without raising."""
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from core.report import _plot_gene_track
+
+        genes = [
+            {"external_name": "GENE1", "gene_id": "ENSG001",
+             "start": 1_000, "end": 5_000, "strand": 1},
+            {"external_name": "GENE2", "gene_id": "ENSG002",
+             "start": 3_000, "end": 8_000, "strand": -1},
+        ]
+        fig, ax = plt.subplots()
+        _plot_gene_track(ax, genes, 0, 10_000)
+        plt.close(fig)
+
+    def test_plot_gene_track_empty_gene_list(self):
+        """_plot_gene_track handles an empty gene list without error."""
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from core.report import _plot_gene_track
+
+        fig, ax = plt.subplots()
+        _plot_gene_track(ax, [], 0, 10_000)
+        plt.close(fig)
+
+    def test_regional_association_gene_track_no_genes(self, tmp_path):
+        """gene_track=True with empty gene response produces a single-panel figure."""
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from core.report import _plot_regional_association
+        from unittest.mock import patch
+
+        df = _small_locus()
+        with patch("core.report._fetch_genes", return_value=[]):
+            _plot_regional_association(df, [], tmp_path, plt, gene_track=True)
+
+        assert (tmp_path / "regional_association.png").exists()
+
+    def test_regional_association_gene_track_with_genes(self, tmp_path):
+        """gene_track=True with gene data produces a two-panel figure."""
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from core.report import _plot_regional_association
+        from unittest.mock import patch
+
+        genes = [
+            {"feature_type": "gene", "external_name": "GENE1", "gene_id": "ENSG001",
+             "start": 1_000_000, "end": 1_005_000, "strand": 1},
+            {"feature_type": "gene", "external_name": "GENE2", "gene_id": "ENSG002",
+             "start": 1_010_000, "end": 1_015_000, "strand": -1},
+        ]
+        df = _small_locus()
+        with patch("core.report._fetch_genes", return_value=genes):
+            _plot_regional_association(df, [], tmp_path, plt, gene_track=True)
+
+        assert (tmp_path / "regional_association.png").exists()
+
+    def test_regional_association_gene_track_false_by_default(self, tmp_path):
+        """_plot_regional_association never calls _fetch_genes when gene_track=False."""
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from core.report import _plot_regional_association
+        from unittest.mock import patch
+
+        df = _small_locus()
+        with patch("core.report._fetch_genes") as mock_fetch:
+            _plot_regional_association(df, [], tmp_path, plt, gene_track=False)
+
+        mock_fetch.assert_not_called()
