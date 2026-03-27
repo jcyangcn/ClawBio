@@ -536,6 +536,72 @@ class TestGeneTrack:
             result = _fetch_genes("1", 1_000_000, 2_000_000)
         assert result == []
 
+    def test_fetch_genes_retries_on_429(self):
+        """_fetch_genes sleeps for Retry-After seconds and retries on HTTP 429."""
+        import json
+        import urllib.error
+        from core.report import _fetch_genes
+        from unittest.mock import MagicMock, call, patch
+
+        # First two calls raise 429; third succeeds
+        gene_data = [{"feature_type": "gene", "gene_id": "ENSG001",
+                      "start": 1000, "end": 2000, "strand": 1}]
+
+        headers_429 = {"Retry-After": "0.01"}
+        http_429 = urllib.error.HTTPError(
+            url="", code=429, msg="Too Many Requests", hdrs=headers_429, fp=None
+        )
+
+        success_resp = MagicMock()
+        success_resp.read.return_value = json.dumps(gene_data).encode()
+        success_resp.__enter__ = lambda s: s
+        success_resp.__exit__ = MagicMock(return_value=False)
+
+        side_effects = [http_429, http_429, success_resp]
+
+        with patch("urllib.request.urlopen", side_effect=side_effects), \
+             patch("time.sleep") as mock_sleep:
+            result = _fetch_genes("1", 1_000_000, 2_000_000)
+
+        assert len(result) == 1
+        assert mock_sleep.call_count == 2
+        mock_sleep.assert_called_with(pytest.approx(0.01))
+
+    def test_fetch_genes_returns_empty_after_max_retries(self):
+        """_fetch_genes returns [] when all 3 attempts receive HTTP 429."""
+        import urllib.error
+        from core.report import _fetch_genes
+        from unittest.mock import patch
+
+        headers_429 = {"Retry-After": "0.01"}
+        http_429 = urllib.error.HTTPError(
+            url="", code=429, msg="Too Many Requests", hdrs=headers_429, fp=None
+        )
+
+        with patch("urllib.request.urlopen", side_effect=[http_429, http_429, http_429]), \
+             patch("time.sleep"):
+            result = _fetch_genes("1", 1_000_000, 2_000_000)
+
+        assert result == []
+
+    def test_fetch_genes_returns_empty_on_non_429_http_error(self):
+        """_fetch_genes returns [] immediately on non-429 HTTP errors (no retry)."""
+        import urllib.error
+        from core.report import _fetch_genes
+        from unittest.mock import patch
+
+        http_500 = urllib.error.HTTPError(
+            url="", code=500, msg="Internal Server Error", hdrs={}, fp=None
+        )
+
+        with patch("urllib.request.urlopen", side_effect=http_500) as mock_urlopen, \
+             patch("time.sleep") as mock_sleep:
+            result = _fetch_genes("1", 1_000_000, 2_000_000)
+
+        assert result == []
+        assert mock_urlopen.call_count == 1  # no retry
+        mock_sleep.assert_not_called()
+
     def test_fetch_genes_filters_to_gene_feature_type(self):
         """_fetch_genes drops non-gene features (e.g. transcripts)."""
         import json
