@@ -237,7 +237,7 @@ def _plot_pip_locus(df, credible_sets, R, figures_dir, plt, mcolors):
         r2 = np.clip(r2, 0, 1)
         colors = _r2_colors(r2, mcolors)
     else:
-        colors = ["#7fbfff"] * len(df)
+        colors = ["#3b528b"] * len(df)
 
     # Mark CS members
     cs_indices = set()
@@ -255,7 +255,7 @@ def _plot_pip_locus(df, credible_sets, R, figures_dir, plt, mcolors):
                    edgecolors="black", linewidths=0.8, zorder=3)
 
     ax.set_ylim(-0.02, 1.05)
-    ax.axhline(0.5, color="red", linestyle="--", linewidth=0.8, alpha=0.6, label="PIP = 0.5")
+    ax.axhline(0.5, color="#D55E00", linestyle="--", linewidth=0.8, alpha=0.6, label="PIP = 0.5")
     ax.set_xlabel("Position" if "pos" in df.columns else "Variant index")
     ax.set_ylabel("Posterior Inclusion Probability (PIP)")
     ax.set_title("Fine-mapping Locus Plot (PIP)")
@@ -280,13 +280,13 @@ def _plot_regional_association(df, credible_sets, figures_dir, plt):
     p = df["p"].values.astype(float)
     with np.errstate(divide="ignore"):
         log_p = -np.log10(np.where(p > 0, p, 1e-300))
-    ax1.scatter(x, log_p, s=15, c="#7fbfff", edgecolors="none", alpha=0.8)
-    ax1.axhline(7.3, color="red", linestyle="--", linewidth=0.8, alpha=0.7, label="p=5×10⁻⁸")
+    ax1.scatter(x, log_p, s=15, c="#31688e", edgecolors="none", alpha=0.8)
+    ax1.axhline(7.3, color="#D55E00", linestyle="--", linewidth=0.8, alpha=0.7, label="p=5×10⁻⁸")
     ax1.set_ylabel("–log₁₀(p)")
     ax1.legend(fontsize=8)
 
     # bottom: PIP
-    ax2.scatter(x, df["pip"].values, s=15, c="#ff9f40", edgecolors="none", alpha=0.8)
+    ax2.scatter(x, df["pip"].values, s=15, c="#35b779", edgecolors="none", alpha=0.8)
     ax2.set_ylim(-0.02, 1.05)
     ax2.set_xlabel("Position")
     ax2.set_ylabel("PIP")
@@ -320,12 +320,13 @@ def _plot_ld_heatmap(R, df, credible_sets, figures_dir, plt, mcolors):
 
     fig, ax = plt.subplots(figsize=(8, 7))
 
-    cmap = plt.cm.get_cmap("RdYlBu_r")
+    cmap = plt.cm.get_cmap("viridis")
     im = ax.imshow(r2_plot, cmap=cmap, vmin=0, vmax=1, aspect="auto", interpolation="nearest")
 
     # Overlay credible set boundaries as coloured rectangles on the diagonal
-    cs_colors = ["#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00",
-                 "#a65628", "#f781bf", "#999999", "#66c2a5", "#fc8d62"]
+    # Okabe-Ito colorblind-safe palette
+    cs_colors = ["#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00",
+                 "#CC79A7", "#000000", "#F0E442"]
     cs_rsid_to_idx = {}
     for cs in credible_sets:
         if not cs.get("pure", True):
@@ -393,19 +394,17 @@ def _plot_ld_heatmap(R, df, credible_sets, figures_dir, plt, mcolors):
 
 
 def _r2_colors(r2: np.ndarray, mcolors) -> list:
-    """Map r² values to a blue-red colour scale."""
-    cmap = mcolors.LinearSegmentedColormap.from_list(
-        "r2", ["#7fbfff", "#00cc44", "#ffcc00", "#ff4400", "#cc0000"]
-    )
+    """Map r² values to viridis colour scale (colorblind-friendly)."""
+    import matplotlib.pyplot as plt
+    cmap = plt.cm.get_cmap("viridis")
     norm = mcolors.Normalize(vmin=0, vmax=1)
     return [cmap(norm(v)) for v in r2]
 
 
 def _add_r2_colorbar(fig, ax, mcolors):
     import matplotlib.cm as cm
-    cmap = mcolors.LinearSegmentedColormap.from_list(
-        "r2", ["#7fbfff", "#00cc44", "#ffcc00", "#ff4400", "#cc0000"]
-    )
+    import matplotlib.pyplot as plt
+    cmap = plt.cm.get_cmap("viridis")
     sm = cm.ScalarMappable(cmap=cmap, norm=mcolors.Normalize(vmin=0, vmax=1))
     sm.set_array([])
     cbar = fig.colorbar(sm, ax=ax, shrink=0.6, pad=0.01)
