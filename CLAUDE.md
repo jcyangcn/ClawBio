@@ -35,10 +35,11 @@ When the user asks a question, match it to a skill and act:
 | Soul to genome, compile soul, synthetic genome, Genomebook compile, character genome | `skills/soul2dna/` | Run `soul2dna.py` |
 | Genome compatibility, mating pairs, heterozygosity, Genomebook match, breeding pairs | `skills/genome-match/` | Run `genome_match.py` |
 | Recombination, offspring, breed, meiosis, next generation, Genomebook breed | `skills/recombinator/` | Run `recombinator.py` |
+| Fine-mapping, SuSiE, ABF, credible sets, PIP, posterior inclusion probability, causal variant, fine map locus, FINEMAP, polyfun | `skills/fine-mapping/` | Run `fine_mapping.py` |
 
 ## How to Use a Skill
 
-### Skills with Python scripts (pharmgx-reporter, equity-scorer, nutrigx_advisor, scrna-orchestrator, bio-orchestrator, clinpgx, gwas-prs, gwas-lookup, profile-report, ukb-navigator, galaxy-bridge, rnaseq-de, methylation-clock, protocols-io, soul2dna, genome-match, recombinator, labstep)
+### Skills with Python scripts (pharmgx-reporter, equity-scorer, nutrigx_advisor, scrna-orchestrator, bio-orchestrator, clinpgx, gwas-prs, gwas-lookup, profile-report, ukb-navigator, galaxy-bridge, rnaseq-de, methylation-clock, protocols-io, soul2dna, genome-match, recombinator, labstep, fine-mapping)
 1. Read the skill's `SKILL.md` for domain context
 2. Run the Python script with correct CLI arguments (see below)
 3. Show the user the output — open any generated figures and explain results
@@ -161,6 +162,16 @@ python skills/recombinator/recombinator.py --demo
 python skills/recombinator/recombinator.py \
   --father einstein-g0 --mother anning-g0 --offspring 3 --generation 1
 
+# SuSiE fine-mapping — credible sets and PIPs from GWAS summary stats
+python skills/fine-mapping/fine_mapping.py \
+  --sumstats locus.tsv --output <report_dir>
+python skills/fine-mapping/fine_mapping.py \
+  --sumstats locus.tsv --ld ld_matrix.npy --output <report_dir>
+python skills/fine-mapping/fine_mapping.py \
+  --sumstats gwas_full.tsv --chr 1 --start 109000000 --end 110000000 \
+  --ld ld_matrix.npy --output <report_dir>
+python skills/fine-mapping/fine_mapping.py --demo --output /tmp/finemapping_demo
+
 # Labstep ELN bridge — experiments, protocols, inventory
 python skills/labstep/labstep.py --demo
 python skills/labstep/labstep.py --experiments [--search QUERY] [--count N]
@@ -198,6 +209,7 @@ For instant demos when the user has no data:
 | GenomeMatch demo (generation-0 pairings) | `--demo` flag | genome-match |
 | Recombinator demo (Einstein x Anning, 3 offspring) | `--demo` flag | recombinator |
 | Labstep demo (3 experiments, protocols, inventory) | `--demo` flag | labstep |
+| Fine-mapping demo (200-variant locus, 2 causal signals, SuSiE) | `--demo` flag | fine-mapping |
 
 
 ### Demo Commands
@@ -271,6 +283,9 @@ python skills/recombinator/recombinator.py --demo
 
 # Labstep demo
 python skills/labstep/labstep.py --demo --output /tmp/labstep
+
+# SuSiE fine-mapping demo
+python skills/fine-mapping/fine_mapping.py --demo --output /tmp/finemapping_demo
 
 ```
 
