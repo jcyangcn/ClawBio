@@ -198,6 +198,30 @@
       "chaining_partners": []
     },
     {
+      "name": "clinical-variant-reporter",
+      "cli_alias": null,
+      "description": ">-",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/clinical-variant-reporter/acmg_engine.py --demo",
+      "dependencies": [],
+      "tags": [
+        "acmg",
+        "variant-classification",
+        "clinical-genomics",
+        "pathogenicity",
+        "germline",
+        "secondary-findings",
+        "exome",
+        "genome"
+      ],
+      "trigger_keywords": [],
+      "chaining_partners": []
+    },
+    {
       "name": "clinpgx",
       "cli_alias": "clinpgx",
       "description": "Query the ClinPGx API for pharmacogenomic gene-drug data, clinical annotations, CPIC guidelines, and FDA drug labels",
