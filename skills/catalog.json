@@ -1,9 +1,36 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 39,
+  "skill_count": 41,
   "galaxy_tool_count": 8182,
   "skills": [
+    {
+      "name": "bigquery-public",
+      "cli_alias": "bigquery",
+      "description": ">-",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run bigquery --demo",
+      "dependencies": [],
+      "tags": [
+        "bigquery",
+        "public-datasets",
+        "sql",
+        "cloud",
+        "genomics"
+      ],
+      "trigger_keywords": [
+        "bigquery",
+        "public dataset",
+        "sql",
+        "public data",
+        "cloud query"
+      ],
+      "chaining_partners": []
+    },
     {
       "name": "bio-orchestrator",
       "cli_alias": null,
@@ -289,6 +316,29 @@
       "chaining_partners": [
         "claw-semantic-sim"
       ]
+    },
+    {
+      "name": "fine-mapping",
+      "cli_alias": null,
+      "description": ">-",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/fine-mapping/fine_mapping.py --demo",
+      "dependencies": [],
+      "tags": [
+        "gwas",
+        "fine-mapping",
+        "susie",
+        "credible-sets",
+        "pip",
+        "causal-variants",
+        "statistics"
+      ],
+      "trigger_keywords": [],
+      "chaining_partners": []
     },
     {
       "name": "galaxy-bridge",

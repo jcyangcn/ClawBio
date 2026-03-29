@@ -383,6 +383,21 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "bigquery": {
+        "script": SKILLS_DIR / "bigquery-public" / "bigquery_public.py",
+        "demo_args": ["--demo"],
+        "description": "BigQuery Public — read-only SQL bridge for public datasets with local outputs",
+        "allowed_extra_flags": {
+            "--query",
+            "--location",
+            "--max-rows",
+            "--max-bytes-billed",
+            "--param",
+            "--dry-run",
+        },
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
     "profile": {
         "script": SKILLS_DIR / "profile-report" / "profile_report.py",
         "demo_args": ["--demo"],
@@ -915,6 +930,22 @@ def main():
     run_parser.add_argument("--genes", default=None, help="Comma-separated gene symbols for ClinPGx")
     run_parser.add_argument("--rsid", default=None, help="rsID for GWAS lookup skill (e.g. rs3798220)")
     run_parser.add_argument("--skip", default=None, help="Comma-separated API names to skip (gwas-lookup skill)")
+    run_parser.add_argument("--query", default=None, help="Inline SQL query for bigquery skill")
+    run_parser.add_argument("--location", default=None, help="BigQuery location (e.g. US, EU)")
+    run_parser.add_argument("--max-rows", type=int, default=None, help="Maximum number of query rows for bigquery skill")
+    run_parser.add_argument(
+        "--max-bytes-billed",
+        type=int,
+        default=None,
+        help="Maximum billed bytes safeguard for bigquery skill",
+    )
+    run_parser.add_argument(
+        "--param",
+        action="append",
+        default=None,
+        help="Repeatable bigquery parameter in name=type:value format",
+    )
+    run_parser.add_argument("--dry-run", action="store_true", help="BigQuery dry-run (estimate bytes only)")
     run_parser.add_argument("--geo-id", default=None, help="GEO accession for methylation clock skill")
     run_parser.add_argument("--clocks", default=None, help="Comma-separated clock names for methylation skill")
     run_parser.add_argument("--metadata-cols", default=None, help="Comma-separated metadata columns for methylation skill")
@@ -1104,6 +1135,19 @@ def main():
             extra.extend(["--rsid", args.rsid])
         if getattr(args, "skip", None):
             extra.extend(["--skip", args.skip])
+        if getattr(args, "query", None):
+            extra.extend(["--query", args.query])
+        if getattr(args, "location", None):
+            extra.extend(["--location", args.location])
+        if getattr(args, "max_rows", None) is not None:
+            extra.extend(["--max-rows", str(args.max_rows)])
+        if getattr(args, "max_bytes_billed", None) is not None:
+            extra.extend(["--max-bytes-billed", str(args.max_bytes_billed)])
+        if getattr(args, "param", None):
+            for param in args.param:
+                extra.extend(["--param", param])
+        if getattr(args, "dry_run", False):
+            extra.append("--dry-run")
         if getattr(args, "geo_id", None):
             extra.extend(["--geo-id", args.geo_id])
         if getattr(args, "clocks", None):
