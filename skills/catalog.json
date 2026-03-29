@@ -8,7 +8,7 @@
       "name": "bigquery-public",
       "cli_alias": "bigquery",
       "description": ">-",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "status": "mvp",
       "has_script": true,
       "has_tests": true,

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-bigquery_public.py — BigQuery Public Data bridge for ClawBio
-============================================================
-Run read-only SQL queries against BigQuery public datasets with a local-first
-workflow. Demo mode uses a bundled offline fixture so tests and first-run
-experience do not require cloud authentication.
+bigquery_public.py — BigQuery Public bridge for ClawBio
+=======================================================
+Run read-only SQL queries and lightweight discovery commands against BigQuery
+public datasets with a local-first workflow. Demo mode uses a bundled offline
+fixture so tests and first-run experience do not require cloud authentication.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from clawbio.common.report import (
+from clawbio.common.report import (  # noqa: E402
     DISCLAIMER,
     generate_report_footer,
     generate_report_header,
@@ -39,10 +39,14 @@ DEMO_QUERY_PATH = DEMO_DIR / "demo_query.sql"
 DEMO_RESULT_PATH = DEMO_DIR / "demo_result.json"
 
 SKILL_NAME = "bigquery-public"
-SKILL_VERSION = "0.1.0"
+SKILL_VERSION = "0.2.0"
 DEFAULT_LOCATION = "US"
 DEFAULT_MAX_ROWS = 100
 DEFAULT_MAX_BYTES_BILLED = 1_000_000_000
+
+DISCOVERY_LIST_DATASETS = "list-datasets"
+DISCOVERY_LIST_TABLES = "list-tables"
+DISCOVERY_DESCRIBE = "describe"
 
 
 class BigQuerySetupError(RuntimeError):
@@ -80,9 +84,27 @@ class QueryExecutionResult:
     raw_metadata: dict[str, Any]
 
 
+@dataclass
+class DiscoveryRequest:
+    action: str
+    target: str
+
+
+@dataclass
+class RunPlan:
+    mode: str
+    query_source: str
+    source_query: str | None
+    effective_query: str | None
+    discovery: DiscoveryRequest | None
+    warnings: list[str]
+    paper_reference: str | None
+    notes: list[str]
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="ClawBio BigQuery Public — read-only SQL bridge for public datasets",
+        description="ClawBio BigQuery Public — SQL-first bridge for public datasets",
     )
     parser.add_argument("--input", help="Path to a SQL file")
     parser.add_argument("--query", help="Inline SQL query string")
@@ -103,6 +125,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Scalar query parameter in name=type:value format (repeatable)",
     )
+    parser.add_argument("--list-datasets", help="List datasets for a project (project)")
+    parser.add_argument("--list-tables", help="List tables for a dataset (project.dataset)")
+    parser.add_argument("--describe", help="Describe top-level schema for a table (project.dataset.table)")
+    parser.add_argument("--preview", type=int, help="Wrap the SQL query in a preview LIMIT")
+    parser.add_argument("--count-only", action="store_true", help="Return only the row count for the SQL query")
+    parser.add_argument("--paper", help="Paper reference, DOI, URL, title, or local PDF path")
+    parser.add_argument("--note", action="append", default=[], help="Repeatable provenance note")
     return parser
 
 
@@ -158,6 +187,10 @@ def _mask_sql_literals(text: str) -> str:
 def _strip_sql_comments(text: str) -> str:
     no_block = re.sub(r"/\*.*?\*/", " ", text, flags=re.DOTALL)
     return re.sub(r"--.*?$", " ", no_block, flags=re.MULTILINE)
+
+
+def _analysis_sql(query: str) -> str:
+    return re.sub(r"\s+", " ", _mask_sql_literals(_strip_sql_comments(query))).strip().upper()
 
 
 def validate_read_only_sql(query: str) -> str:
@@ -228,6 +261,119 @@ def parse_scalar_params(specs: list[str]) -> list[QueryParameter]:
     return [parse_scalar_param(spec) for spec in specs]
 
 
+def parse_project_dataset(spec: str) -> tuple[str, str]:
+    parts = spec.strip().split(".")
+    if len(parts) != 2 or not all(parts):
+        raise ValueError(f"Expected project.dataset, got: {spec!r}")
+    return parts[0], parts[1]
+
+
+def parse_project_dataset_table(spec: str) -> tuple[str, str, str]:
+    parts = spec.strip().split(".")
+    if len(parts) != 3 or not all(parts):
+        raise ValueError(f"Expected project.dataset.table, got: {spec!r}")
+    return parts[0], parts[1], parts[2]
+
+
+def _wrap_preview_query(query: str, preview_rows: int) -> str:
+    return f"SELECT * FROM (\n{query}\n) AS clawbio_preview LIMIT {preview_rows}"
+
+
+def _wrap_count_query(query: str) -> str:
+    return f"SELECT COUNT(*) AS row_count FROM (\n{query}\n) AS clawbio_count"
+
+
+def _has_select_star(query: str) -> bool:
+    return bool(re.search(r"\bSELECT\s+(?:ALL\s+|DISTINCT\s+)?\*", _analysis_sql(query), flags=re.IGNORECASE))
+
+
+def _has_limit_clause(query: str) -> bool:
+    return bool(re.search(r"\bLIMIT\b", _analysis_sql(query), flags=re.IGNORECASE))
+
+
+def collect_query_warnings(
+    source_query: str,
+    *,
+    dry_run: bool,
+    preview_rows: int | None,
+    count_only: bool,
+) -> list[str]:
+    warnings: list[str] = []
+    if _has_select_star(source_query):
+        warnings.append("Query uses SELECT *; consider selecting only the columns you need.")
+    if not dry_run and preview_rows is None and not count_only and not _has_limit_clause(source_query):
+        warnings.append("Query does not include LIMIT; be sure the result size is intentional.")
+    return warnings
+
+
+def _resolve_run_plan(args: argparse.Namespace) -> RunPlan:
+    discovery_options = [
+        (DISCOVERY_LIST_DATASETS, args.list_datasets),
+        (DISCOVERY_LIST_TABLES, args.list_tables),
+        (DISCOVERY_DESCRIBE, args.describe),
+    ]
+    selected_discovery = [(action, target) for action, target in discovery_options if target]
+
+    if len(selected_discovery) > 1:
+        raise ValueError("Choose only one of --list-datasets, --list-tables, or --describe.")
+    if args.preview is not None and args.preview <= 0:
+        raise ValueError("--preview must be greater than 0.")
+    if args.preview is not None and args.count_only:
+        raise ValueError("--preview and --count-only cannot be used together.")
+
+    if selected_discovery:
+        if args.demo or args.query or args.input:
+            raise ValueError("Discovery options are mutually exclusive with --query, --input, and --demo.")
+        if args.dry_run:
+            raise ValueError("--dry-run is only supported with --query or --input.")
+        if args.preview is not None or args.count_only:
+            raise ValueError("--preview and --count-only are only supported with --query or --input.")
+        action, target = selected_discovery[0]
+        if action == DISCOVERY_LIST_TABLES:
+            parse_project_dataset(target)
+        elif action == DISCOVERY_DESCRIBE:
+            parse_project_dataset_table(target)
+        return RunPlan(
+            mode="discovery",
+            query_source=f"discovery:{action}",
+            source_query=None,
+            effective_query=None,
+            discovery=DiscoveryRequest(action=action, target=target),
+            warnings=[],
+            paper_reference=args.paper,
+            notes=args.note or [],
+        )
+
+    query_text, query_source = _read_query_from_args(args)
+    source_query = validate_read_only_sql(query_text)
+    effective_query = source_query
+
+    if args.demo and (args.preview is not None or args.count_only):
+        raise ValueError("--preview and --count-only are not supported with --demo.")
+    if args.count_only:
+        effective_query = validate_read_only_sql(_wrap_count_query(source_query))
+    elif args.preview is not None:
+        effective_query = validate_read_only_sql(_wrap_preview_query(source_query, args.preview))
+
+    warnings = [] if args.demo else collect_query_warnings(
+        source_query,
+        dry_run=args.dry_run,
+        preview_rows=args.preview,
+        count_only=args.count_only,
+    )
+
+    return RunPlan(
+        mode="demo" if args.demo else "query",
+        query_source=query_source,
+        source_query=source_query,
+        effective_query=effective_query,
+        discovery=None,
+        warnings=warnings,
+        paper_reference=args.paper,
+        notes=args.note or [],
+    )
+
+
 def _json_safe_value(value: Any) -> Any:
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
@@ -267,9 +413,41 @@ def _write_results_csv(path: Path, rows: list[dict[str, Any]], columns: list[str
             )
 
 
+def _build_provenance_payload(plan: RunPlan, result: QueryExecutionResult) -> dict[str, Any]:
+    payload = {
+        "paper_reference": plan.paper_reference,
+        "notes": plan.notes,
+        "query_source": plan.query_source,
+        "source_query": plan.source_query,
+        "effective_query": plan.effective_query,
+        "backend": result.backend,
+        "project_id": result.project_id,
+        "location": result.location,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+    }
+    if plan.discovery:
+        payload["discovery_action"] = plan.discovery.action
+        payload["discovery_target"] = plan.discovery.target
+    if plan.warnings:
+        payload["warnings"] = plan.warnings
+    return payload
+
+
+def _default_query_sql(plan: RunPlan) -> str:
+    if plan.effective_query:
+        return plan.effective_query.rstrip() + "\n"
+    if plan.discovery:
+        return (
+            "-- No SQL query executed.\n"
+            f"-- Discovery action: {plan.discovery.action}\n"
+            f"-- Discovery target: {plan.discovery.target}\n"
+        )
+    return "-- No SQL query executed.\n"
+
+
 def _write_reproducibility_bundle(
     output_dir: Path,
-    query: str,
+    plan: RunPlan,
     result: QueryExecutionResult,
 ) -> None:
     repro_dir = output_dir / "reproducibility"
@@ -283,9 +461,13 @@ def _write_reproducibility_bundle(
         + "\n"
     )
     (repro_dir / "commands.sh").write_text(command_text, encoding="utf-8")
-    (repro_dir / "query.sql").write_text(query.rstrip() + "\n", encoding="utf-8")
+    (repro_dir / "query.sql").write_text(_default_query_sql(plan), encoding="utf-8")
     (repro_dir / "job_metadata.json").write_text(
         json.dumps(result.raw_metadata, indent=2, default=str),
+        encoding="utf-8",
+    )
+    (repro_dir / "provenance.json").write_text(
+        json.dumps(_build_provenance_payload(plan, result), indent=2, default=str),
         encoding="utf-8",
     )
     (repro_dir / "environment.yml").write_text(
@@ -336,45 +518,100 @@ def _format_int(value: int | None) -> str:
 
 
 def build_report(
-    query: str,
+    plan: RunPlan,
     result: QueryExecutionResult,
-    query_source: str,
     parameters: list[QueryParameter],
     max_rows: int,
     max_bytes_billed: int | None,
 ) -> str:
+    execution_mode = "Discovery" if plan.mode == "discovery" else ("Dry run" if result.dry_run else "Query")
     metadata = {
-        "Execution mode": "Dry run" if result.dry_run else "Query",
+        "Execution mode": execution_mode,
+        "Mode": plan.mode,
         "Backend": result.backend,
         "Project": result.project_id or "n/a",
         "Location": result.location,
-        "Query source": query_source,
+        "Query source": plan.query_source,
         "Rows returned": str(result.row_count),
         "Estimated bytes processed": _format_int(result.estimated_bytes_processed),
         "Actual bytes processed": _format_int(result.total_bytes_processed),
         "Max rows": str(max_rows),
         "Max bytes billed": _format_int(max_bytes_billed),
     }
+    if plan.discovery:
+        metadata["Discovery action"] = plan.discovery.action
+        metadata["Discovery target"] = plan.discovery.target
 
     lines = [generate_report_header("BigQuery Public Query Report", SKILL_NAME, extra_metadata=metadata)]
     lines.extend(
         [
             "## Summary",
             "",
+            f"- Run mode: `{plan.mode}`",
             f"- Execution backend: `{result.backend}`",
             f"- Location: `{result.location}`",
             f"- Rows returned: `{result.row_count}`",
             f"- Estimated bytes processed: `{_format_int(result.estimated_bytes_processed)}`",
             f"- Actual bytes processed: `{_format_int(result.total_bytes_processed)}`",
             "",
-            "## Query",
-            "",
-            "```sql",
-            query,
-            "```",
-            "",
         ]
     )
+
+    if plan.warnings:
+        lines.append("## Warnings")
+        lines.append("")
+        for warning in plan.warnings:
+            lines.append(f"- {warning}")
+        lines.append("")
+
+    if plan.paper_reference or plan.notes:
+        lines.append("## Provenance")
+        lines.append("")
+        if plan.paper_reference:
+            lines.append(f"- Paper reference: `{plan.paper_reference}`")
+        for note in plan.notes:
+            lines.append(f"- Note: {note}")
+        lines.append("")
+
+    if plan.discovery:
+        lines.extend(
+            [
+                "## Discovery Request",
+                "",
+                f"- Action: `{plan.discovery.action}`",
+                f"- Target: `{plan.discovery.target}`",
+                "",
+            ]
+        )
+    elif plan.effective_query:
+        if plan.source_query == plan.effective_query:
+            lines.extend(
+                [
+                    "## Query",
+                    "",
+                    "```sql",
+                    plan.effective_query,
+                    "```",
+                    "",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    "## Source Query",
+                    "",
+                    "```sql",
+                    plan.source_query or "",
+                    "```",
+                    "",
+                    "## Effective Query",
+                    "",
+                    "```sql",
+                    plan.effective_query,
+                    "```",
+                    "",
+                ]
+            )
 
     if parameters:
         lines.append("## Parameters")
@@ -425,7 +662,7 @@ def _read_query_from_args(args: argparse.Namespace) -> tuple[str, str]:
             raise FileNotFoundError(f"SQL file not found: {input_path}")
         return input_path.read_text(encoding="utf-8"), str(input_path)
 
-    raise ValueError("Provide --query, --input <sql_file>, or --demo.")
+    raise ValueError("Provide --query, --input <sql_file>, --demo, or a discovery option.")
 
 
 def _load_demo_result(query: str, location: str, max_rows: int, dry_run: bool) -> QueryExecutionResult:
@@ -505,21 +742,13 @@ def _normalize_bq_cli_rows(payload: Any) -> list[dict[str, Any]]:
 
 
 def _build_python_query_parameters(parameters: list[QueryParameter], bigquery_module: Any) -> list[Any]:
-    built = []
-    for param in parameters:
-        built.append(bigquery_module.ScalarQueryParameter(param.name, param.type_name, param.value))
-    return built
+    return [
+        bigquery_module.ScalarQueryParameter(param.name, param.type_name, param.value)
+        for param in parameters
+    ]
 
 
-def _execute_with_python_client_once(
-    query: str,
-    location: str,
-    max_rows: int,
-    max_bytes_billed: int | None,
-    parameters: list[QueryParameter],
-    dry_run: bool,
-    project_id: str | None,
-) -> QueryExecutionResult:
+def _load_python_bigquery_client(project_id: str | None = None) -> tuple[Any, Any, str]:
     try:
         import google.auth
         from google.auth.exceptions import DefaultCredentialsError
@@ -539,6 +768,20 @@ def _execute_with_python_client_once(
         raise BigQuerySetupError("No Google Cloud project configured for the Python client.")
 
     client = bigquery.Client(project=active_project, credentials=credentials)
+    return client, bigquery, active_project
+
+
+def _execute_with_python_client_once(
+    query: str,
+    location: str,
+    max_rows: int,
+    max_bytes_billed: int | None,
+    parameters: list[QueryParameter],
+    dry_run: bool,
+    project_id: str | None,
+) -> QueryExecutionResult:
+    client, bigquery, active_project = _load_python_bigquery_client(project_id)
+
     job_config = bigquery.QueryJobConfig(
         dry_run=dry_run,
         use_legacy_sql=False,
@@ -779,31 +1022,333 @@ def execute_query(
     raise BigQuerySetupError(_auth_setup_message(failures, _get_gcloud_project()))
 
 
-def run_query(
-    query: str,
+def _result_from_discovery_rows(
+    *,
+    backend: str,
+    active_project: str,
+    location: str,
+    rows: list[dict[str, Any]],
+    columns: list[str],
+    raw_metadata: dict[str, Any],
+) -> QueryExecutionResult:
+    return QueryExecutionResult(
+        backend=backend,
+        project_id=active_project,
+        location=location,
+        query="",
+        dry_run=False,
+        rows=rows,
+        columns=columns,
+        estimated_bytes_processed=None,
+        total_bytes_processed=None,
+        row_count=len(rows),
+        job_id=raw_metadata.get("job_id"),
+        raw_metadata=raw_metadata,
+    )
+
+
+def execute_discovery_with_python_client(
+    request: DiscoveryRequest,
+    *,
+    max_rows: int,
+    location: str,
+) -> QueryExecutionResult:
+    client, bigquery, active_project = _load_python_bigquery_client()
+    try:
+        if request.action == DISCOVERY_LIST_DATASETS:
+            target_project = request.target
+            rows = []
+            for dataset in client.list_datasets(project=target_project, max_results=max_rows):
+                rows.append(
+                    {
+                        "project_id": target_project,
+                        "dataset_id": dataset.dataset_id,
+                        "location": getattr(dataset, "location", "") or "",
+                    }
+                )
+            result_location = rows[0]["location"] if rows and len({row["location"] for row in rows if row["location"]}) == 1 else location
+            raw_metadata = {
+                "backend": "python-adc",
+                "project_id": active_project,
+                "location": result_location,
+                "discovery_action": request.action,
+                "discovery_target": request.target,
+                "target_project": target_project,
+            }
+            return _result_from_discovery_rows(
+                backend="python-adc",
+                active_project=active_project,
+                location=result_location,
+                rows=rows,
+                columns=["project_id", "dataset_id", "location"],
+                raw_metadata=raw_metadata,
+            )
+
+        if request.action == DISCOVERY_LIST_TABLES:
+            target_project, dataset_id = parse_project_dataset(request.target)
+            dataset_ref = bigquery.DatasetReference(target_project, dataset_id)
+            dataset = client.get_dataset(dataset_ref)
+            rows = []
+            for table in client.list_tables(dataset_ref, max_results=max_rows):
+                rows.append(
+                    {
+                        "project_id": target_project,
+                        "dataset_id": dataset_id,
+                        "table_id": table.table_id,
+                        "table_type": getattr(table, "table_type", "") or "",
+                    }
+                )
+            raw_metadata = {
+                "backend": "python-adc",
+                "project_id": active_project,
+                "location": getattr(dataset, "location", None) or location,
+                "discovery_action": request.action,
+                "discovery_target": request.target,
+                "target_project": target_project,
+                "target_dataset": dataset_id,
+            }
+            return _result_from_discovery_rows(
+                backend="python-adc",
+                active_project=active_project,
+                location=raw_metadata["location"],
+                rows=rows,
+                columns=["project_id", "dataset_id", "table_id", "table_type"],
+                raw_metadata=raw_metadata,
+            )
+
+        if request.action == DISCOVERY_DESCRIBE:
+            target_project, dataset_id, table_id = parse_project_dataset_table(request.target)
+            table_ref = bigquery.TableReference(bigquery.DatasetReference(target_project, dataset_id), table_id)
+            table = client.get_table(table_ref)
+            rows = [
+                {
+                    "field_name": field.name,
+                    "field_type": field.field_type,
+                    "mode": field.mode,
+                    "description": field.description or "",
+                }
+                for field in table.schema
+            ]
+            raw_metadata = {
+                "backend": "python-adc",
+                "project_id": active_project,
+                "location": getattr(table, "location", None) or location,
+                "discovery_action": request.action,
+                "discovery_target": request.target,
+                "target_project": target_project,
+                "target_dataset": dataset_id,
+                "target_table": table_id,
+                "table_type": getattr(table, "table_type", None),
+            }
+            return _result_from_discovery_rows(
+                backend="python-adc",
+                active_project=active_project,
+                location=raw_metadata["location"],
+                rows=rows,
+                columns=["field_name", "field_type", "mode", "description"],
+                raw_metadata=raw_metadata,
+            )
+    except Exception as exc:
+        raise BigQuerySetupError(f"Python BigQuery discovery failed: {exc}") from exc
+
+    raise ValueError(f"Unsupported discovery action: {request.action}")
+
+
+def _run_bq_cli_json(cmd: list[str]) -> Any:
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        detail = proc.stderr.strip() or proc.stdout.strip() or "Unknown bq CLI error."
+        raise BigQuerySetupError(f"bq CLI discovery failed: {detail}")
+    parsed = _try_parse_json(proc.stdout)
+    return parsed if parsed is not None else proc.stdout.strip()
+
+
+def execute_discovery_with_bq_cli(
+    request: DiscoveryRequest,
+    *,
+    max_rows: int,
+    location: str,
+) -> QueryExecutionResult:
+    if not shutil.which("bq"):
+        raise BigQuerySetupError("bq CLI is not installed.")
+
+    active_project = _get_gcloud_project()
+    if not active_project:
+        raise BigQuerySetupError("No Google Cloud project configured for the bq CLI.")
+
+    if request.action == DISCOVERY_LIST_DATASETS:
+        payload = _run_bq_cli_json(
+            [
+                "bq",
+                f"--project_id={active_project}",
+                "ls",
+                "--datasets",
+                "--format=prettyjson",
+                request.target,
+            ]
+        )
+        items = payload if isinstance(payload, list) else []
+        rows = [
+            {
+                "project_id": item.get("datasetReference", {}).get("projectId", request.target),
+                "dataset_id": item.get("datasetReference", {}).get("datasetId", ""),
+                "location": item.get("location", "") or "",
+            }
+            for item in items[:max_rows]
+        ]
+        unique_locations = {row["location"] for row in rows if row["location"]}
+        result_location = rows[0]["location"] if len(unique_locations) == 1 and rows else location
+        raw_metadata = {
+            "backend": "bq-cli",
+            "project_id": active_project,
+            "location": result_location,
+            "discovery_action": request.action,
+            "discovery_target": request.target,
+            "raw_response": payload,
+        }
+        return _result_from_discovery_rows(
+            backend="bq-cli",
+            active_project=active_project,
+            location=result_location,
+            rows=rows,
+            columns=["project_id", "dataset_id", "location"],
+            raw_metadata=raw_metadata,
+        )
+
+    if request.action == DISCOVERY_LIST_TABLES:
+        target_project, dataset_id = parse_project_dataset(request.target)
+        dataset_meta = _run_bq_cli_json(
+            [
+                "bq",
+                f"--project_id={active_project}",
+                "show",
+                "--format=prettyjson",
+                f"{target_project}:{dataset_id}",
+            ]
+        )
+        payload = _run_bq_cli_json(
+            [
+                "bq",
+                f"--project_id={active_project}",
+                "ls",
+                "--format=prettyjson",
+                f"{target_project}:{dataset_id}",
+            ]
+        )
+        items = payload if isinstance(payload, list) else []
+        rows = [
+            {
+                "project_id": item.get("tableReference", {}).get("projectId", target_project),
+                "dataset_id": item.get("tableReference", {}).get("datasetId", dataset_id),
+                "table_id": item.get("tableReference", {}).get("tableId", ""),
+                "table_type": item.get("type", "") or "",
+            }
+            for item in items[:max_rows]
+        ]
+        raw_metadata = {
+            "backend": "bq-cli",
+            "project_id": active_project,
+            "location": dataset_meta.get("location", location) if isinstance(dataset_meta, dict) else location,
+            "discovery_action": request.action,
+            "discovery_target": request.target,
+            "raw_response": payload,
+        }
+        return _result_from_discovery_rows(
+            backend="bq-cli",
+            active_project=active_project,
+            location=raw_metadata["location"],
+            rows=rows,
+            columns=["project_id", "dataset_id", "table_id", "table_type"],
+            raw_metadata=raw_metadata,
+        )
+
+    if request.action == DISCOVERY_DESCRIBE:
+        target_project, dataset_id, table_id = parse_project_dataset_table(request.target)
+        payload = _run_bq_cli_json(
+            [
+                "bq",
+                f"--project_id={active_project}",
+                "show",
+                "--format=prettyjson",
+                f"{target_project}:{dataset_id}.{table_id}",
+            ]
+        )
+        schema_fields = payload.get("schema", {}).get("fields", []) if isinstance(payload, dict) else []
+        rows = [
+            {
+                "field_name": field.get("name", ""),
+                "field_type": field.get("type", ""),
+                "mode": field.get("mode", ""),
+                "description": field.get("description", "") or "",
+            }
+            for field in schema_fields
+        ]
+        raw_metadata = {
+            "backend": "bq-cli",
+            "project_id": active_project,
+            "location": payload.get("location", location) if isinstance(payload, dict) else location,
+            "discovery_action": request.action,
+            "discovery_target": request.target,
+            "raw_response": payload,
+        }
+        return _result_from_discovery_rows(
+            backend="bq-cli",
+            active_project=active_project,
+            location=raw_metadata["location"],
+            rows=rows,
+            columns=["field_name", "field_type", "mode", "description"],
+            raw_metadata=raw_metadata,
+        )
+
+    raise ValueError(f"Unsupported discovery action: {request.action}")
+
+
+def execute_discovery(
+    request: DiscoveryRequest,
+    *,
+    max_rows: int,
+    location: str,
+) -> QueryExecutionResult:
+    failures: list[str] = []
+    try:
+        return execute_discovery_with_python_client(request, max_rows=max_rows, location=location)
+    except BigQuerySetupError as exc:
+        failures.append(f"Python ADC: {exc}")
+
+    try:
+        return execute_discovery_with_bq_cli(request, max_rows=max_rows, location=location)
+    except BigQuerySetupError as exc:
+        failures.append(f"bq CLI: {exc}")
+
+    raise BigQuerySetupError(_auth_setup_message(failures, _get_gcloud_project()))
+
+
+def run_plan(
+    plan: RunPlan,
     output_dir: Path,
     *,
-    query_source: str,
     parameters: list[QueryParameter],
     location: str,
     max_rows: int,
     max_bytes_billed: int | None,
     dry_run: bool,
-    demo: bool,
 ) -> QueryExecutionResult:
-    validated_query = validate_read_only_sql(query)
     _ensure_output_dir_ready(output_dir)
 
-    if demo:
+    if plan.mode == "demo":
         result = _load_demo_result(
-            query=validated_query,
+            query=plan.effective_query or "",
             location=location,
             max_rows=max_rows,
             dry_run=dry_run,
         )
+    elif plan.mode == "discovery":
+        assert plan.discovery is not None
+        result = execute_discovery(plan.discovery, max_rows=max_rows, location=location)
     else:
+        assert plan.effective_query is not None
         result = execute_query(
-            query=validated_query,
+            query=plan.effective_query,
             location=location,
             max_rows=max_rows,
             max_bytes_billed=max_bytes_billed,
@@ -812,20 +1357,19 @@ def run_query(
         )
 
     report_text = build_report(
-        query=validated_query,
+        plan=plan,
         result=result,
-        query_source=query_source,
         parameters=parameters,
         max_rows=max_rows,
         max_bytes_billed=max_bytes_billed,
     )
     (output_dir / "report.md").write_text(report_text, encoding="utf-8")
     _write_results_csv(output_dir / "tables" / "results.csv", result.rows, result.columns)
-    _write_reproducibility_bundle(output_dir, validated_query, result)
+    _write_reproducibility_bundle(output_dir, plan, result)
 
     summary = {
-        "mode": "demo" if demo else "query",
-        "dry_run": dry_run,
+        "mode": plan.mode,
+        "dry_run": result.dry_run,
         "backend": result.backend,
         "project_id": result.project_id,
         "location": result.location,
@@ -833,19 +1377,33 @@ def run_query(
         "max_rows": max_rows,
         "estimated_bytes_processed": result.estimated_bytes_processed,
         "total_bytes_processed": result.total_bytes_processed,
-        "query_source": query_source,
+        "query_source": plan.query_source,
     }
+    if plan.discovery:
+        summary["discovery_action"] = plan.discovery.action
+        summary["discovery_target"] = plan.discovery.target
+
     data = {
-        "query": validated_query,
+        "query": plan.effective_query or "",
+        "source_query": plan.source_query,
+        "effective_query": plan.effective_query,
         "columns": result.columns,
         "rows": result.rows,
         "parameters": [
             {"name": param.name, "type": param.type_name, "value": param.original}
             for param in parameters
         ],
+        "paper_reference": plan.paper_reference,
+        "notes": plan.notes,
+        "warnings": plan.warnings,
         "job_metadata": result.raw_metadata,
         "disclaimer": DISCLAIMER,
     }
+    if plan.discovery:
+        data["discovery"] = {
+            "action": plan.discovery.action,
+            "target": plan.discovery.target,
+        }
     write_result_json(
         output_dir=output_dir,
         skill=SKILL_NAME,
@@ -866,24 +1424,24 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--max-bytes-billed must be greater than 0")
 
     try:
-        query_text, query_source = _read_query_from_args(args)
-        params = parse_scalar_params(args.param)
+        plan = _resolve_run_plan(args)
+        params = parse_scalar_params(args.param) if plan.mode == "query" else []
         output_dir = Path(args.output)
-        result = run_query(
-            query=query_text,
+        result = run_plan(
+            plan=plan,
             output_dir=output_dir,
-            query_source=query_source,
             parameters=params,
             location=args.location,
             max_rows=args.max_rows,
             max_bytes_billed=args.max_bytes_billed,
             dry_run=args.dry_run,
-            demo=args.demo,
         )
     except (BigQuerySetupError, QueryValidationError, FileNotFoundError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
+    for warning in plan.warnings:
+        print(f"WARNING: {warning}")
     print(f"Report written to {output_dir / 'report.md'}")
     print(f"Rows returned: {result.row_count}")
     print(f"Backend: {result.backend}")

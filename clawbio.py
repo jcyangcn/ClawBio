@@ -394,6 +394,13 @@ SKILLS = {
             "--max-bytes-billed",
             "--param",
             "--dry-run",
+            "--list-datasets",
+            "--list-tables",
+            "--describe",
+            "--preview",
+            "--count-only",
+            "--paper",
+            "--note",
         },
         "no_input_required": True,
         "accepts_genotypes": False,
@@ -946,6 +953,13 @@ def main():
         help="Repeatable bigquery parameter in name=type:value format",
     )
     run_parser.add_argument("--dry-run", action="store_true", help="BigQuery dry-run (estimate bytes only)")
+    run_parser.add_argument("--list-datasets", default=None, help="List BigQuery datasets for a project")
+    run_parser.add_argument("--list-tables", default=None, help="List BigQuery tables for a dataset (project.dataset)")
+    run_parser.add_argument("--describe", default=None, help="Describe a BigQuery table schema (project.dataset.table)")
+    run_parser.add_argument("--preview", type=int, default=None, help="Preview wrapper row limit for bigquery skill")
+    run_parser.add_argument("--count-only", action="store_true", help="Return only row count for bigquery skill")
+    run_parser.add_argument("--paper", default=None, help="Paper reference/DOI/URL/path for bigquery provenance")
+    run_parser.add_argument("--note", action="append", default=None, help="Repeatable provenance note for bigquery skill")
     run_parser.add_argument("--geo-id", default=None, help="GEO accession for methylation clock skill")
     run_parser.add_argument("--clocks", default=None, help="Comma-separated clock names for methylation skill")
     run_parser.add_argument("--metadata-cols", default=None, help="Comma-separated metadata columns for methylation skill")
@@ -1148,6 +1162,21 @@ def main():
                 extra.extend(["--param", param])
         if getattr(args, "dry_run", False):
             extra.append("--dry-run")
+        if getattr(args, "list_datasets", None):
+            extra.extend(["--list-datasets", args.list_datasets])
+        if getattr(args, "list_tables", None):
+            extra.extend(["--list-tables", args.list_tables])
+        if getattr(args, "describe", None):
+            extra.extend(["--describe", args.describe])
+        if getattr(args, "preview", None) is not None:
+            extra.extend(["--preview", str(args.preview)])
+        if getattr(args, "count_only", False):
+            extra.append("--count-only")
+        if getattr(args, "paper", None):
+            extra.extend(["--paper", args.paper])
+        if getattr(args, "note", None):
+            for note in args.note:
+                extra.extend(["--note", note])
         if getattr(args, "geo_id", None):
             extra.extend(["--geo-id", args.geo_id])
         if getattr(args, "clocks", None):

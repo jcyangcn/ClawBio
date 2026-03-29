@@ -3,7 +3,7 @@ name: bigquery-public
 description: >-
   Run read-only SQL against BigQuery public datasets with local result capture,
   cost safeguards, and reproducibility outputs.
-version: 0.1.0
+version: 0.2.0
 author: ClawBio
 license: MIT
 tags: [bigquery, public-datasets, sql, cloud, genomics]
@@ -47,8 +47,10 @@ You are **BigQuery Public**, a specialised ClawBio agent for read-only access to
 
 1. **Read-only SQL execution**: accepts `SELECT` / `WITH` queries only.
 2. **Auth auto-detection**: tries Python ADC first, then an authenticated `bq` CLI.
-3. **Cost safeguards**: supports dry-run and maximum-bytes-billed limits.
-4. **Reproducible outputs**: writes query text, job metadata, CSV results, and a markdown summary locally.
+3. **Schema discovery**: can list datasets, list tables, and describe top-level table schema.
+4. **Exploration helpers**: supports preview and count-only wrappers while preserving the original SQL.
+5. **Cost safeguards**: supports dry-run and maximum-bytes-billed limits.
+6. **Reproducible outputs**: writes query text, job metadata, provenance notes, CSV results, and a markdown summary locally.
 
 ## Input Formats
 
@@ -64,7 +66,8 @@ When the user asks to query BigQuery public data:
 1. **Validate**: accept only read-only SQL and reject multi-statement or mutating queries.
 2. **Authenticate**: try Python ADC, then fall back to logged-in `bq` CLI.
 3. **Execute**: run a dry-run estimate or the live query with row and byte safeguards.
-4. **Generate**: write `report.md`, `result.json`, `tables/results.csv`, and a reproducibility bundle.
+4. **Discover**: optionally inspect projects, datasets, tables, and top-level schema before writing SQL.
+5. **Generate**: write `report.md`, `result.json`, `tables/results.csv`, and a reproducibility bundle.
 
 ## CLI Reference
 
@@ -79,12 +82,24 @@ python skills/bigquery-public/bigquery_public.py \
   --input path/to/query.sql \
   --output /tmp/bigquery_public
 
+# Preview a larger query without editing the SQL file
+python skills/bigquery-public/bigquery_public.py \
+  --input path/to/query.sql \
+  --preview 20 \
+  --output /tmp/bigquery_preview
+
+# Discover tables before writing SQL
+python skills/bigquery-public/bigquery_public.py \
+  --list-tables isb-cgc.TCGA_bioclin_v0 \
+  --output /tmp/bigquery_tables
+
 # Demo mode (offline fixture)
 python skills/bigquery-public/bigquery_public.py --demo --output /tmp/bigquery_demo
 
 # Via ClawBio runner
 python clawbio.py run bigquery --demo
 python clawbio.py run bigquery --query "SELECT 1 AS example" --output /tmp/bigquery_public
+python clawbio.py run bigquery --describe isb-cgc.TCGA_bioclin_v0.Clinical --output /tmp/bigquery_schema
 ```
 
 ## Demo
@@ -101,8 +116,9 @@ Expected output: a local report and CSV preview using a bundled snapshot of `big
 
 1. **Normalize query**: strip comments, mask literals, reject non-read-only SQL.
 2. **Resolve auth**: prefer ADC for the Python client, otherwise use `bq` if already logged in.
-3. **Run safely**: apply `--max-bytes-billed`, `--max-rows`, and optional dry-run.
-4. **Persist locally**: store query text, result rows, and job metadata in the output directory.
+3. **Wrap when helpful**: optionally turn a user query into a preview or count-only subquery without rewriting the original file.
+4. **Run safely**: apply `--max-bytes-billed`, `--max-rows`, and optional dry-run.
+5. **Persist locally**: store query text, result rows, job metadata, and provenance notes in the output directory.
 
 **Key parameters**:
 - Default location: `US`
@@ -127,6 +143,7 @@ output_directory/
     ├── commands.sh
     ├── environment.yml
     ├── job_metadata.json
+    ├── provenance.json
     └── query.sql
 ```
 
