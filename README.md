@@ -167,6 +167,17 @@ report/
 | [Labstep](skills/labstep/) | Planned | Labstep electronic lab notebook API integration |
 | [Seq Wrangler](skills/seq-wrangler/) | Planned | Sequence QC, alignment, and BAM processing (FastQC, BWA, SAMtools) |
 
+### Contributing a Skill
+
+Wrap your bioinformatics pipeline as a skill and submit a PR. One community-contributed skill (NutriGx Advisor) is already in production; eight more have specifications authored and are awaiting implementation.
+
+```bash
+cp templates/SKILL-TEMPLATE.md skills/<your-skill-name>/SKILL.md
+# Edit SKILL.md, add Python implementation, demo data, and tests
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full submission process. Join the contributors community on Telegram: [t.me/ClawBioContributors](https://t.me/ClawBioContributors).
+
 ---
 
 ## Genomebook
@@ -330,6 +341,23 @@ python clawbio.py run pharmgx --demo
 
 PharmGx demo runs in <2 seconds. Only needs Python 3.10+.
 
+> **Note:** ClawBio is currently installed by cloning the repository. There is no `pip install clawbio` package yet (planned for a future release).
+
+### Use as a Python library
+
+```python
+from clawbio import run_skill, list_skills
+
+# List available skills
+skills = list_skills()
+
+# Run pharmacogenomics with demo data
+result = run_skill("pharmgx", demo=True)
+
+# Run with your own input
+result = run_skill("gwas-lookup", rsid="rs3798220", output="/tmp/report")
+```
+
 ### Install as a Claude Code plugin
 
 Inside [Claude Code](https://claude.ai/claude-code):
@@ -380,6 +408,21 @@ python clawbio.py run methylation --geo-id GSE139307 --output results_methylatio
 pip install pytest
 python -m pytest
 ```
+
+### Dependencies
+
+Core dependencies (`requirements.txt`): biopython, pandas, numpy, scikit-learn, matplotlib, openai, pydeseq2. Most skills run with just these.
+
+Some skills have additional requirements:
+
+| Skill | Extra dependency | Install |
+|-------|-----------------|---------|
+| Metagenomics | Kraken2, RGI, HUMAnN3 | Conda (see skill README) |
+| Methylation Clock | PyAging | `pip install pyaging` |
+| scRNA Embedding | scvi-tools | `pip install scvi-tools` |
+| Galaxy Bridge | BioBlend | `pip install bioblend` |
+
+No Docker or Singularity required for core functionality. Skills that need external bioinformatics tools document their setup in their own `SKILL.md`.
 
 ---
 
@@ -501,22 +544,20 @@ Agents can also run `python clawbio.py list` to discover available skills progra
 
 ---
 
-## Community Wanted Skills
+## Wanted Skills
 
-We want skills from the bioinformatics community. If you work with genomics, proteomics, metabolomics, imaging, or clinical data — **wrap your pipeline as a skill**.
+Open skill requests (PRs welcome):
 
-| Skill | What | Your expertise |
-|-------|------|----------------|
-| **claw-gwas** | PLINK/REGENIE automation | Statistical genetics |
-| **claw-acmg** | Clinical variant classification | Clinical genomics |
-| **claw-pathway** | GO/KEGG enrichment | Functional genomics |
-| **claw-phylogenetics** | IQ-TREE/RAxML automation | Evolutionary biology |
-| **claw-spatial** | Visium/MERFISH | Spatial transcriptomics |
-| **claw-long-reads** | ONT/PacBio QC and assembly | Long-read sequencing |
+| Skill | Domain |
+|-------|--------|
+| **claw-gwas** | PLINK/REGENIE automation (statistical genetics) |
+| **claw-acmg** | Clinical variant classification (clinical genomics) |
+| **claw-pathway** | GO/KEGG enrichment (functional genomics) |
+| **claw-phylogenetics** | IQ-TREE/RAxML automation (evolutionary biology) |
+| **claw-spatial** | Visium/MERFISH (spatial transcriptomics) |
+| **claw-long-reads** | ONT/PacBio QC and assembly (long-read sequencing) |
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the submission process and [templates/SKILL-TEMPLATE.md](templates/SKILL-TEMPLATE.md) for the skill template.
-
-**Join the contributors community on Telegram: [t.me/ClawBioContributors](https://t.me/ClawBioContributors)**
+See [Contributing a Skill](#contributing-a-skill) above for the submission process.
 
 ---
 
@@ -528,9 +569,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the submission process and [templates
 
 ---
 
+## Versioning
+
+ClawBio follows [Semantic Versioning](https://semver.org/). The current release is **v0.4.0**. See [CHANGELOG.md](CHANGELOG.md) for a full history of additions and breaking changes.
+
+---
+
 ## Citation
 
-If you use ClawBio in your research, please cite:
+ClawBio is accompanied by a peer-reviewed publication in *Nature Biotechnology* (Correspondence). If you use ClawBio in your research, please cite:
 
 ```bibtex
 @article{corpas_clawbio_2026,
