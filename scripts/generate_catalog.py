@@ -101,10 +101,11 @@ FOLDER_TO_ALIAS = {
     "bioconductor-bridge": "bioc",
     "rnaseq-de": "rnaseq",
     "diff-visualizer": "diffviz",
+    "llm-biobank-bench": "llm-bench",
 }
 
 # Skill folders excluded from the public catalog (local-only / gitignored)
-EXCLUDED_FOLDERS = {"pr-audit"}
+EXCLUDED_FOLDERS = {"pr-audit", "wes-clinical-report-es"}
 
 # Skills that are MVP (have working Python + are in SKILLS dict or are bio-orchestrator)
 MVP_FOLDERS = {
@@ -114,6 +115,7 @@ MVP_FOLDERS = {
     "profile-report", "bio-orchestrator", "claw-ancestry-pca", "claw-semantic-sim",
     "ukb-navigator", "galaxy-bridge", "rnaseq-de", "diff-visualizer",
     "bioconductor-bridge",
+    "llm-biobank-bench",
 }
 
 # Known trigger keywords for orchestrator routing
@@ -136,6 +138,7 @@ TRIGGER_KEYWORDS: dict[str, list[str]] = {
     "claw-metagenomics": ["metagenomics", "Kraken2", "RGI", "CARD", "HUMAnN3", "microbiome"],
     "bio-orchestrator": ["route", "which skill", "orchestrator"],
     "ukb-navigator": ["UK Biobank", "UKB", "biobank schema", "data showcase"],
+    "llm-biobank-bench": ["llm benchmark", "benchmark language models", "biobank knowledge retrieval", "coverage score", "weighted coverage", "model comparison biobank"],
     "galaxy-bridge": ["galaxy", "usegalaxy", "tool shed", "bioblend", "run on galaxy", "galaxy tool", "galaxy workflow", "NGS pipeline"],
     "bioconductor-bridge": ["bioconductor", "bioc", "biocmanager", "summarizedexperiment", "singlecellexperiment", "genomicranges", "variantannotation", "annotationhub", "experimenthub"],
 }
@@ -159,7 +162,8 @@ CHAINING: dict[str, list[str]] = {
     "claw-semantic-sim": ["equity-scorer"],
     "claw-metagenomics": [],
     "bio-orchestrator": [],
-    "ukb-navigator": [],
+    "ukb-navigator": ["llm-biobank-bench"],
+    "llm-biobank-bench": ["ukb-navigator", "pubmed-summariser", "lit-synthesizer"],
     "galaxy-bridge": ["pharmgx-reporter", "claw-metagenomics", "equity-scorer", "vcf-annotator"],
     "bioconductor-bridge": ["rnaseq-de", "scrna-orchestrator", "diff-visualizer", "bio-orchestrator"],
 }

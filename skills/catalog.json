@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 40,
+  "skill_count": 41,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -171,30 +171,6 @@
       "chaining_partners": []
     },
     {
-      "name": "clinical-variant-reporter",
-      "cli_alias": null,
-      "description": ">-",
-      "version": "0.1.0",
-      "status": "planned",
-      "has_script": true,
-      "has_tests": true,
-      "has_demo": true,
-      "demo_command": "python skills/clinical-variant-reporter/acmg_engine.py --demo",
-      "dependencies": [],
-      "tags": [
-        "acmg",
-        "variant-classification",
-        "clinical-genomics",
-        "pathogenicity",
-        "germline",
-        "secondary-findings",
-        "exome",
-        "genome"
-      ],
-      "trigger_keywords": [],
-      "chaining_partners": []
-    },
-    {
       "name": "clinpgx",
       "cli_alias": "clinpgx",
       "description": "Query the ClinPGx API for pharmacogenomic gene-drug data, clinical annotations, CPIC guidelines, and FDA drug labels",
@@ -313,6 +289,29 @@
       "chaining_partners": [
         "claw-semantic-sim"
       ]
+    },
+    {
+      "name": "fine-mapping",
+      "cli_alias": null,
+      "description": ">-",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/fine-mapping/fine_mapping.py --demo",
+      "dependencies": [],
+      "tags": [
+        "gwas",
+        "fine-mapping",
+        "susie",
+        "credible-sets",
+        "pip",
+        "causal-variants",
+        "statistics"
+      ],
+      "trigger_keywords": [],
+      "chaining_partners": []
     },
     {
       "name": "galaxy-bridge",
@@ -510,6 +509,39 @@
       "tags": [],
       "trigger_keywords": [],
       "chaining_partners": []
+    },
+    {
+      "name": "llm-biobank-bench",
+      "cli_alias": "llm-bench",
+      "description": ">-",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": false,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run llm-bench --demo",
+      "dependencies": [],
+      "tags": [
+        "llm",
+        "benchmark",
+        "biobank",
+        "uk-biobank",
+        "evaluation",
+        "semantic-similarity"
+      ],
+      "trigger_keywords": [
+        "llm benchmark",
+        "benchmark language models",
+        "biobank knowledge retrieval",
+        "coverage score",
+        "weighted coverage",
+        "model comparison biobank"
+      ],
+      "chaining_partners": [
+        "ukb-navigator",
+        "pubmed-summariser",
+        "lit-synthesizer"
+      ]
     },
     {
       "name": "methylation-clock",
@@ -934,7 +966,9 @@
         "biobank schema",
         "data showcase"
       ],
-      "chaining_partners": []
+      "chaining_partners": [
+        "llm-biobank-bench"
+      ]
     },
     {
       "name": "variant-annotation",
