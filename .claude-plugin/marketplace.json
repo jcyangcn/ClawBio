@@ -21,7 +21,7 @@
       "homepage": "https://clawbio.ai",
       "repository": "https://github.com/ClawBio/ClawBio",
       "license": "MIT",
-      "source": ".",
+      "source": "./",
       "category": "life-sciences",
       "keywords": [
         "bioinformatics",
