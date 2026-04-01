@@ -17,6 +17,7 @@ This is a fully open personal genome sequenced at 30x depth on Illumina by Dante
 | Variant types | SNPs, indels, SVs (DEL, DUP, INV, BND, INS), CNVs |
 | QC | Ti/Tv ~ 2.0, Het/Hom ~ 1.6 |
 | License | CC0 1.0 Universal (Public Domain) |
+| Ethics approval | UNIR Research Ethics Committee, PI:029/2020, "Healthy Genome Project", approved 28 January 2021 |
 
 ## Contents
 

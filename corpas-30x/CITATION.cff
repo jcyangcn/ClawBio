@@ -26,3 +26,10 @@ keywords:
   - personal genomics
   - GRCh37
 repository: "https://github.com/ClawBio/ClawBio"
+references:
+  - type: generic
+    title: "Ethics approval: Healthy Genome Project"
+    authors:
+      - name: "UNIR Research Ethics Committee (Comite de Etica de la Investigacion)"
+    date-accessed: "2021-01-28"
+    notes: "Positive ethics evaluation, protocol PI:029/2020, approved 28 January 2021"

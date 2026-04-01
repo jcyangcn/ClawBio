@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 41,
+  "skill_count": 42,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -200,7 +200,7 @@
     {
       "name": "clinical-variant-reporter",
       "cli_alias": null,
-      "description": ">-",
+      "description": "Classify germline variants from VCF/BCF files according to the ACMG/AMP 2015 28-criteria evidence framework and generate clinical-grade interpretation reports with per-variant evidence audit trails and ACMG SF v3.2 secondary findings screening.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
@@ -984,7 +984,9 @@
         "biobank schema",
         "data showcase"
       ],
-      "chaining_partners": []
+      "chaining_partners": [
+        "llm-biobank-bench"
+      ]
     },
     {
       "name": "variant-annotation",
