@@ -402,6 +402,7 @@ SKILLS = {
             "--paper",
             "--note",
         },
+        "allowed_extra_flags_without_values": {"--dry-run", "--count-only"},
         "no_input_required": True,
         "accepts_genotypes": False,
     },
@@ -720,6 +721,7 @@ def run_skill(
     # SEC INT-001: filter extra_args against per-skill allowlist
     if extra_args:
         allowed = skill_info.get("allowed_extra_flags", set())
+        flags_without_values = skill_info.get("allowed_extra_flags_without_values", set())
         blocked = {"--input", "--output", "--demo"}
         filtered = []
         i = 0
@@ -730,7 +732,13 @@ def run_skill(
                 continue
             if flag in allowed:
                 filtered.append(extra_args[i])
-                if "=" not in extra_args[i] and i + 1 < len(extra_args) and not extra_args[i + 1].startswith("-"):
+                if (
+                    "=" not in extra_args[i]
+                    and flag not in flags_without_values
+                    and i + 1 < len(extra_args)
+                    and extra_args[i + 1].split("=")[0] not in allowed
+                    and extra_args[i + 1].split("=")[0] not in blocked
+                ):
                     filtered.append(extra_args[i + 1])
                     i += 1
             i += 1

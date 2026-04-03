@@ -232,29 +232,10 @@ def execute_with_python_client(
     return actual
 
 
-def _looks_like_missing_query_error(proc: subprocess.CompletedProcess[str]) -> bool:
-    detail = "\n".join(part for part in [proc.stderr, proc.stdout] if part).lower()
-    hints = [
-        "query argument",
-        "requires argument",
-        "requires 1 arg",
-        "must provide a query",
-        "missing query",
-        "not enough positional arguments",
-        "too few arguments",
-        "expected one argument",
-    ]
-    return proc.returncode != 0 and any(hint in detail for hint in hints)
-
-
 def _run_bq_query_command(base_cmd: list[str], query: str) -> tuple[subprocess.CompletedProcess[str], str]:
-    stdin_proc = subprocess.run(base_cmd, input=query, capture_output=True, text=True, check=False)
-    if stdin_proc.returncode == 0:
-        return stdin_proc, "stdin"
-    if _looks_like_missing_query_error(stdin_proc):
-        argv_proc = subprocess.run([*base_cmd, query], capture_output=True, text=True, check=False)
-        return argv_proc, "argv"
-    return stdin_proc, "stdin"
+    # Keep SQL out of argv so long queries do not hit OS argument length limits.
+    proc = subprocess.run(base_cmd, input=query, capture_output=True, text=True, check=False)
+    return proc, "stdin"
 
 
 def _execute_with_bq_cli_once(

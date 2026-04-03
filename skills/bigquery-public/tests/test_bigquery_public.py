@@ -4,6 +4,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -34,10 +35,12 @@ def test_validate_read_only_sql_accepts_select_and_with():
     WITH example AS (SELECT 1 AS value)
     SELECT value FROM example
     """
+    case_sql = "SELECT CASE WHEN TRUE THEN 1 ELSE 0 END AS ok"
     assert skill.validate_read_only_sql(select_sql) == "SELECT 1 AS ok"
     normalized = skill.validate_read_only_sql(with_sql)
     assert normalized.lstrip().startswith("-- comment")
     assert "WITH example" in normalized
+    assert skill.validate_read_only_sql(case_sql) == case_sql
 
 
 @pytest.mark.parametrize(
@@ -46,6 +49,10 @@ def test_validate_read_only_sql_accepts_select_and_with():
         ("DELETE FROM dataset.table", "Only read-only SELECT/WITH queries are supported."),
         ("SELECT 1; SELECT 2", "Multiple SQL statements are not supported."),
         ("WITH x AS (SELECT 1) CREATE TABLE t AS SELECT * FROM x", "Unsupported SQL keyword detected"),
+        ("SELECT EXECUTE IMMEDIATE 'SELECT 1'", "Unsupported SQL keyword detected: EXECUTE IMMEDIATE"),
+        ("WITH x AS (SELECT 1) BEGIN SELECT * FROM x END", "Unsupported SQL keyword detected: BEGIN"),
+        ("SELECT 1 AS x ASSERT TRUE", "Unsupported SQL keyword detected: ASSERT"),
+        ("SELECT 1 AS x WHILE TRUE DO SELECT 2 END WHILE", "Unsupported SQL keyword detected: WHILE"),
     ],
 )
 def test_validate_read_only_sql_rejects_unsafe_queries(query: str, expected: str):
@@ -58,11 +65,13 @@ def test_parse_scalar_param_valid_types():
     int_param = skill.parse_scalar_param("limit=INT64:5")
     float_param = skill.parse_scalar_param("p=FLOAT64:0.01")
     bool_param = skill.parse_scalar_param("strict=BOOL:true")
+    numeric_param = skill.parse_scalar_param("threshold=NUMERIC:12345678901234567890.123456789")
 
     assert string_param.value == "TP53"
     assert int_param.value == 5
     assert float_param.value == pytest.approx(0.01)
     assert bool_param.value is True
+    assert numeric_param.value == Decimal("12345678901234567890.123456789")
 
 
 def test_parse_scalar_param_invalid_format_and_type():
@@ -70,6 +79,8 @@ def test_parse_scalar_param_invalid_format_and_type():
         skill.parse_scalar_param("broken")
     with pytest.raises(ValueError, match="Unsupported parameter type"):
         skill.parse_scalar_param("gene=ARRAY:TP53")
+    with pytest.raises(ValueError, match="must not contain newlines or NUL bytes"):
+        skill.parse_scalar_param("gene=STRING:TP53\nBRCA1")
 
 
 def test_generate_catalog_parser_folds_block_scalar_description():
@@ -264,7 +275,22 @@ def test_bq_cli_query_prefers_stdin_transport(monkeypatch: pytest.MonkeyPatch):
     assert result.raw_metadata["query_transport"] == "stdin"
 
 
-def test_bq_cli_query_falls_back_to_argv_when_stdin_is_unsupported(monkeypatch: pytest.MonkeyPatch):
+def test_python_backend_preserves_exact_numeric_params():
+    class FakeBigQueryModule:
+        captured: list[tuple[str, str, object]] = []
+
+        @staticmethod
+        def ScalarQueryParameter(name, type_name, value):
+            FakeBigQueryModule.captured.append((name, type_name, value))
+            return (name, type_name, value)
+
+    params = [skill.parse_scalar_param("threshold=NUMERIC:12345678901234567890.123456789")]
+    built = backends._build_python_query_parameters(params, FakeBigQueryModule)
+    assert built == [("threshold", "NUMERIC", Decimal("12345678901234567890.123456789"))]
+    assert FakeBigQueryModule.captured[0][2] == Decimal("12345678901234567890.123456789")
+
+
+def test_bq_cli_query_stays_on_stdin_when_bq_returns_an_error(monkeypatch: pytest.MonkeyPatch):
     calls: list[dict[str, object]] = []
 
     class Proc:
@@ -273,33 +299,26 @@ def test_bq_cli_query_falls_back_to_argv_when_stdin_is_unsupported(monkeypatch: 
             self.stdout = stdout
             self.stderr = stderr
 
-    responses = [
-        Proc(2, "", "ERROR: query argument is required"),
-        Proc(0, '[{"example": 1}]'),
-    ]
-
     def fake_run(cmd, capture_output, text, check, input=None):
         calls.append({"cmd": cmd, "input": input})
-        return responses[len(calls) - 1]
+        return Proc(2, "", "ERROR: query argument is required")
 
     monkeypatch.setattr(backends.shutil, "which", lambda name: "/usr/bin/bq")
     monkeypatch.setattr(backends, "get_gcloud_project", lambda: "demo-project")
     monkeypatch.setattr(backends.subprocess, "run", fake_run)
 
-    result = backends._execute_with_bq_cli_once(
-        query="SELECT 1 AS example",
-        location="US",
-        max_rows=5,
-        max_bytes_billed=1000,
-        parameters=[],
-        dry_run=False,
-        project_id=None,
-    )
-    assert len(calls) == 2
+    with pytest.raises(backends.BigQuerySetupError, match="query argument is required"):
+        backends._execute_with_bq_cli_once(
+            query="SELECT 1 AS example",
+            location="US",
+            max_rows=5,
+            max_bytes_billed=1000,
+            parameters=[],
+            dry_run=False,
+            project_id=None,
+        )
+    assert len(calls) == 1
     assert calls[0]["input"] == "SELECT 1 AS example"
-    assert calls[1]["input"] is None
-    assert calls[1]["cmd"][-1] == "SELECT 1 AS example"
-    assert result.raw_metadata["query_transport"] == "argv"
 
 
 def test_execute_discovery_prefers_python_backend(monkeypatch: pytest.MonkeyPatch):
@@ -548,6 +567,35 @@ def test_runner_security_filter_allows_bigquery_flags_and_ignores_unknown(tmp_pa
     assert payload["summary"]["max_rows"] == 2
     assert payload["data"]["paper_reference"] == "demo-paper"
     assert payload["data"]["notes"] == ["keep"]
+
+
+def test_runner_security_filter_preserves_allowed_value_starting_with_dash(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+):
+    captured: dict[str, object] = {}
+
+    class Proc:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(cmd, capture_output, text, timeout, cwd):
+        captured["cmd"] = cmd
+        return Proc()
+
+    monkeypatch.setattr(clawbio_runner.subprocess, "run", fake_run)
+
+    result = clawbio_runner.run_skill(
+        skill_name="bigquery",
+        output_dir=str(tmp_path / "runner_query"),
+        extra_args=["--query", "-- comment\nSELECT 1", "--dry-run"],
+    )
+
+    assert result["success"] is True
+    cmd = captured["cmd"]
+    assert "--query" in cmd
+    assert "-- comment\nSELECT 1" in cmd
 
 
 def test_cli_subprocess_demo_round_trip(tmp_path: Path):

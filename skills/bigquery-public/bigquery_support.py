@@ -6,6 +6,7 @@ import json
 import re
 import shlex
 import sys
+from decimal import Decimal, InvalidOperation
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -111,6 +112,21 @@ def validate_read_only_sql(query: str) -> str:
         cleaned = cleaned.rstrip()
         cleaned = cleaned[:-1].rstrip()
 
+    analysis = _analysis_sql(cleaned)
+    if re.search(r"\bEXECUTE\s+IMMEDIATE\b", analysis, flags=re.IGNORECASE):
+        raise QueryValidationError("Unsupported SQL keyword detected: EXECUTE IMMEDIATE")
+    if re.search(r"\bBEGIN\b", analysis, flags=re.IGNORECASE):
+        raise QueryValidationError("Unsupported SQL keyword detected: BEGIN")
+    if re.search(r"\bASSERT\b", analysis, flags=re.IGNORECASE):
+        raise QueryValidationError("Unsupported SQL keyword detected: ASSERT")
+    if re.search(r"\bEXCEPTION\b", analysis, flags=re.IGNORECASE):
+        raise QueryValidationError("Unsupported SQL keyword detected: EXCEPTION")
+    if re.search(r"\bWHILE\b", analysis, flags=re.IGNORECASE):
+        raise QueryValidationError("Unsupported SQL keyword detected: WHILE")
+    # END is only rejected when paired with BEGIN so CASE ... END expressions remain valid.
+    if re.search(r"\bEND\b", analysis, flags=re.IGNORECASE) and re.search(r"\bBEGIN\b", analysis, flags=re.IGNORECASE):
+        raise QueryValidationError("Unsupported SQL keyword detected: END")
+
     forbidden = re.compile(
         r"\b(INSERT|UPDATE|DELETE|CREATE|MERGE|EXPORT\s+DATA|DROP|ALTER|TRUNCATE|CALL|DECLARE|SET)\b",
         flags=re.IGNORECASE,
@@ -134,15 +150,22 @@ def parse_scalar_param(spec: str) -> QueryParameter:
 
     if not name:
         raise ValueError(f"Invalid --param value: {spec!r}. Parameter name is empty.")
+    if any(char in raw_value for char in ("\n", "\r", "\x00")):
+        raise ValueError(f"Invalid --param value: {spec!r}. Parameter values must not contain newlines or NUL bytes.")
 
     if type_name in {"STRING", "DATE", "DATETIME", "TIMESTAMP"}:
         value: Any = raw_value
     elif type_name in {"INT64", "INTEGER"}:
         value = int(raw_value)
         type_name = "INT64"
-    elif type_name in {"FLOAT64", "FLOAT", "NUMERIC"}:
+    elif type_name in {"FLOAT64", "FLOAT"}:
         value = float(raw_value)
-        type_name = "FLOAT64" if type_name != "NUMERIC" else "NUMERIC"
+        type_name = "FLOAT64"
+    elif type_name == "NUMERIC":
+        try:
+            value = Decimal(raw_value)
+        except InvalidOperation as exc:
+            raise ValueError(f"Invalid NUMERIC parameter value: {raw_value!r}") from exc
     elif type_name in {"BOOL", "BOOLEAN"}:
         lowered = raw_value.lower()
         if lowered not in {"true", "false"}:
