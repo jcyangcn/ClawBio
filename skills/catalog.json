@@ -1,9 +1,36 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 41,
+  "skill_count": 42,
   "galaxy_tool_count": 8182,
   "skills": [
+    {
+      "name": "bigquery-public",
+      "cli_alias": "bigquery",
+      "description": "Run read-only SQL against BigQuery public datasets with local result capture, cost safeguards, and reproducibility outputs.",
+      "version": "0.2.1",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run bigquery --demo",
+      "dependencies": [],
+      "tags": [
+        "bigquery",
+        "public-datasets",
+        "sql",
+        "cloud",
+        "genomics"
+      ],
+      "trigger_keywords": [
+        "bigquery",
+        "public dataset",
+        "sql",
+        "public data",
+        "cloud query"
+      ],
+      "chaining_partners": []
+    },
     {
       "name": "bio-orchestrator",
       "cli_alias": null,
@@ -158,7 +185,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-trial-finder/opentargets.py --demo",
+      "demo_command": "python skills/clinical-trial-finder/euctr.py --demo",
       "dependencies": [],
       "tags": [
         "clinical-trials",
@@ -173,13 +200,13 @@
     {
       "name": "clinical-variant-reporter",
       "cli_alias": null,
-      "description": ">-",
+      "description": "Classify germline variants from VCF/BCF files according to the ACMG/AMP 2015 28-criteria evidence framework and generate clinical-grade interpretation reports with per-variant evidence audit trails and ACMG SF v3.2 secondary findings screening.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-variant-reporter/clinical_variant_reporter.py --demo",
+      "demo_command": "python skills/clinical-variant-reporter/acmg_engine.py --demo",
       "dependencies": [],
       "tags": [
         "acmg",
@@ -317,7 +344,7 @@
     {
       "name": "fine-mapping",
       "cli_alias": null,
-      "description": ">-",
+      "description": "Statistical fine-mapping of GWAS loci using SuSiE (Sum of Single Effects) and Approximate Bayes Factors to identify credible sets and posterior inclusion probabilities (PIPs) for causal variant discovery.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
@@ -483,7 +510,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/illumina-bridge/illumina_providers.py --demo",
+      "demo_command": "python skills/illumina-bridge/illumina_bridge.py --demo",
       "dependencies": [],
       "tags": [
         "illumina",
@@ -499,7 +526,7 @@
     {
       "name": "labstep",
       "cli_alias": null,
-      "description": ">-",
+      "description": "Query and display Labstep electronic lab notebook data — experiments, protocols, resources, and inventory — via labstepPy.  Supports offline demo mode with synthetic biology data.",
       "version": "0.2.0",
       "status": "planned",
       "has_script": true,
@@ -647,7 +674,7 @@
     {
       "name": "profile-report",
       "cli_alias": "profile",
-      "description": ">-",
+      "description": "Unified personal genomic profile report — reads a PatientProfile JSON and synthesizes all skill results into a single \"Your Genomic Profile\" document.",
       "version": "0.1.0",
       "status": "mvp",
       "has_script": true,
@@ -691,7 +718,7 @@
     {
       "name": "protocols-io",
       "cli_alias": null,
-      "description": ">-",
+      "description": "Search, browse, and retrieve scientific protocols from protocols.io via REST API. Client token authentication for private protocols. Use when user mentions protocols.io, lab protocols, DOI lookup, protocol search, protocol steps, or scientific methods.",
       "version": "0.2.0",
       "status": "planned",
       "has_script": true,
@@ -713,13 +740,13 @@
     {
       "name": "pubmed-summariser",
       "cli_alias": null,
-      "description": ">-",
+      "description": "Search PubMed for a gene name or disease term and generate a structured research briefing of the top recent English-language papers.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/pubmed-summariser/pubmed_summariser.py --demo",
+      "demo_command": "python skills/pubmed-summariser/pubmed_api.py --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [],

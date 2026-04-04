@@ -383,6 +383,29 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "bigquery": {
+        "script": SKILLS_DIR / "bigquery-public" / "bigquery_public.py",
+        "demo_args": ["--demo"],
+        "description": "BigQuery Public — read-only SQL bridge for public datasets with local outputs",
+        "allowed_extra_flags": {
+            "--query",
+            "--location",
+            "--max-rows",
+            "--max-bytes-billed",
+            "--param",
+            "--dry-run",
+            "--list-datasets",
+            "--list-tables",
+            "--describe",
+            "--preview",
+            "--count-only",
+            "--paper",
+            "--note",
+        },
+        "allowed_extra_flags_without_values": {"--dry-run", "--count-only"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
     "profile": {
         "script": SKILLS_DIR / "profile-report" / "profile_report.py",
         "demo_args": ["--demo"],
@@ -698,6 +721,7 @@ def run_skill(
     # SEC INT-001: filter extra_args against per-skill allowlist
     if extra_args:
         allowed = skill_info.get("allowed_extra_flags", set())
+        flags_without_values = skill_info.get("allowed_extra_flags_without_values", set())
         blocked = {"--input", "--output", "--demo"}
         filtered = []
         i = 0
@@ -708,7 +732,13 @@ def run_skill(
                 continue
             if flag in allowed:
                 filtered.append(extra_args[i])
-                if "=" not in extra_args[i] and i + 1 < len(extra_args) and not extra_args[i + 1].startswith("-"):
+                if (
+                    "=" not in extra_args[i]
+                    and flag not in flags_without_values
+                    and i + 1 < len(extra_args)
+                    and extra_args[i + 1].split("=")[0] not in allowed
+                    and extra_args[i + 1].split("=")[0] not in blocked
+                ):
                     filtered.append(extra_args[i + 1])
                     i += 1
             i += 1
@@ -935,6 +965,29 @@ def main():
     run_parser.add_argument("--genes", default=None, help="Comma-separated gene symbols for ClinPGx")
     run_parser.add_argument("--rsid", default=None, help="rsID for GWAS lookup skill (e.g. rs3798220)")
     run_parser.add_argument("--skip", default=None, help="Comma-separated API names to skip (gwas-lookup skill)")
+    run_parser.add_argument("--query", default=None, help="Inline SQL query for bigquery skill")
+    run_parser.add_argument("--location", default=None, help="BigQuery location (e.g. US, EU)")
+    run_parser.add_argument("--max-rows", type=int, default=None, help="Maximum number of query rows for bigquery skill")
+    run_parser.add_argument(
+        "--max-bytes-billed",
+        type=int,
+        default=None,
+        help="Maximum billed bytes safeguard for bigquery skill",
+    )
+    run_parser.add_argument(
+        "--param",
+        action="append",
+        default=None,
+        help="Repeatable bigquery parameter in name=type:value format",
+    )
+    run_parser.add_argument("--dry-run", action="store_true", help="BigQuery dry-run (estimate bytes only)")
+    run_parser.add_argument("--list-datasets", default=None, help="List BigQuery datasets for a project")
+    run_parser.add_argument("--list-tables", default=None, help="List BigQuery tables for a dataset (project.dataset)")
+    run_parser.add_argument("--describe", default=None, help="Describe a BigQuery table schema (project.dataset.table)")
+    run_parser.add_argument("--preview", type=int, default=None, help="Preview wrapper row limit for bigquery skill")
+    run_parser.add_argument("--count-only", action="store_true", help="Return only row count for bigquery skill")
+    run_parser.add_argument("--paper", default=None, help="Paper reference/DOI/URL/path for bigquery provenance")
+    run_parser.add_argument("--note", action="append", default=None, help="Repeatable provenance note for bigquery skill")
     run_parser.add_argument("--geo-id", default=None, help="GEO accession for methylation clock skill")
     run_parser.add_argument("--clocks", default=None, help="Comma-separated clock names for methylation skill")
     run_parser.add_argument("--metadata-cols", default=None, help="Comma-separated metadata columns for methylation skill")
@@ -1124,6 +1177,34 @@ def main():
             extra.extend(["--rsid", args.rsid])
         if getattr(args, "skip", None):
             extra.extend(["--skip", args.skip])
+        if getattr(args, "query", None):
+            extra.extend(["--query", args.query])
+        if getattr(args, "location", None):
+            extra.extend(["--location", args.location])
+        if getattr(args, "max_rows", None) is not None:
+            extra.extend(["--max-rows", str(args.max_rows)])
+        if getattr(args, "max_bytes_billed", None) is not None:
+            extra.extend(["--max-bytes-billed", str(args.max_bytes_billed)])
+        if getattr(args, "param", None):
+            for param in args.param:
+                extra.extend(["--param", param])
+        if getattr(args, "dry_run", False):
+            extra.append("--dry-run")
+        if getattr(args, "list_datasets", None):
+            extra.extend(["--list-datasets", args.list_datasets])
+        if getattr(args, "list_tables", None):
+            extra.extend(["--list-tables", args.list_tables])
+        if getattr(args, "describe", None):
+            extra.extend(["--describe", args.describe])
+        if getattr(args, "preview", None) is not None:
+            extra.extend(["--preview", str(args.preview)])
+        if getattr(args, "count_only", False):
+            extra.append("--count-only")
+        if getattr(args, "paper", None):
+            extra.extend(["--paper", args.paper])
+        if getattr(args, "note", None):
+            for note in args.note:
+                extra.extend(["--note", note])
         if getattr(args, "geo_id", None):
             extra.extend(["--geo-id", args.geo_id])
         if getattr(args, "clocks", None):
