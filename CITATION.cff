@@ -4,6 +4,7 @@ type: software
 title: "ClawBio: Bioinformatics-Native AI Agent Skill Library"
 version: 0.5.0
 date-released: "2026-04-04"
+doi: "10.5281/zenodo.19420648"
 url: "https://clawbio.ai"
 repository-code: "https://github.com/ClawBio/ClawBio"
 license: MIT
