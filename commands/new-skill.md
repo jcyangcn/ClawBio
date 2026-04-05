@@ -13,7 +13,7 @@ Rules:
 - Must not already exist in `skills/`
 - Should be 2-4 words maximum
 
-Store as `SKILL_NAME`.
+Store as `SKILL_NAME`. Also derive `SKILL_NAME_UNDERSCORE` by replacing hyphens with underscores (e.g. `pathway-enrichment` becomes `pathway_enrichment`). Use this for Python filenames and test files.
 
 ## Step 2: Interview the User
 
@@ -88,7 +88,7 @@ Create `skills/$SKILL_NAME/tests/test_$SKILL_NAME_UNDERSCORE.py` with:
 Run the tests and confirm they fail (red):
 
 ```bash
-cd 02-APPS/06-CLAWBIO && python -m pytest skills/$SKILL_NAME/tests/ -v
+python -m pytest skills/$SKILL_NAME/tests/ -v
 ```
 
 Show the user the red output.
@@ -107,7 +107,7 @@ Create `skills/$SKILL_NAME/$SKILL_NAME_UNDERSCORE.py` with:
 Run the tests and confirm they pass (green):
 
 ```bash
-cd 02-APPS/06-CLAWBIO && python -m pytest skills/$SKILL_NAME/tests/ -v
+python -m pytest skills/$SKILL_NAME/tests/ -v
 ```
 
 Show the user the green output.
@@ -115,7 +115,7 @@ Show the user the green output.
 ## Step 8: Run the Demo
 
 ```bash
-cd 02-APPS/06-CLAWBIO && python skills/$SKILL_NAME/$SKILL_NAME_UNDERSCORE.py --demo --output /tmp/$SKILL_NAME_demo
+python skills/$SKILL_NAME/$SKILL_NAME_UNDERSCORE.py --demo --output /tmp/$SKILL_NAME_demo
 ```
 
 Read and display the generated report to the user.

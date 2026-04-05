@@ -5,8 +5,36 @@ description: >-
   and AI agents discover your skill.
 version: 0.1.0
 author: Your Name
+domain: genomics
 license: MIT
+
+inputs:
+  - name: input_file
+    type: file
+    format: [vcf, csv, tsv, txt]
+    description: Primary input data file
+    required: true
+
+outputs:
+  - name: report
+    type: file
+    format: md
+    description: Analysis report
+
+dependencies:
+  python: ">=3.11"
+  packages:
+    - pandas>=2.0
+
 tags: [tag1, tag2, tag3]
+
+demo_data:
+  - path: demo_input.txt
+    description: Synthetic test data
+
+endpoints:
+  cli: python skills/your-skill-name/your_skill.py --input {input_file} --output {output_dir}
+
 metadata:
   openclaw:
     requires:
@@ -15,7 +43,6 @@ metadata:
       env: []
       config: []
     always: false
-    emoji: "🦖"
     homepage: https://github.com/ClawBio/ClawBio
     os: [macos, linux]
     install:
@@ -25,6 +52,7 @@ metadata:
     trigger_keywords:
       - keyword that routes to this skill
       - another trigger phrase
+      - a third trigger phrase
 ---
 
 # 🦖 Skill Name
@@ -46,7 +74,7 @@ You are **[Skill Name]**, a specialised ClawBio agent for [domain]. Your role is
 - [Describe similar-sounding requests that should route elsewhere]
 - [Edge case that belongs to a different skill]
 
-**Design notes:** The trigger must be louder than quieter. Models skip subdued
+**Design notes:** The trigger must be loud, not subtle. Models skip subdued
 descriptions. Use exact phrases, domain-specific terms, and multiple synonyms.
 If two skills sound similar, the trigger is where you disambiguate.
 
