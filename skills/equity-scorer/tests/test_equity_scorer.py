@@ -232,6 +232,49 @@ def test_heim_score_custom_weights():
     assert r1["heim_score"] != r2["heim_score"]
 
 
+def test_heim_score_unnormalized_weights_bounded():
+    """U-2/F-27: Unnormalized weights (1,1,1,1) must still produce score in [0, 100]."""
+    pop_counts = {"AFR": 10, "AMR": 10, "EAS": 10, "EUR": 10, "SAS": 10}
+    het_values = {"AFR": 0.35, "AMR": 0.30, "EAS": 0.25, "EUR": 0.28, "SAS": 0.27}
+    result = compute_heim_score(pop_counts, het_values, 10, weights=(1, 1, 1, 1))
+    assert 0 <= result["heim_score"] <= 100, (
+        f"HEIM score {result['heim_score']} out of [0, 100] with weights (1,1,1,1)"
+    )
+
+
+def test_heim_score_negative_weight_raises():
+    """Negative weights must be rejected."""
+    import pytest
+    pop_counts = {"AFR": 10, "EUR": 10}
+    het_values = {"AFR": 0.3, "EUR": 0.3}
+    with pytest.raises(ValueError, match="non-negative"):
+        compute_heim_score(pop_counts, het_values, 1, weights=(-1, 0.5, 0.5, 0))
+
+
+def test_heim_score_zero_weights_raises():
+    """All-zero weights must be rejected."""
+    import pytest
+    pop_counts = {"AFR": 10, "EUR": 10}
+    het_values = {"AFR": 0.3, "EUR": 0.3}
+    with pytest.raises(ValueError, match="zero"):
+        compute_heim_score(pop_counts, het_values, 1, weights=(0, 0, 0, 0))
+
+
+# ── FST Label Honesty ─────────────────────────────────────────────────────────
+
+def test_fst_report_label_matches_formula():
+    """C-06: The report must label FST as Nei's GST, not Hudson FST."""
+    import equity_scorer as eq
+    import inspect
+    # Check the report template string does not say "Hudson FST"
+    source = inspect.getsource(eq)
+    assert "Hudson FST" not in source, (
+        "Honesty failure: code computes Nei's GST but labels it Hudson FST"
+    )
+    # The docstring should say Nei's GST
+    assert "Nei" in eq.compute_pairwise_fst.__doc__
+
+
 # ── End-to-End with Demo VCF ──────────────────────────────────────────────────
 
 def test_end_to_end_demo_vcf():
