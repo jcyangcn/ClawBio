@@ -1581,6 +1581,20 @@ def generate_report(input_path, fmt, total_snps, pgx_snps, profiles, drug_result
         if gene in profiles:
             p = profiles[gene]
             lines.append(f"| {gene} | {GENE_DEFS[gene]['name']} | {p['diplotype']} | {p['phenotype']} |")
+    # CPIC Level 1A genes not in this panel: explicit "not assessed" disclosure
+    # These must appear in the gene profiles table, not just a separate section.
+    # HLA-B*57:01: abacavir hypersensitivity (~48% risk in carriers)
+    # MT-RNR1: aminoglycoside ototoxicity (permanent deafness, single dose)
+    # G6PD: rasburicase/chloroquine contraindication
+    _out_of_panel = [
+        ("HLA-B", "HLA-B*57:01", "Not assessed", "Indeterminate (not in panel)"),
+        ("MT-RNR1", "MT-RNR1 (mitochondrial)", "Not assessed", "Indeterminate (not in panel)"),
+        ("G6PD", "Glucose-6-Phosphate Dehydrogenase", "Not assessed", "Indeterminate (not in panel)"),
+        ("HLA-A", "HLA-A*31:01", "Not assessed", "Indeterminate (not in panel)"),
+        ("CYP2B6", "Cytochrome P450 2B6", "Not assessed", "Indeterminate (not in panel)"),
+    ]
+    for gene_sym, full_name, dip, pheno in _out_of_panel:
+        lines.append(f"| {gene_sym} | {full_name} | {dip} | {pheno} |")
     lines.append("")
 
     # Detected variants
