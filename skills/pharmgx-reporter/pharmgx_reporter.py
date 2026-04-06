@@ -1000,30 +1000,31 @@ def call_diplotype(gene, pgx_snps):
             return pgx_snps[rsid]["genotype"]
         return "NOT_TESTED"
 
-    # Count how many of this gene's SNPs were actually present in the file
-    gene_rsids = list(gdef["variants"].keys())
+    # Exclude structural variant SNPs (DEL, INS, TA7) from both the total
+    # panel count and tested count: they are inherently untestable from DTC data.
+    sv_rsids = {r for r, v in gdef["variants"].items() if v["alt"].upper() in ("DEL", "INS", "TA7")}
+    gene_rsids = [r for r in gdef["variants"].keys() if r not in sv_rsids]
     tested = [r for r in gene_rsids if r in pgx_snps]
 
     if not tested:
+        # Check if the only SNPs present are SV SNPs
+        sv_in_data = [r for r in sv_rsids if r in pgx_snps]
+        if sv_in_data:
+            # Gene has data but only at untestable SV positions
+            return "NOT_TESTED"
         return "NOT_TESTED"
 
     detected = []
-    sv_untestable = []  # structural variants that cannot be reliably called from DTC data
+    sv_untestable = []  # SV SNPs where patient carries a het call
     for rsid, vdef in gdef["variants"].items():
         if rsid in pgx_snps:
             gt = pgx_snps[rsid]["genotype"]
             alt = vdef["alt"].upper()
             if alt in ("DEL", "INS", "TA7"):
-                # Structural variant SNPs cannot be reliably interpreted from
-                # DTC array data. Exclude from coverage count (don't count as
-                # "tested") but only flag as Indeterminate if the patient
-                # appears to carry a non-reference allele (heterozygous call).
-                is_het = len(set(gt)) > 1  # e.g. "CT" vs "CC"
+                # Only flag if patient has a heterozygous call (possible carrier)
+                is_het = len(set(gt)) > 1
                 if is_het:
                     sv_untestable.append({"rsid": rsid, "allele": vdef["allele"], "alt": alt})
-                # Remove from tested count: SV SNPs are inherently untestable
-                if rsid in tested:
-                    tested.remove(rsid)
                 continue
             alt_count = gt.count(alt)
             if alt_count > 0:
