@@ -37,6 +37,13 @@ def build_credible_sets_susie(
     L = alpha.shape[0]
     credible_sets = []
 
+    # Compute true PIPs from full alpha matrix: PIP_i = 1 - prod_l(1 - alpha[l,i])
+    true_pip = 1.0 - np.prod(1.0 - alpha, axis=0)
+    true_pip = np.clip(true_pip, 0.0, 1.0)
+    # Inject into dataframe so _collect_variants uses true PIP
+    df = df.copy()
+    df["pip"] = true_pip
+
     for l in range(L):
         a_l = alpha[l]
         cs = _greedy_credible_set(a_l, coverage)

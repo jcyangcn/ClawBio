@@ -158,8 +158,22 @@ def run_susie(
             converged = True
             break
 
-    # Compute PIPs: PIP_i = 1 - prod_l (1 - alpha_{l,i})
-    pip = 1.0 - np.prod(1.0 - alpha, axis=0)
+    # When null component is active, prune null effects: if an effect row's
+    # maximum alpha is below the uniform prior (1/p), the null hypothesis
+    # dominates and the effect should not contribute to PIPs. This prevents
+    # phantom PIP accumulation from multiple null effects on a null locus.
+    if use_null:
+        uniform_prior = 1.0 / p
+        active_mask = alpha.max(axis=1) > uniform_prior
+        alpha_active = alpha[active_mask] if active_mask.any() else np.zeros((0, p))
+    else:
+        alpha_active = alpha
+
+    # Compute PIPs: PIP_i = 1 - prod_l (1 - alpha_{l,i})  [active effects only]
+    if alpha_active.shape[0] > 0:
+        pip = 1.0 - np.prod(1.0 - alpha_active, axis=0)
+    else:
+        pip = np.zeros(p)
     pip = np.clip(pip, 0.0, 1.0)
 
     # Non-convergent results: suppress PIPs to prevent downstream use of

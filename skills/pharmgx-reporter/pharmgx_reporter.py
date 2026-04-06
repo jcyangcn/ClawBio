@@ -1008,27 +1008,32 @@ def call_diplotype(gene, pgx_snps):
         return "NOT_TESTED"
 
     detected = []
-    sv_skipped = []  # structural variants we cannot interpret from DTC data
+    sv_untestable = []  # structural variants that cannot be reliably called from DTC data
     for rsid, vdef in gdef["variants"].items():
         if rsid in pgx_snps:
             gt = pgx_snps[rsid]["genotype"]
             alt = vdef["alt"].upper()
             if alt in ("DEL", "INS", "TA7"):
-                print(f"  WARNING: {gene} {rsid} has structural variant "
-                      f"alt={alt}, cannot interpret from DTC data. "
-                      f"Marking {gene} as Indeterminate.",
-                      file=sys.stderr)
-                sv_skipped.append({"rsid": rsid, "allele": vdef["allele"], "alt": alt})
+                # Structural variant SNPs cannot be reliably interpreted from
+                # DTC array data. Exclude from coverage count (don't count as
+                # "tested") but only flag as Indeterminate if the patient
+                # appears to carry a non-reference allele (heterozygous call).
+                is_het = len(set(gt)) > 1  # e.g. "CT" vs "CC"
+                if is_het:
+                    sv_untestable.append({"rsid": rsid, "allele": vdef["allele"], "alt": alt})
+                # Remove from tested count: SV SNPs are inherently untestable
+                if rsid in tested:
+                    tested.remove(rsid)
                 continue
             alt_count = gt.count(alt)
             if alt_count > 0:
                 detected.append({"rsid": rsid, "allele": vdef["allele"],
                                  "copies": alt_count, "effect": vdef["effect"]})
 
-    # If any structural variant SNPs were skipped, the gene result is unreliable.
+    # If patient carries a het call at an SV SNP, the gene result is unreliable.
     # Report as Indeterminate rather than falsely claiming Normal.
-    if sv_skipped:
-        sv_desc = ", ".join(f"{s['allele']}({s['rsid']})" for s in sv_skipped)
+    if sv_untestable:
+        sv_desc = ", ".join(f"{s['allele']}({s['rsid']})" for s in sv_untestable)
         return f"Indeterminate (structural variant not assessed: {sv_desc})"
 
     if gdef.get("type") == "dpyd":
