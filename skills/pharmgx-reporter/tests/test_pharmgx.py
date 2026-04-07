@@ -387,6 +387,65 @@ def test_all_guideline_drugs_reference_valid_genes():
         assert gene in GENE_DEFS, f"{drug} references unknown gene {gene}"
 
 
+# ── CPIC Compliance (clawbio_bench v0.1.4 findings) ─────────────────────────
+
+def test_cyp2c19_rapid_metabolizer_clopidogrel_standard():
+    """CYP2C19 Rapid Metabolizer (*1/*17) should map to standard for Clopidogrel."""
+    profiles = _profiles()
+    profiles["CYP2C19"] = {"diplotype": "*1/*17", "phenotype": "Rapid Metabolizer"}
+    results = lookup_drugs(profiles)
+    clop = [d for cat in results.values() for d in cat if d["drug"] == "Clopidogrel"]
+    assert clop[0]["classification"] == "standard", (
+        "CYP2C19 Rapid Metabolizer should get standard for Clopidogrel per CPIC"
+    )
+
+
+def test_cyp2c19_rapid_metabolizer_voriconazole_caution():
+    """CYP2C19 Rapid Metabolizer (*1/*17) should map to caution for Voriconazole."""
+    profiles = _profiles()
+    profiles["CYP2C19"] = {"diplotype": "*1/*17", "phenotype": "Rapid Metabolizer"}
+    results = lookup_drugs(profiles)
+    vori = [d for cat in results.values() for d in cat if d["drug"] == "Voriconazole"]
+    assert vori[0]["classification"] == "caution", (
+        "CYP2C19 Rapid Metabolizer should get caution for Voriconazole per CPIC"
+    )
+
+
+def test_diclofenac_no_avoid_for_cyp2c9_pm():
+    """Diclofenac should NOT be 'avoid' for CYP2C9 PM (CPIC Theken 2020: no recommendation)."""
+    profiles = _profiles()
+    profiles["CYP2C9"] = {"diplotype": "*3/*3", "phenotype": "Poor Metabolizer"}
+    results = lookup_drugs(profiles)
+    diclo = [d for cat in results.values() for d in cat if d["drug"] == "Diclofenac"]
+    assert diclo[0]["classification"] != "avoid", (
+        "Diclofenac should not be avoid for CYP2C9 PM per CPIC Table S9 (Theken 2020)"
+    )
+
+
+def test_slco1b1_decreased_function_simvastatin_caution():
+    """SLCO1B1 Decreased Function (TC) should map to caution for Simvastatin."""
+    profiles = _profiles()
+    profiles["SLCO1B1"] = {"diplotype": "TC", "phenotype": "Decreased Function"}
+    results = lookup_drugs(profiles)
+    simva = [d for cat in results.values() for d in cat if d["drug"] == "Simvastatin"]
+    assert simva[0]["classification"] == "caution", (
+        "SLCO1B1 Decreased Function should get caution for Simvastatin per CPIC 2022"
+    )
+
+
+def test_phenotype_to_key_decreased_function():
+    """Decreased Function (CPIC 2022 SLCO1B1 term) must map correctly."""
+    assert phenotype_to_key("Decreased Function") == "decreased_function"
+
+
+def test_cyp2d6_star1_star10_is_normal_metabolizer():
+    """CYP2D6 *1/*10 should be Normal Metabolizer per CPIC 2020 (AS >= 1.25)."""
+    pheno = call_phenotype("CYP2D6", "*1/*10")
+    assert pheno == "Normal Metabolizer", (
+        f"CYP2D6 *1/*10 should be NM per CPIC 2020 (Caudle, PMID 31647186), got {pheno}"
+    )
+
+
 # ── ClinPGx Evidence Enrichment ──────────────────────────────────────────────
 
 def test_enrich_returns_dict():

@@ -128,8 +128,10 @@ GENE_DEFS = {
             "rs28371725": {"allele": "*41", "alt": "T", "effect": "decreased_function"},
         },
         "phenotypes": {
-            "Normal Metabolizer":       ["*1/*1", "*1/*2", "*2/*2"],
-            "Intermediate Metabolizer": ["*1/*4", "*1/*10", "*1/*41", "*2/*41", "*10/*10", "*4/*10", "*10/*41", "*41/*41"],
+            # CPIC 2020 (Caudle, PMID 31647186): NM at AS >= 1.25
+            # *1/*10 has AS = 1.0 + 0.25 = 1.25 -> NM (not IM)
+            "Normal Metabolizer":       ["*1/*1", "*1/*2", "*2/*2", "*1/*10"],
+            "Intermediate Metabolizer": ["*1/*4", "*1/*41", "*2/*41", "*10/*10", "*4/*10", "*10/*41", "*41/*41"],
             "Poor Metabolizer":         ["*4/*4", "*4/*6", "*6/*6", "*4/*41"],
         },
     },
@@ -323,70 +325,80 @@ GUIDELINES = {
     "Clopidogrel": {
         "brand": "Plavix", "class": "Antiplatelet Agent", "gene": "CYP2C19",
         "recs": {
-            "ultrarapid_metabolizer": "standard", "normal_metabolizer": "standard",
+            "ultrarapid_metabolizer": "standard", "rapid_metabolizer": "standard",
+            "normal_metabolizer": "standard",
             "intermediate_metabolizer": "caution", "poor_metabolizer": "avoid",
         },
     },
     "Omeprazole": {
         "brand": "Prilosec", "class": "Proton Pump Inhibitor", "gene": "CYP2C19",
         "recs": {
-            "ultrarapid_metabolizer": "caution", "normal_metabolizer": "standard",
+            "ultrarapid_metabolizer": "caution", "rapid_metabolizer": "standard",
+            "normal_metabolizer": "standard",
             "intermediate_metabolizer": "standard", "poor_metabolizer": "caution",
         },
     },
     "Pantoprazole": {
         "brand": "Protonix", "class": "Proton Pump Inhibitor", "gene": "CYP2C19",
         "recs": {
-            "ultrarapid_metabolizer": "caution", "normal_metabolizer": "standard",
+            "ultrarapid_metabolizer": "caution", "rapid_metabolizer": "standard",
+            "normal_metabolizer": "standard",
             "intermediate_metabolizer": "standard", "poor_metabolizer": "caution",
         },
     },
     "Lansoprazole": {
         "brand": "Prevacid", "class": "Proton Pump Inhibitor", "gene": "CYP2C19",
         "recs": {
-            "ultrarapid_metabolizer": "caution", "normal_metabolizer": "standard",
+            "ultrarapid_metabolizer": "caution", "rapid_metabolizer": "standard",
+            "normal_metabolizer": "standard",
             "intermediate_metabolizer": "standard", "poor_metabolizer": "caution",
         },
     },
     "Esomeprazole": {
         "brand": "Nexium", "class": "Proton Pump Inhibitor", "gene": "CYP2C19",
         "recs": {
-            "ultrarapid_metabolizer": "caution", "normal_metabolizer": "standard",
+            "ultrarapid_metabolizer": "caution", "rapid_metabolizer": "standard",
+            "normal_metabolizer": "standard",
             "intermediate_metabolizer": "standard", "poor_metabolizer": "caution",
         },
     },
     "Dexlansoprazole": {
         "brand": "Dexilant", "class": "Proton Pump Inhibitor", "gene": "CYP2C19",
         "recs": {
-            "ultrarapid_metabolizer": "caution", "normal_metabolizer": "standard",
+            "ultrarapid_metabolizer": "caution", "rapid_metabolizer": "standard",
+            "normal_metabolizer": "standard",
             "intermediate_metabolizer": "standard", "poor_metabolizer": "caution",
         },
     },
     "Citalopram": {
         "brand": "Celexa", "class": "SSRI Antidepressant", "gene": "CYP2C19",
         "recs": {
-            "ultrarapid_metabolizer": "caution", "normal_metabolizer": "standard",
+            "ultrarapid_metabolizer": "caution", "rapid_metabolizer": "standard",
+            "normal_metabolizer": "standard",
             "intermediate_metabolizer": "standard", "poor_metabolizer": "caution",
         },
     },
     "Escitalopram": {
         "brand": "Lexapro", "class": "SSRI Antidepressant", "gene": "CYP2C19",
         "recs": {
-            "ultrarapid_metabolizer": "caution", "normal_metabolizer": "standard",
+            "ultrarapid_metabolizer": "caution", "rapid_metabolizer": "standard",
+            "normal_metabolizer": "standard",
             "intermediate_metabolizer": "standard", "poor_metabolizer": "caution",
         },
     },
     "Sertraline": {
         "brand": "Zoloft", "class": "SSRI Antidepressant", "gene": "CYP2C19",
         "recs": {
-            "ultrarapid_metabolizer": "standard", "normal_metabolizer": "standard",
+            "ultrarapid_metabolizer": "standard", "rapid_metabolizer": "standard",
+            "normal_metabolizer": "standard",
             "intermediate_metabolizer": "standard", "poor_metabolizer": "standard",
         },
     },
     "Voriconazole": {
         "brand": "Vfend", "class": "Antifungal", "gene": "CYP2C19",
         "recs": {
-            "ultrarapid_metabolizer": "caution", "normal_metabolizer": "standard",
+            "ultrarapid_metabolizer": "caution", "rapid_metabolizer": "caution",
+            "normal_metabolizer": "standard",
             "intermediate_metabolizer": "standard", "poor_metabolizer": "caution",
         },
     },
@@ -582,30 +594,31 @@ GUIDELINES = {
     # --- SLCO1B1 drugs ---
     "Simvastatin": {
         "brand": "Zocor", "class": "Statin", "gene": "SLCO1B1",
+        # CPIC 2022: Decreased Function (TC) = avoid simvastatin 40+ mg
         "recs": {
             "normal_function": "standard",
-            "intermediate_function": "caution", "poor_function": "avoid",
+            "decreased_function": "caution", "poor_function": "avoid",
         },
     },
     "Atorvastatin": {
         "brand": "Lipitor", "class": "Statin", "gene": "SLCO1B1",
         "recs": {
             "normal_function": "standard",
-            "intermediate_function": "caution", "poor_function": "caution",
+            "decreased_function": "caution", "poor_function": "caution",
         },
     },
     "Rosuvastatin": {
         "brand": "Crestor", "class": "Statin", "gene": "SLCO1B1",
         "recs": {
             "normal_function": "standard",
-            "intermediate_function": "standard", "poor_function": "standard",
+            "decreased_function": "standard", "poor_function": "standard",
         },
     },
     "Pravastatin": {
         "brand": "Pravachol", "class": "Statin", "gene": "SLCO1B1",
         "recs": {
             "normal_function": "standard",
-            "intermediate_function": "standard", "poor_function": "standard",
+            "decreased_function": "standard", "poor_function": "standard",
         },
     },
     # --- DPYD drugs ---
@@ -696,9 +709,12 @@ GUIDELINES = {
     # --- Additional CYP2C9 NSAIDs ---
     "Diclofenac": {
         "brand": "Voltaren", "class": "NSAID", "gene": "CYP2C9",
+        # CPIC (Theken 2020, Table S9): diclofenac PK not significantly impacted
+        # by CYP2C9 variants in vivo. No CPIC recommendation for PM (Level C).
+        # Diclofenac is listed as an alternative for CYP2C9 PMs.
         "recs": {
             "normal_metabolizer": "standard",
-            "intermediate_metabolizer": "caution", "poor_metabolizer": "avoid",
+            "intermediate_metabolizer": "standard", "poor_metabolizer": "standard",
         },
     },
     "Ibuprofen": {
@@ -1193,11 +1209,13 @@ def phenotype_to_key(phenotype_desc):
         "Normal Metabolizer": "normal_metabolizer",
         "Intermediate Metabolizer": "intermediate_metabolizer",
         "Poor Metabolizer": "poor_metabolizer",
+        "Rapid Metabolizer": "rapid_metabolizer",
         "Ultrarapid Metabolizer": "ultrarapid_metabolizer",
         "Normal Warfarin Sensitivity": "normal_warfarin_sensitivity",
         "Intermediate Warfarin Sensitivity": "intermediate_warfarin_sensitivity",
         "High Warfarin Sensitivity": "high_warfarin_sensitivity",
         "Normal Function": "normal_function",
+        "Decreased Function": "decreased_function",
         "Intermediate Function": "intermediate_function",
         "Poor Function": "poor_function",
         "CYP3A5 Expressor": "extensive_metabolizer",
@@ -1659,6 +1677,7 @@ def generate_report(input_path, fmt, total_snps, pgx_snps, profiles, drug_result
     lines.append("| Gene | Clinical Relevance | CPIC Guideline |")
     lines.append("|------|-------------------|----------------|")
     lines.append("| HLA-B\\*57:01 | Abacavir hypersensitivity | CPIC Abacavir (2014, updated 2020) |")
+    lines.append("| HLA-B\\*58:01 | Allopurinol hypersensitivity (SJS/TEN) | CPIC Allopurinol (Hershfield 2013, updated 2015) |")
     lines.append("| G6PD | Rasburicase, chloroquine contraindication | CPIC G6PD (2014) |")
     lines.append("| MT-RNR1 | Aminoglycoside ototoxicity | FDA label |")
     lines.append("| HLA-A\\*31:01 | Carbamazepine hypersensitivity | CPIC Carbamazepine (2017) |")
