@@ -686,10 +686,12 @@ def _validate_path(filepath: Path, allowed_root: Path) -> bool:
 
 async def execute_save_file(args: dict) -> str:
     """Save the most recently received file to the requested destination."""
-    file_info = None
-    for _cid, info in _received_files.items():
-        file_info = info
-        break
+    chat_id = args.get("_chat_id")
+    file_info = _received_files.get(chat_id) if chat_id else None
+    if file_info is None:
+        for _, info in _received_files.items():
+            file_info = info
+            break
 
     if not file_info:
         return "No recently received file to save. Send a file first."
@@ -984,6 +986,7 @@ async def llm_tool_loop(chat_id: int, user_content: str | list) -> str:
                 _audit("tool_call", chat_id=chat_id, tool=func_name,
                        args_preview=json.dumps(args, default=str)[:300])
                 try:
+                    args["_chat_id"] = chat_id
                     result = await executor(args)
                 except Exception as tool_err:
                     logger.error(f"Tool {func_name} raised: {tool_err}", exc_info=True)
