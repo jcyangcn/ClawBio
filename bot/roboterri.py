@@ -640,6 +640,16 @@ async def execute_clawbio(args: dict) -> str:
 # --------------------------------------------------------------------------- #
 
 
+_ALLOWED_UPLOAD_EXTENSIONS = {
+    ".txt", ".csv", ".vcf", ".fastq", ".fq",   # genetic data
+    ".gz",                                       # compressed genetic data
+    ".h5ad",                                     # single-cell AnnData
+    ".tif", ".tiff", ".png", ".jpg", ".jpeg", ".heic", ".heif",  # microscopy / photos
+    ".tsv",                                      # tab-separated counts
+    # .pdf, .html, .md excluded — active content risk / prompt injection
+}
+
+
 def _sanitize_filename(filename: str) -> str:
     """Strip path traversal components and dangerous characters from a filename."""
     # Take only the basename (no directory components)
@@ -1393,6 +1403,12 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Sanitize filename (TG-002)
         filename = _sanitize_filename(filename)
 
+        # Extension allowlist — photos must be image types (TG-005)
+        ext = Path(filename).suffix.lower()
+        if ext not in _ALLOWED_UPLOAD_EXTENSIONS or not media_type.startswith("image/"):
+            logger.warning(f"Rejected photo with ext={ext} mime={media_type}")
+            return
+
         # Store for potential file-based skill use
         upload_path = UPLOADS_DIR / f"{update.effective_chat.id}" / filename
         upload_path.parent.mkdir(exist_ok=True)
@@ -1466,6 +1482,16 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file = await doc.get_file()
         filename = _sanitize_filename(doc.file_name or "document")
         file_size = doc.file_size or 0
+
+        # Extension allowlist check (TG-005)
+        ext = Path(filename).suffix.lower()
+        if ext not in _ALLOWED_UPLOAD_EXTENSIONS:
+            allowed = ", ".join(sorted(_ALLOWED_UPLOAD_EXTENSIONS))
+            await update.message.reply_text(
+                f"Unsupported file type ({ext or 'no extension'}). "
+                f"Accepted: {allowed}"
+            )
+            return
 
         # File size check (TG-004)
         if file_size > MAX_UPLOAD_BYTES:
