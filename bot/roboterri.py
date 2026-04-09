@@ -427,9 +427,10 @@ async def execute_clawbio(args: dict) -> str:
 
         orch_input = query
         if mode == "file":
-            for _cid, info in _received_files.items():
-                orch_input = info["path"]
-                break
+            chat_id = args.get("_chat_id")
+            file_info = _received_files.get(chat_id) if chat_id else next(iter(_received_files.values()), None)
+            if file_info:
+                orch_input = file_info["path"]
         if not orch_input:
             return "Error: skill='auto' requires either a file or a query to route."
 
@@ -475,10 +476,11 @@ async def execute_clawbio(args: dict) -> str:
     # Resolve input and profile for file mode
     input_path = None
     profile_path = None
-    for _cid, info in _received_files.items():
-        input_path = info.get("path")
-        profile_path = info.get("profile_path")
-        break
+    chat_id = args.get("_chat_id")
+    file_info = _received_files.get(chat_id) if chat_id else next(iter(_received_files.values()), None)
+    if file_info:
+        input_path = file_info.get("path")
+        profile_path = file_info.get("profile_path")
 
     if mode == "file" and not input_path and not profile_path:
         # Fall back to owner's genome for admin users
