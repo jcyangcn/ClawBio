@@ -95,25 +95,24 @@ class _TokenRedactFilter(logging.Filter):
         self._token = token
 
     def filter(self, record: logging.LogRecord) -> bool:
-        if self._token and self._token in record.getMessage():
-            record.msg = str(record.msg).replace(self._token, "[REDACTED]")
-            if isinstance(record.args, tuple):
-                record.args = tuple(
-                    str(a).replace(self._token, "[REDACTED]")
-                    for a in record.args
-                )
-            elif isinstance(record.args, dict):
-                record.args = {
-                    k: str(v).replace(self._token, "[REDACTED]")
-                    for k, v in record.args.items()
-                }
+        try:
+            formatted = record.getMessage()
+        except Exception:
+            return True
+        if self._token and self._token in formatted:
+            # Collapse to pre-formatted string and clear args so that
+            # subsequent getMessage() calls (from the handler's emit) don't
+            # re-apply % formatting with now-wrong arg types (e.g. %d vs str).
+            record.msg = formatted.replace(self._token, "[REDACTED]")
+            record.args = None
         return True
 
 
-if TELEGRAM_BOT_TOKEN:
-    _redact = _TokenRedactFilter(TELEGRAM_BOT_TOKEN)
-    for _ln in ("httpx", "telegram", "httpcore"):
+for _secret in filter(None, [TELEGRAM_BOT_TOKEN, LLM_API_KEY]):
+    _redact = _TokenRedactFilter(_secret)
+    for _ln in ("httpx", "telegram", "httpcore", "openai", "httpx._client", "root"):
         logging.getLogger(_ln).addFilter(_redact)
+    logger.addFilter(_redact)
 
 
 # ---------------------------------------------------------------------------
