@@ -75,7 +75,7 @@ DATA_DIR = CLAWBIO_DIR / "data"
 OWNER_GENOME = CLAWBIO_DIR / "skills" / "genome-compare" / "data" / "manuel_corpas_23andme.txt.gz"
 
 # Security limits (TG-004)
-MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB (Telegram document limit)
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB — Telegram Bot API getFile() limit (not the client send limit)
 MAX_PHOTO_BYTES = 20 * 1024 * 1024   # 20 MB (Telegram photo limit)
 
 logging.basicConfig(
