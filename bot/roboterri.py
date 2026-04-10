@@ -639,13 +639,32 @@ async def execute_clawbio(args: dict) -> str:
 
 
 _ALLOWED_UPLOAD_EXTENSIONS = {
-    ".txt", ".csv", ".vcf", ".fastq", ".fq",   # genetic data
-    ".gz",                                       # compressed genetic data
+    ".txt", ".csv", ".vcf", ".fastq", ".fq",   # genetic data (uncompressed)
     ".h5ad",                                     # single-cell AnnData
     ".tif", ".tiff", ".png", ".jpg", ".jpeg", ".heic", ".heif",  # microscopy / photos
     ".tsv",                                      # tab-separated counts
     # .pdf, .html, .md excluded — active content risk / prompt injection
 }
+
+# Compound suffixes allowed for gzip-compressed files (e.g. "data.vcf.gz").
+# Bare ".gz" is intentionally excluded — it could wrap arbitrary content.
+_ALLOWED_GZ_STEMS = {
+    ".vcf.gz", ".fastq.gz", ".fq.gz", ".txt.gz", ".tsv.gz", ".csv.gz", ".bed.gz",
+}
+
+
+def _is_allowed_extension(filename: str) -> bool:
+    """Return True if the file's extension (or compound .*.gz suffix) is permitted."""
+    p = Path(filename)
+    suffixes = p.suffixes
+    if not suffixes:
+        return False
+    # Compound suffix check first (e.g. ".vcf.gz")
+    compound = "".join(suffixes[-2:]).lower()
+    if compound in _ALLOWED_GZ_STEMS:
+        return True
+    # Single-suffix check
+    return suffixes[-1].lower() in _ALLOWED_UPLOAD_EXTENSIONS
 
 
 def _sanitize_filename(filename: str) -> str:
@@ -1402,8 +1421,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         filename = _sanitize_filename(filename)
 
         # Extension allowlist — photos must be image types (TG-005)
-        ext = Path(filename).suffix.lower()
-        if ext not in _ALLOWED_UPLOAD_EXTENSIONS or not media_type.startswith("image/"):
+        if not _is_allowed_extension(filename) or not media_type.startswith("image/"):
             logger.warning(f"Rejected photo with ext={ext} mime={media_type}")
             return
 
@@ -1481,11 +1499,11 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_size = doc.file_size or 0
 
         # Extension allowlist check (TG-005)
-        ext = Path(filename).suffix.lower()
-        if ext not in _ALLOWED_UPLOAD_EXTENSIONS:
-            allowed = ", ".join(sorted(_ALLOWED_UPLOAD_EXTENSIONS))
+        if not _is_allowed_extension(filename):
+            ext = "".join(Path(filename).suffixes).lower() or "no extension"
+            allowed = ", ".join(sorted(_ALLOWED_UPLOAD_EXTENSIONS | _ALLOWED_GZ_STEMS))
             await update.message.reply_text(
-                f"Unsupported file type ({ext or 'no extension'}). "
+                f"Unsupported file type ({ext}). "
                 f"Accepted: {allowed}"
             )
             return
