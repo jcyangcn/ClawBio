@@ -593,7 +593,7 @@ async def execute_clawbio(args: dict) -> str:
             elif f.suffix == ".png":
                 media_items.append({"type": "photo", "path": str(f)})
         if media_items:
-            _pending_media[0] = _pending_media.get(0, []) + media_items
+            _pending_media[chat_id] = _pending_media.get(chat_id, []) + media_items
 
     # Read report for chat display
     report_text = ""
@@ -860,10 +860,10 @@ async def execute_generate_audio(args: dict) -> str:
 
 async def _drain_pending_media(update: Update, context) -> None:
     """Send any queued ClawBio media (documents + figures) after the text reply."""
-    items = _pending_media.pop(0, [])
+    chat_id = update.effective_chat.id
+    items = _pending_media.pop(chat_id, [])
     if not items:
         return
-    chat_id = update.effective_chat.id
     for item in items:
         try:
             path = Path(item["path"])
