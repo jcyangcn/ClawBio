@@ -12,6 +12,7 @@ import csv
 import hashlib
 import io
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -38,8 +39,11 @@ CITATION = (
     "DOI: 10.1016/j.cmet.2024.10.005"
 )
 
+# Pinned to organAging commit 5147b03 for reproducibility.
+# To update: change this SHA and clear the local cache (~/.cache/clawbio/proteomics-clock/).
+ORGANAGING_COMMIT = "5147b0301ec7f4abdb10ef650d04f47454ddc8fd"
 GITHUB_RAW_BASE = (
-    "https://raw.githubusercontent.com/ludgergoeminne/organAging/main/data/output_Python"
+    f"https://raw.githubusercontent.com/ludgergoeminne/organAging/{ORGANAGING_COMMIT}/data/output_Python"
 )
 
 ORGAN_PROTEINS_URL = f"{GITHUB_RAW_BASE}/GTEx_4x_FC_genes.json"
@@ -66,7 +70,11 @@ DEFAULT_ORGANS = list(ALL_ORGANS)
 
 
 def _cache_dir() -> Path:
-    d = Path.home() / ".cache" / "clawbio" / "proteomics-clock"
+    base = os.environ.get("CLAWBIO_CACHE")
+    if base:
+        d = Path(base) / "proteomics-clock"
+    else:
+        d = Path.home() / ".cache" / "clawbio" / "proteomics-clock"
     d.mkdir(parents=True, exist_ok=True)
     return d
 

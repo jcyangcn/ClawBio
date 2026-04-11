@@ -223,12 +223,26 @@ proteomics_clock_report/
 - **Missing proteins silently degrade accuracy**: With many missing proteins, predictions become unreliable. Always check `missing_proteins.csv` and the coverage report.
 - **Non-Olink data needs rescaling**: If using SomaLogic or mass-spec data, you must standardise and rescale using the standard deviations from Table S3 of the paper. This skill currently assumes Olink NPX input.
 
+## Network Calls
+
+This skill fetches model coefficients on first run and caches them locally.
+
+| What | URL pattern | Cached? |
+|------|------------|---------|
+| Organ-protein mapping | `raw.githubusercontent.com/ludgergoeminne/organAging/{SHA}/data/output_Python/GTEx_4x_FC_genes.json` | Yes |
+| Gen1 coefficients (per organ) | `.../instance_0/chronological_models/{organ}_coefs_GTEx_4x_FC.csv` | Yes |
+| Gen2 coefficients (per organ) | `.../instance_0/mortality_based_models/{organ}_mortality_coefs_GTEx_4x_FC.csv` | Yes |
+
+- **Cache location**: `$CLAWBIO_CACHE/proteomics-clock/` if set, otherwise `~/.cache/clawbio/proteomics-clock/`
+- **Pinned commit**: All URLs are pinned to organAging commit `5147b03` for reproducibility. Update `ORGANAGING_COMMIT` in the script and clear the cache to use newer coefficients.
+- **Offline mode**: After first run, the skill works fully offline from cache. No `--offline` flag needed.
+
 ## Safety
 
 - **Local-first**: Olink data never leaves the machine; only coefficient downloads go to GitHub
 - **Disclaimer**: Every report includes the ClawBio medical disclaimer
 - **Audit trail**: Full reproducibility bundle with commands, environment, and checksums
-- **No hallucinated science**: All coefficients trace directly to the published organAging GitHub repository
+- **No hallucinated science**: All coefficients trace directly to the published organAging GitHub repository (pinned commit SHA)
 
 ## Agent Boundary
 
