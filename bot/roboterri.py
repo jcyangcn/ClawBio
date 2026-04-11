@@ -91,17 +91,23 @@ class _TokenRedactFilter(logging.Filter):
     def __init__(self, token: str):
         super().__init__()
         self._token = token
+        # PTB's _get_encoded_url() percent-encodes ':' → '%3A' in download
+        # URLs, so store both forms and always replace both.
+        import urllib.parse as _up
+        self._token_encoded = _up.quote(token, safe="")
 
     def filter(self, record: logging.LogRecord) -> bool:
         try:
             formatted = record.getMessage()
         except Exception:
             return True
-        if self._token and self._token in formatted:
-            # Collapse to pre-formatted string and clear args so that
-            # subsequent getMessage() calls (from the handler's emit) don't
-            # re-apply % formatting with now-wrong arg types (e.g. %d vs str).
-            record.msg = formatted.replace(self._token, "[REDACTED]")
+        if self._token:
+            # Collapse to pre-formatted string (clears args) and strip both the
+            # raw and percent-encoded token. str.replace is a no-op when the
+            # substring is absent, so no guard needed.
+            record.msg = formatted.replace(self._token, "[REDACTED]").replace(
+                self._token_encoded, "[REDACTED]"
+            )
             record.args = None
         return True
 
