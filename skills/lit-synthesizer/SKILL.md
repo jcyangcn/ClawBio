@@ -8,10 +8,8 @@ version: 0.1.0
 author: Sooraj (github.com/sooraj-codes)
 domain: literature
 license: MIT
-emoji: 📚
-os:
-  - darwin
-  - linux
+emoji: "📚"
+os: "darwin, linux"
 inputs:
   - name: query
     type: string
@@ -42,9 +40,6 @@ metadata:
     requires:
       always: false
     homepage: https://github.com/ClawBio/ClawBio
-    os:
-      - darwin
-      - linux
     install:
       - kind: pip
         package: biopython
