@@ -1,181 +1,200 @@
 ---
-name: claw-methylation-cycle
-version: 0.1.0
-author: Samuel Carmona Aguirre <samuel@unimed-consulting.es>
-domain: methylation-genomics
-description: >
-  Methylation cycle analysis with BH4/neurotransmitter axis interpretation.
-  Profiles MTHFR, MTRR, MTR, CBS, BHMT, SHMT1, COMT, and AHCY from raw
-  genotype data and estimates Net Methylation Capacity and BH4 production
-  capacity (dopamine/serotonin synthesis impact). Designed for clinical
-  support in neurodevelopmental disorders (ADHD, depression, anxiety).
+name: methylation-cycle
+version: 0.1.1
+author: Samuel Carmona Aguirre
 license: MIT
-inputs:
-  - name: genotype_file
-    type: file
-    format: [txt, csv]
-    description: >
-      23andMe, AncestryDNA, or ADNTRO raw genotype file.
-      Tab-separated with columns: rsid, chromosome, position, genotype.
-    required: true
-outputs:
-  - name: report
-    type: file
-    format: md
-    description: >
-      Clinical methylation cycle report with enzymatic activity estimates,
-      BH4 axis capacity, compound heterozygosity flags, and
-      prioritised supplementation recommendations.
-  - name: result
-    type: file
-    format: json
-    description: >
-      Structured JSON output for downstream integration with CAPS Digital /
-      13MIL or any clinical decision-support system.
-    dependencies:
-  python: ">=3.11"
-  packages:
-    - pandas>=2.0
-    - numpy>=1.24
-tags:
+trigger_keywords:
   - methylation
   - MTHFR
+  - folate cycle
   - BH4
-  - neurotransmitters
-  - ADHD
-  - pharmacogenomics
-  - nutrigenomics
-  - neurodevelopmental
-  - Holomedicina
+  - homocysteine
+  - methylation cycle
+  - metilacion
+  - neurotransmitter synthesis
+input_format: 23andme, adntro, ancestry
+output_format: markdown, json
+dependencies_python: ">=3.9"
+framework: Holomedicina CAPS Digital UNIMED Consulting
+tags:
+  - genomics
+  - methylation
+  - MTHFR
+  - neurodevelopment
   - CAPS-Digital
-demo_data:
-  - path: demo_input.txt
-    description: >
-      Synthetic genotype file with 8 methylation-cycle SNPs
-      representing a MTHFR compound heterozygous profile (C677T + A1298C)
-      with BHMT and COMT variants. NOT real patient data.
-endpoints:
-  cli: python skills/claw-methylation-cycle/methylation_cycle.py --input {genotype_file} --output {output_dir}
-guideline_authority: PMID
+demo_data_path: demo_input.txt
 guideline_doi: "10.3390/nu13030768"
 validation_tier: community
 ---
-## Domain Decisions
 
-### Genes and Variants Assessed
+# claw-methylation-cycle
 
-| Gene   | rsID        | Variant        | Allele Assessed | Effect Direction        |
-|--------|-------------|----------------|-----------------|-------------------------|
-| MTHFR  | rs1801133   | C677T          | T (risk)        | Decreased MTHFR activity |
-| MTHFR  | rs1801131   | A1298C         | C (risk)        | Decreased MTHFR activity |
-| MTRR   | rs1801394   | A66G           | G (risk)        | Decreased MTRR activity  |
-| MTR    | rs1805087   | A2756G         | G (risk)        | Decreased MTR activity   |
-| CBS    | rs234706    | C699T          | T (risk)        | Increased CBS activity   |
-| BHMT   | rs3733890   | R239Q          | A (risk)        | Decreased BHMT activity  |
-| SHMT1  | rs1979277   | C1420T         | T (risk)        | Decreased SHMT1 activity |
-| COMT   | rs4680      | Val158Met      | A/Met (risk)    | Decreased COMT activity  |
-| AHCY   | rs819147    | AHCY           | T (risk)        | Decreased AHCY activity  |
-### Enzymatic Activity Estimates
+Methylation cycle analysis skill for ClawBio. Produces enzymatic activity
+profiles, Net Methylation Capacity (NMC), BH4 axis estimates, compound
+heterozygosity detection, and clinical recommendations from raw SNP genotype
+data. Integrated into the CAPS Digital / Holomedicina clinical framework
+(Samuel Carmona Aguirre, 2014/UNESCO 2016).
 
-Activity is estimated as a percentage of normal function based on homozygous vs.
-heterozygous status of risk alleles. These are approximations derived from published
-functional studies — they are NOT direct enzyme assays.
+---
 
-| Genotype              | Estimated Activity |
-|-----------------------|--------------------|
-| 0 risk alleles (WT)   | 100%               |
-| 1 risk allele (het)   | 60–80% (gene-specific, see table below) |
-| 2 risk alleles (hom)  | 15–40% (gene-specific, see table below) |
+## Trigger
 
-Gene-specific activity estimates (homozygous risk):
+**Fire this skill when:**
 
-- MTHFR C677T homozygous: ~30% of normal
-- MTHFR A1298C homozygous: ~60% of normal
-- MTHFR compound heterozygous (C677T + A1298C): ~15% of normal (combined reduction)
-- MTRR A66G homozygous: ~60% of normal
-- BHMT R239Q homozygous: ~40% of normal
-- COMT Val158Met homozygous (Met/Met): ~25% of normal (slow COMT)
-- SHMT1 C1420T homozygous: ~60% of normal
+- The user asks about methylation, MTHFR variants, folate cycle, or
+  homocysteine risk from a genotype file.
+- A raw SNP file (23andMe, ADNTRO, or Ancestry format) is provided and the
+  clinical question involves methylation, BH4, dopamine or serotonin synthesis
+  capacity, or neurodevelopmental contexts such as ADHD, depression, anxiety.
+- The upstream workflow (PharmGx Reporter, NutriGx Advisor) has flagged
+  MTHFR or MTRR and the clinician needs the full methylation panel.
+- Keywords present: methylation, MTHFR, BH4, folate cycle, metilacion,
+  homocysteine, 5-MTHF, methylcobalamin, neurotransmitter synthesis.
 
-Source: Nazki FH et al. (2014) Gene 533(1):11-20; Ledford AW et al. (2021) Nutrients 13(3):768.
-### Net Methylation Capacity (NMC) Score
+**Do NOT fire this skill when:**
 
-NMC is a composite index (0–100) derived from weighted enzymatic activities
-of the eight assessed genes. Weights reflect clinical significance for
-methylation flux:
+- The question is purely about folic acid supplementation without a genotype file.
+- The user is asking about MTHFR in the context of thrombophilia only.
+  Use PharmGx Reporter for warfarin and anticoagulation questions.
+- Only N-GENE polygenic risk data is available with no raw SNP file.
+  This skill requires genotype-level input. PRS percentiles are not sufficient.
+- The SNP file format is VCF, FASTQ, BAM, or PLINK binary.
+  These require preprocessing before this skill can run.
+- The clinical question is exclusively pharmacogenomic (CYP enzymes).
+  Use PharmGx Reporter instead.
 
-- MTHFR: weight 0.35 (primary rate-limiting enzyme)
-- MTRR: weight 0.15
-- BHMT: weight 0.15
-- COMT: weight 0.10
-- MTR: weight 0.10
-- CBS: weight 0.05 (inverse — CBS upregulation diverts homocysteine)
-- SHMT1: weight 0.05
-- AHCY: weight 0.05
+---
 
-NMC < 40: Severely reduced — clinical intervention indicated
-NMC 40–60: Moderately reduced — supplementation strongly recommended
-NMC 60–80: Mildly reduced — dietary optimisation recommended
-NMC > 80: Normal range
+## Workflow
 
-### BH4 Axis Capacity
+1. Receive input. Accept a raw genotype file path or a pre-parsed snp_dict.
+   Call parse_genotype_file() to extract the rsID to genotype mapping.
 
-BH4 (tetrahydrobiopterin) is an essential cofactor for tyrosine hydroxylase
-(dopamine synthesis) and tryptophan hydroxylase (serotonin synthesis).
-MTHFR activity directly constrains BH4 regeneration via the folate cycle.
+2. Panel coverage check. Compare detected rsIDs against the 9-gene methylation
+   panel. Mark missing SNPs as not_assessed. Do NOT silently assume normal
+   activity. This is Safety Rule 6.
 
-BH4 capacity is estimated from MTHFR combined activity and MTRR modifier:
-- Base BH4 capacity = MTHFR_activity × MTRR_modifier
-- MTRR_modifier: homozygous risk = 0.75; heterozygous = 0.88; WT = 1.0
+3. Enzymatic activity scoring. For each gene, map the diplotype to an estimated
+   activity percentage. Heterozygous risk variants reduce activity by their
+   assigned weight. Homozygous variants apply the full reduction.
 
-BH4 Axis thresholds:
-- < 40%: Severely reduced — dopamine and serotonin synthesis substantially impaired
-- 40–65%: Moderately reduced — neurotransmitter synthesis may be clinically relevant
-- > 65%: Within normal range
-### Compound Heterozygosity
+4. Compound heterozygosity detection. Check MTHFR C677T (rs1801133) and A1298C
+   (rs1801131) simultaneously. If both are heterozygous, set
+   compound_heterozygosity to True and apply the combined reduction of
+   approximately 15% of normal, more severe than either variant alone.
 
-MTHFR compound heterozygous (C677T + A1298C simultaneously) is the most
-clinically significant single-gene methylation finding. When both variants
-are present, total MTHFR enzymatic activity is reduced more than either
-variant alone. This combination is flagged explicitly in the output.
+5. Net Methylation Capacity (NMC). Compute the weighted average of all enzyme
+   activities. Clamp to 0-100. Expose coverage_pct and snps_missing. Flag NMC
+   as partial if key SNPs are missing.
 
-### Reference Framework
+6. BH4 axis capacity. Derive BH4 from MTHFR activity and MTRR modifier. Report
+   clinical implications for dopamine and serotonin synthesis.
 
-Clinical interpretation is grounded in the Holomedicina® framework
-(Samuel Carmona Aguirre, 2014/UNESCO 2016) and the MH-AIAP methodology,
-which integrates genomic findings with the subject's biographical history
-(FHH — Formulario de Historicidad Holónica) and semantic clinical map
-for holonic interpretation. Raw genetic output alone does not constitute
-a clinical recommendation.
+7. Prioritised recommendations. Generate PRIORITY 1, 2, and 3 recommendations.
+   Lead with the highest clinical impact finding.
+
+8. Output. Write report.md and result.json for 13MIL v6.0 integration.
+
+---
+
+## Example Output
+
+```
+ClawBio Methylation Cycle Clinical Report
+Framework: Holomedicina / CAPS Digital / UNIMED Consulting
+
+Net Methylation Capacity : 53 / 100  REDUCED
+BH4 Axis Capacity        : 31 / 100  REDUCED
+MTHFR Compound Het.      : YES (C677T + A1298C)
+Dopamine Synthesis       : Severely Reduced
+Serotonin Synthesis      : Severely Reduced
+
+Gene    Activity  Status               Key Variants
+MTHFR    15%     Severely reduced     C677T, A1298C
+MTRR     60%     Moderately reduced   A66G
+MTR     100%     Normal               -
+CBS     100%     Normal               -
+BHMT     40%     Moderately reduced   R239Q
+SHMT1    80%     Mildly reduced       C1420T
+COMT     55%     Moderately reduced   Val158Met
+AHCY    100%     Normal               -
+
+PRIORITY 1 - Use 5-MTHF not synthetic folic acid.
+PRIORITY 1 - MTHFR compound het: 5-MTHF plus methylcobalamin strongly indicated.
+PRIORITY 2 - BH4 at 31%: Riboflavin B2 200-400 mg/day plus Vitamin C 500 mg/day.
+PRIORITY 2 - Evaluate ADHD/depression/anxiety re BH4 deficit before pharma.
+PRIORITY 2 - MTRR variant: prefer methylcobalamin over cyanocobalamin.
+PRIORITY 3 - BHMT R239Q: betaine TMG 500-1000 mg/day plus choline-rich foods.
+```
+
+---
+
+## Gotchas
+
+1. Missing SNPs must never be silently normalised. Line 471 assumes normal
+   activity for absent SNPs producing artificially high NMC. Always expose
+   coverage_pct and snps_missing so downstream consumers know the score is partial.
+
+2. Compound heterozygosity is synergistic not additive. C677T and A1298C affect
+   different MTHFR domains. Combined effect is approximately 15% of normal,
+   greater than either variant alone. Do not compute as activity(677) multiplied
+   by activity(1298).
+
+3. BH4 capacity is an estimate not a measured value. Derived from MTHFR activity
+   and literature-based weights. Does not account for DHFR variation or dietary
+   cofactors. Always include the RUO disclaimer.
+
+4. COMT Val158Met has a dual role in methylation via SAM consumption and in
+   dopamine metabolism. Always note this dual role and do not report in isolation.
+
+5. The pandas import on line 235 is unused. Remove it. Adds approximately 40 MB
+   to the dependency footprint with no current function.
+
+6. DTC array coverage varies by platform. ADNTRO covers all 9 panel SNPs for
+   most European-ancestry samples. 23andMe v3 and Ancestry v1 may not include
+   rs1801394 (MTRR) or rs3733890 (BHMT). Always check snps_missing.
+
+7. This skill does not cover pharmacogenomics. SLCO1B1, CYP enzymes, statin
+   risk, and warfarin risk belong to PharmGx Reporter, not this skill.
+
+---
 
 ## Safety Rules
 
-1. Never report a clinical diagnosis. Always include the RUO (Research Use Only) disclaimer.
+1. Never report a clinical diagnosis. Always include the RUO disclaimer.
 2. Never recommend specific drug dosages or prescribe medication changes.
 3. Always flag MTHFR compound heterozygous status as requiring clinical review.
-4. Flag BH4 capacity < 40% with an explicit neurodevelopmental implications warning.
-5. Never extrapolate findings to ancestries not represented in the source studies
-   (findings validated primarily in European-ancestry populations).
-6. Unknown SNPs or SNPs not present in the input file must be reported as
-   "Not assessed" — never assume wildtype.
-7. All supplementation suggestions are Priority-ranked guidance for a clinician —
-   not direct patient instructions.
+4. Flag BH4 capacity below 40% with an explicit neurodevelopmental warning.
+5. Never extrapolate to ancestries not represented in source studies.
+6. Unknown SNPs must be reported as Not assessed. Never assume wildtype.
+7. Supplementation suggestions are Priority-ranked guidance for a clinician only.
+
+---
 
 ## Agent Boundary
 
-### In Scope
-- Genotype extraction for 9 methylation-cycle genes from raw DTC genotype files
-- Enzymatic activity estimation (percentage of normal function)
-- Net Methylation Capacity (NMC) composite index calculation
-- BH4 axis capacity estimation and neurotransmitter synthesis impact
-- MTHFR compound heterozygosity detection and flagging
-- Prioritised clinical recommendations for clinician review
-- JSON output for integration with downstream clinical decision-support systems
+In Scope: genotype extraction for 9 methylation-cycle genes, enzymatic activity
+estimation, NMC calculation, BH4 axis capacity, compound heterozygosity detection,
+prioritised recommendations, JSON output for clinical decision-support.
 
-### Out of Scope
-- Dosing recommendations (requires clinical context and prescribing authority)
-- Diagnosis of methylation disorders or neurodevelopmental conditions
-- Drug-drug interaction analysis (see PharmGx Reporter)
-- Epigenetic state (methylation is a phenotype; this skill assesses genotype only)
-- Whole-genome or whole-exome sequencing data (SNP array input only)
-- Direct patient communication (output is for qualified clinician use)
+Out of Scope: dosing recommendations, diagnosis, drug-drug interactions, epigenetic
+state, whole-genome sequencing data, direct patient communication.
+
+---
+
+## References
+
+- Nazki FH et al. (2014). Folate metabolism genes polymorphisms. Gene, 533(1), 11-20.
+- Ledford AW et al. (2021). MTHFR and BH4 pathway in neuropsychiatric disorders. Nutrients, 13(3):768.
+- Stover PJ (2009). One-carbon metabolism genome interactions. J Nutr, 139(12), 2402-5.
+- Carmona Aguirre S. (2014/UNESCO 2016). Holomedicina. UNIMED Consulting.
+- ClawBio (2026). https://github.com/ClawBio/ClawBio
+
+---
+
+## Changelog
+
+| Version | Date       | Change |
+|---------|------------|--------|
+| 0.1.0   | 2026-04-07 | Initial release. Validated on ASES-2307-002. |
+| 0.1.1   | 2026-04-14 | Fixed SKILL.md per PR 133. Added Trigger, Workflow, Example Output, Gotchas. Single YAML block. Removed unused pandas. Documented line 471 design decision. |
