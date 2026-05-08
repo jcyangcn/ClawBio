@@ -217,6 +217,7 @@ def test_execution_root_can_differ_from_symlinked_descriptor_root(tmp_path: Path
 
     assert plan.intent_id == "runtime_version"
     assert plan.executions[0].argv[1] == str(clawbio_root / "clawbio.py")
+    assert plan.executions[0].argv[1] != str(external_root / "clawbio.py")
     assert plan.executions[0].input_path.endswith(
         "gentle_rs/integrations/clawbio/skills/gentle-cloning/examples/request_runtime_version.json"
     )
@@ -235,6 +236,7 @@ def test_confirmed_demo_tool_call_is_allowed(tmp_path: Path):
 
     assert plan.status == "planned"
     assert plan.executions[0].argv[-1] == "--demo"
+    assert not plan.warnings
 
 
 def test_drugphoto_keeps_demo_genotype_exception(tmp_path: Path):
@@ -255,6 +257,7 @@ def test_drugphoto_keeps_demo_genotype_exception(tmp_path: Path):
     assert plan.status == "planned"
     assert "--demo" in plan.executions[0].argv
     assert "--drug" in plan.executions[0].argv
+    assert not any("Ignored weak demo mode" in warning for warning in plan.warnings)
 
 
 def test_unregistered_skill_directory_descriptor_is_discovered_but_not_executable(tmp_path: Path):
@@ -305,6 +308,7 @@ def test_unregistered_skill_directory_descriptor_is_discovered_but_not_executabl
     assert plan.status == "needs_registration"
     assert plan.skill == "gentle-cloning"
     assert plan.executions == []
+    assert "not registered in clawbio.py SKILLS yet" in plan.reason
 
 
 def test_descriptor_skill_with_entrypoint_is_advertised_and_planned(tmp_path: Path):

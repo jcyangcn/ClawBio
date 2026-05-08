@@ -853,7 +853,10 @@ def _plan_legacy_fallback(
             extra_args.extend(["--dose", dose])
 
     argv = [sys.executable, str(project_root / "clawbio.py"), "run", skill]
-    if (explicit_demo and effective_mode == "demo") or (skill == "drugphoto" and requested_mode == "demo"):
+    accepted_demo = (explicit_demo and effective_mode == "demo") or (
+        skill == "drugphoto" and requested_mode == "demo"
+    )
+    if accepted_demo:
         argv.append("--demo")
     elif skill in ("profile", "prs") and profile_path:
         argv.extend(["--profile", profile_path])
@@ -896,7 +899,7 @@ def _plan_legacy_fallback(
         ],
         requested_skill=requested_skill,
         requested_mode=requested_mode,
-        warnings=[] if explicit_demo or requested_mode != "demo" else [
+        warnings=[] if accepted_demo or requested_mode != "demo" else [
             "Ignored weak demo mode because the user text did not explicitly request a demo."
         ],
     )
