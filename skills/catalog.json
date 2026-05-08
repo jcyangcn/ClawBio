@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 62,
+  "skill_count": 63,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -92,7 +92,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/archaic-introgression/archaic_introgression.py --demo",
+      "demo_command": "python skills/archaic-introgression/pipeline.py --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [],
@@ -385,7 +385,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-trial-finder/opentargets.py --demo",
+      "demo_command": "python skills/clinical-trial-finder/euctr.py --demo",
       "dependencies": [
         "python>=3.11"
       ],
@@ -419,7 +419,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-variant-reporter/clinical_variant_reporter.py --demo",
+      "demo_command": "python skills/clinical-variant-reporter/acmg_engine.py --demo",
       "dependencies": [],
       "tags": [
         "acmg",
@@ -545,6 +545,79 @@
         "rnaseq-de",
         "scrna-orchestrator"
       ]
+    },
+    {
+      "name": "dnasp",
+      "cli_alias": null,
+      "description": "Full reimplementation of DnaSP 6 for population genetics analysis of aligned DNA sequences. Covers nucleotide diversity, haplotype statistics, neutrality tests (Tajima's D, Fu & Li's D*/F*, R2), linkage disequilibrium (D, D', R², ZnS, Za, ZZ), minimum recombination (Rm), mismatch distribution, InDel polymorphism, between-population divergence (Dxy, Da, fixed/shared sites), outgroup-based Fu & Li D/F tests (fuliout), the HKA multi-locus neutrality test (hka), the McDonald-Kreitman test (mk), Ka/Ks (dN/dS) via the Nei-Gojobori (1986) method (kaks), Fu's Fs test (fufs), the site frequency spectrum (sfs, folded and outgroup-unfolded), transition/transversion ratio (tstv), and codon usage bias  -  RSCU (Sharp & Li 1987) and ENC (Wright 1990) (codon). Accepts FASTA or NEXUS input; outputs DnaSP-compatible TSV and a Markdown report.",
+      "version": "0.4.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/dnasp/dnasp.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "matplotlib>=3.7"
+      ],
+      "tags": [
+        "population-genetics",
+        "molecular-evolution",
+        "DNA-polymorphism",
+        "neutrality-tests",
+        "linkage-disequilibrium",
+        "recombination",
+        "divergence",
+        "sequence-analysis"
+      ],
+      "trigger_keywords": [
+        "nucleotide diversity",
+        "Tajima's D",
+        "DNA polymorphism",
+        "population genetics sequences",
+        "haplotype diversity",
+        "DnaSP",
+        "segregating sites",
+        "Fu and Li test",
+        "neutrality test alignment",
+        "Watterson theta",
+        "linkage disequilibrium",
+        "recombination events",
+        "mismatch distribution",
+        "population expansion",
+        "InDel polymorphism",
+        "divergence between populations",
+        "Dxy Da net divergence",
+        "fixed differences populations",
+        "Ramos-Onsins Rozas R2",
+        "Fu Li D F outgroup",
+        "outgroup polarised mutations",
+        "HKA test neutrality",
+        "Hudson Kreitman Aguade",
+        "multi-locus neutrality",
+        "polymorphism divergence ratio",
+        "McDonald-Kreitman test",
+        "MK test",
+        "adaptive evolution test",
+        "alpha McDonald-Kreitman",
+        "neutrality index NI",
+        "direction of selection DoS",
+        "Ka/Ks",
+        "dN/dS",
+        "omega synonymous nonsynonymous",
+        "synonymous substitution rate",
+        "nonsynonymous substitution rate",
+        "coding sequence neutrality",
+        "Nei-Gojobori method",
+        "Fu's Fs test",
+        "Fu 1997 Fs",
+        "site frequency spectrum",
+        "SFS folded unfolded",
+        "allele frequency spectrum",
+        "singleton excess",
+        "minor allele frequency distribution"
+      ],
+      "chaining_partners": []
     },
     {
       "name": "drug-photo",
@@ -887,7 +960,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/illumina-bridge/illumina_providers.py --demo",
+      "demo_command": "python skills/illumina-bridge/illumina_bridge.py --demo",
       "dependencies": [],
       "tags": [
         "illumina",
@@ -1128,7 +1201,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/nutrigx-advisor/parse_input.py --demo",
+      "demo_command": "python skills/nutrigx-advisor/score_variants.py --demo",
       "dependencies": [],
       "tags": [
         "nutrigenomics",
@@ -1381,7 +1454,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/pubmed-summariser/pubmed_summariser.py --demo",
+      "demo_command": "python skills/pubmed-summariser/pubmed_api.py --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [
