@@ -99,7 +99,7 @@ python tests/benchmark/benchmark_scorer.py --genes "APP,BIN1,CLU,TREM2,GAPDH"
 python tests/benchmark/mock_api_server.py &
 ```
 
-**74 benchmark tests**, all green. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**74 benchmark tests** at v0.5.0 baseline, all green. The public leaderboard now tracks **168 / 182 tests passing (92.3%)** across 10 audited skills, up from 80 / 140 (57.1%) at the original audit. See [benchmarks.html](https://clawbio.ai/benchmarks.html) for the live leaderboard and [CHANGELOG.md](CHANGELOG.md) for full details.
 
 ---
 
@@ -210,6 +210,11 @@ report/
 | [Clinical Variant Reporter](skills/clinical-variant-reporter/) | **MVP** | ACMG-guided clinical variant classification from VCF with GiAB validation |
 | [WES Clinical Report](skills/wes-clinical-report-es/) | **MVP** | Whole-exome sequencing clinical report generation |
 | [LLM Biobank Bench](skills/llm-biobank-bench/) | **MVP** | Benchmark LLMs on biobank knowledge retrieval and coverage scoring |
+| [Analyze FASTA](skills/analyze-fasta/) | **MVP** *(community)* | Single-FASTA analyser for nucleotide or protein input: GC%, ORFs, MW, pI, GRAVY |
+| [Rare Disease RNA-seq](skills/rare-disease-rnaseq/) | **MVP** | Blood RNA-seq expression-outlier detection over a 50-gene ClinGen haploinsufficiency panel |
+| [WGS-PRS](skills/wgs-prs/) | **MVP** *(community)* | End-to-end whole-genome sequencing to polygenic risk score pipeline (GRCh38) |
+| [DnaSP](skills/dnasp/) | **MVP** *(community)* | Python reimplementation of DnaSP 6: 16 population-genetics analyses (Pi, Theta-W, Tajima's D, Fst, Ka/Ks, McDonald-Kreitman) |
+| [ClawPathy Autoresearch](skills/clawpathy_autoresearch/) | **MVP** *(community)* | Eval-driven iterative skill-tuning loop with reversal-on-regression semantics |
 | [VCF Annotator](skills/vcf-annotator/) | Planned | Legacy VCF annotation pipeline (see Variant Annotation for the active skill) |
 | [Lit Synthesizer](skills/lit-synthesizer/) | Planned | PubMed/bioRxiv search with LLM summarisation and citation graphs |
 | [Struct Predictor](skills/struct-predictor/) | **MVP** | AlphaFold/Boltz local structure prediction |
@@ -219,7 +224,7 @@ report/
 
 ### Contributing a Skill
 
-Wrap your bioinformatics pipeline as a skill and submit a PR. One community-contributed skill (NutriGx Advisor) is already in production; eight more have specifications authored and are awaiting implementation.
+Wrap your bioinformatics pipeline as a skill and submit a PR. Several community-contributed skills are now in production (NutriGx Advisor, analyze-fasta, WGS-PRS, DnaSP, ClawPathy Autoresearch, and others). See [skills/catalog.json](skills/catalog.json) for the full list with status flags.
 
 ```bash
 cp templates/SKILL-TEMPLATE.md skills/<your-skill-name>/SKILL.md
