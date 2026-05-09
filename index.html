@@ -120,7 +120,7 @@
   </nav>
   <a href="/benchmarks.html" style="display:block;background:linear-gradient(90deg,#238636,#1f6feb);color:#fff;text-align:center;padding:0.7rem 1rem;font-size:0.95rem;font-weight:600;text-decoration:none;">📊 Public Benchmark Leaderboard | 168/182 passing (92.3%) | Up from 80/140 (57.1%) at original audit | Every failure documented &rarr;</a>
   <section class="hero">
-    <div class="hero-badge">📊 Publicly benchmarked · 786 stars · 63 skills · 20 contributors · 1,756 tests</div>
+    <div class="hero-badge">📊 Publicly benchmarked · 787 stars · 63 skills · 24 contributors · 1,756 tests</div>
     <h1>The first <em>bioinformatics-native</em><br>AI agent skill library</h1>
     <p>ClawBio is where biological AI gets its skills: a curated, reproducible, open repository any agent can call.</p>
     <div class="hero-ctas">
@@ -283,7 +283,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr style="border-bottom:1px solid var(--border);background:rgba(63,185,80,0.05);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/ClawBio/ClawBio" target="_blank" style="color:var(--accent);">ClawBio</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">786</td><td style="padding:0.6rem 1rem;text-align:right;">160</td><td style="padding:0.6rem 1rem;text-align:right;">63</td></tr>
+            <tr style="border-bottom:1px solid var(--border);background:rgba(63,185,80,0.05);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/ClawBio/ClawBio" target="_blank" style="color:var(--accent);">ClawBio</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">787</td><td style="padding:0.6rem 1rem;text-align:right;">161</td><td style="padding:0.6rem 1rem;text-align:right;">63</td></tr>
             <tr style="border-bottom:1px solid var(--border);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/FreedomIntelligence/OpenClaw-Medical-Skills" target="_blank" style="color:var(--accent2);">OpenClaw-Medical-Skills</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">1,037</td><td style="padding:0.6rem 1rem;text-align:right;">123</td><td style="padding:0.6rem 1rem;text-align:right;">869</td></tr>
             <tr style="border-bottom:1px solid var(--border);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/GPTomics/bioSkills" target="_blank" style="color:var(--accent2);">bioSkills</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">331</td><td style="padding:0.6rem 1rem;text-align:right;">52</td><td style="padding:0.6rem 1rem;text-align:right;">425</td></tr>
             <tr style="border-bottom:1px solid var(--border);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/wu-yc/LabClaw" target="_blank" style="color:var(--accent2);">LabClaw</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">317</td><td style="padding:0.6rem 1rem;text-align:right;">54</td><td style="padding:0.6rem 1rem;text-align:right;">211</td></tr>
@@ -300,6 +300,13 @@
       <div class="section-label">Recent Updates</div>
       <div class="section-title">Latest from the community</div>
       <div style="display:grid;gap:0.75rem;max-width:700px;">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
+          <span style="font-size:1.5rem;flex-shrink:0;">🔧</span>
+          <div>
+            <div style="font-weight:600;font-size:0.95rem;">Skill execution refactor: routing now reads from per-skill <code style="background:var(--bg3);padding:0.1rem 0.3rem;border-radius:3px;font-size:0.82rem;">intent.json</code> descriptors. Separates descriptor discovery (symlink-following) from execution root (registry-anchored), so externally-symlinked skills like GENtle resolve to the correct ClawBio checkout. Adds path-traversal hardening, descriptor-validation gates (<code style="background:var(--bg3);padding:0.1rem 0.3rem;border-radius:3px;font-size:0.82rem;">status="needs_registration"</code>), demo-mode guard fixes, and ~960 lines of new regression tests. Contributed by Steffen Möller (@smoe).</div>
+            <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.15rem;">PR #208 · 9 May 2026</div>
+          </div>
+        </div>
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
           <span style="font-size:1.5rem;flex-shrink:0;">🧬</span>
           <div>
