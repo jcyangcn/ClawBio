@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 63,
+  "skill_count": 64,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -645,6 +645,39 @@
       "chaining_partners": [
         "pharmgx-reporter"
       ]
+    },
+    {
+      "name": "eqtl-catalogue-region-fetch",
+      "cli_alias": null,
+      "description": "Fetch a region of cis-eQTL summary statistics from EBI eQTL Catalogue v7+\nvia tabix-on-FTP. Use when an agent needs eQTL beta / SE / p-value for\nevery variant in a window around a gene's TSS for one specific dataset\n(study × tissue × quantification method). Input: dataset_id, chromosome,\nstart, end, optional molecular_trait_id. Output: harmonised TSV slice.\n",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/eqtl-catalogue-region-fetch/eqtl_catalogue_region_fetch.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "pysam>=0.22",
+        "pandas>=2.0",
+        "requests>=2.28"
+      ],
+      "tags": [
+        "eqtl",
+        "eqtl-catalogue",
+        "region-fetch",
+        "tabix",
+        "summary-statistics",
+        "cis-eqtl"
+      ],
+      "trigger_keywords": [
+        "eqtl region fetch",
+        "eqtl catalogue tabix",
+        "eqtl sumstats slice",
+        "cis-eqtl region pull",
+        "GTEx eqtl region"
+      ],
+      "chaining_partners": []
     },
     {
       "name": "equity-scorer",
