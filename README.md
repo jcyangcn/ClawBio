@@ -169,58 +169,28 @@ report/
 
 ---
 
-## Skills
+## Featured Skills
 
-| Skill | Status | Description |
-|-------|--------|-------------|
-| [Bio Orchestrator](skills/bio-orchestrator/) | **MVP** | Routes requests to the right skill automatically |
-| [PharmGx Reporter](skills/pharmgx-reporter/) | **MVP** | 12 genes, 51 drugs, CPIC guidelines from consumer genetic data |
-| [Drug Photo](skills/drug-photo/) | **MVP** | Snap a medication photo → personalised dosage card from your genotype |
-| [ClinPGx](skills/clinpgx/) | **MVP** | Gene-drug lookup from ClinPGx, PharmGKB, CPIC, and FDA drug labels |
-| [GWAS Lookup](skills/gwas-lookup/) | **MVP** | Federated variant query across 9 genomic databases |
-| [GWAS PRS](skills/gwas-prs/) | **MVP** | Polygenic risk scores from the PGS Catalog for 6+ traits |
-| [Profile Report](skills/profile-report/) | **MVP** | Unified personal genomic report: PGx + ancestry + PRS + nutrigenomics |
-| [UKB Navigator](skills/ukb-navigator/) | **MVP** | Semantic search across the UK Biobank schema |
-| [Equity Scorer](skills/equity-scorer/) | **MVP** | HEIM diversity metrics from VCF or ancestry CSV |
-| [NutriGx Advisor](skills/nutrigx-advisor/) | **MVP** *(community)* | Personalised nutrigenomics — 40 SNPs, 13 dietary domains |
-| [Metagenomics Profiler](skills/claw-metagenomics/) | **MVP** | Kraken2 / RGI / HUMAnN3 taxonomy, resistome, and functional profiles |
-| [Ancestry PCA](skills/claw-ancestry-pca/) | **MVP** | PCA vs SGDP (345 samples, 164 populations) with confidence ellipses |
-| [Semantic Similarity](skills/claw-semantic-sim/) | **MVP** | Semantic Isolation Index from 13.1M PubMed abstracts |
-| [Genome Comparator](skills/genome-compare/) | **MVP** | Pairwise IBS vs George Church (PGP-1) + ancestry estimation |
-| [Galaxy Bridge](skills/galaxy-bridge/) | **MVP** | Search, run, and chain 8,000+ Galaxy bioinformatics tools |
-| [RNA-seq DE](skills/rnaseq-de/) | **MVP** | Bulk/pseudo-bulk differential expression with QC + PCA + contrasts |
-| [Methylation Clock](skills/methylation-clock/) | **MVP** | Epigenetic age from methylation arrays with PyAging clocks |
-| [scRNA Embedding](skills/scrna-embedding/) | **MVP** | scVI/scANVI latent embedding, batch integration, and stable `integrated.h5ad` export for downstream latent analysis |
-| [scRNA Orchestrator](skills/scrna-orchestrator/) | **MVP** | Scanpy automation: QC, optional doublet detection, clustering, markers, annotation, latent downstream mode, contrastive markers |
-| [Diff Visualizer](skills/diff-visualizer/) | **MVP** | Rich downstream visualisation for bulk RNA-seq DE and scRNA marker/contrast outputs |
-| [Proteomics DE](skills/proteomics-de/) | **MVP** | Differential expression for label-free quantitative (LFQ) intensity data (MaxQuant, DIA-NN) |
-| [Variant Annotation](skills/variant-annotation/) | **MVP** | Annotate VCF variants with Ensembl VEP REST, ClinVar significance, gnomAD frequencies |
-| [Bioconductor Bridge](skills/bioconductor-bridge/) | **MVP** | Bioconductor package discovery, workflow recommendation, and starter code generation |
-| [Clinical Trial Finder](skills/clinical-trial-finder/) | **MVP** | Find clinical trials for a gene, variant, or condition from ClinicalTrials.gov + EUCTR |
-| [Data Extractor](skills/data-extractor/) | **MVP** | Extract numerical data from scientific figure images using Claude vision + OpenCV calibration |
-| [Illumina Bridge](skills/illumina-bridge/) | **MVP** | Import DRAGEN-exported Illumina result bundles for local tertiary analysis |
-| [Protocols.io](skills/protocols-io/) | **MVP** | Search, browse, and retrieve scientific protocols from protocols.io via REST API |
-| [PubMed Summariser](skills/pubmed-summariser/) | **MVP** | PubMed search with structured research briefings of top recent papers |
-| [Omics Target Evidence Mapper](skills/omics-target-evidence-mapper/) | **MVP** | Aggregate public target-level evidence across omics and translational sources |
-| [Target Validation Scorer](skills/target-validation-scorer/) | **MVP** | Evidence-grounded target validation scoring with GO/NO-GO decisions for drug discovery |
-| [Soul2DNA](skills/soul2dna/) | **MVP** | Compile SOUL.md character profiles into synthetic diploid genomes |
-| [GenomeMatch](skills/genome-match/) | **MVP** | Score genetic compatibility across all M x F pairings per generation |
-| [Recombinator](skills/recombinator/) | **MVP** | Produce offspring via meiotic recombination, mutation, and clinical eval |
-| [Fine-Mapping](skills/fine-mapping/) | **MVP** | SuSiE/ABF credible sets with posterior inclusion probabilities from GWAS summary stats |
-| [Clinical Variant Reporter](skills/clinical-variant-reporter/) | **MVP** | ACMG-guided clinical variant classification from VCF with GiAB validation |
-| [WES Clinical Report](skills/wes-clinical-report-es/) | **MVP** | Whole-exome sequencing clinical report generation |
-| [LLM Biobank Bench](skills/llm-biobank-bench/) | **MVP** | Benchmark LLMs on biobank knowledge retrieval and coverage scoring |
-| [Analyze FASTA](skills/analyze-fasta/) | **MVP** *(community)* | Single-FASTA analyser for nucleotide or protein input: GC%, ORFs, MW, pI, GRAVY |
-| [Rare Disease RNA-seq](skills/rare-disease-rnaseq/) | **MVP** | Blood RNA-seq expression-outlier detection over a 50-gene ClinGen haploinsufficiency panel |
-| [WGS-PRS](skills/wgs-prs/) | **MVP** *(community)* | End-to-end whole-genome sequencing to polygenic risk score pipeline (GRCh38) |
-| [DnaSP](skills/dnasp/) | **MVP** *(community)* | Python reimplementation of DnaSP 6: 16 population-genetics analyses (Pi, Theta-W, Tajima's D, Fst, Ka/Ks, McDonald-Kreitman) |
-| [ClawPathy Autoresearch](skills/clawpathy_autoresearch/) | **MVP** *(community)* | Eval-driven iterative skill-tuning loop with reversal-on-regression semantics |
-| [VCF Annotator](skills/vcf-annotator/) | Planned | Legacy VCF annotation pipeline (see Variant Annotation for the active skill) |
-| [Lit Synthesizer](skills/lit-synthesizer/) | Planned | PubMed/bioRxiv search with LLM summarisation and citation graphs |
-| [Struct Predictor](skills/struct-predictor/) | **MVP** | AlphaFold/Boltz local structure prediction |
-| [Repro Enforcer](skills/repro-enforcer/) | Planned | Export any analysis as Conda env + Singularity + Nextflow pipeline |
-| [Labstep](skills/labstep/) | **MVP** | Labstep electronic lab notebook API integration |
-| [Seq Wrangler](skills/seq-wrangler/) | Planned | Sequence QC, alignment, and BAM processing (FastQC, BWA, SAMtools) |
+A curated cross-section of ClawBio's 63 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
+
+| Skill | Scale | Description |
+|-------|-------|-------------|
+| [Bio Orchestrator](skills/bio-orchestrator/) | Infrastructure | Routes free-text or file inputs to the right skill automatically |
+| [PharmGx Reporter](skills/pharmgx-reporter/) | Personal | 12 genes, 51 drugs, CPIC guidelines from consumer genetic data |
+| [Drug Photo](skills/drug-photo/) | Personal | Snap a medication photo, get a personalised dosage card from your genotype |
+| [GWAS Lookup](skills/gwas-lookup/) | Population | Federated variant query across 9 genomic databases (gnomAD, ClinVar, Open Targets, GTEx, LDlink, ...) |
+| [GWAS PRS](skills/gwas-prs/) | Population | Polygenic risk scores from the PGS Catalog for 6+ traits |
+| [Ancestry PCA](skills/claw-ancestry-pca/) | Population | PCA vs SGDP (345 samples, 164 populations) with confidence ellipses |
+| [Fine-Mapping](skills/fine-mapping/) | Population | SuSiE / ABF credible sets with posterior inclusion probabilities from GWAS summary stats |
+| [UKB Navigator](skills/ukb-navigator/) | Research | Semantic search across the UK Biobank schema (22,000+ fields) |
+| [Galaxy Bridge](skills/galaxy-bridge/) | Research | Search, run, and chain 8,000+ Galaxy bioinformatics tools |
+| [Variant Annotation](skills/variant-annotation/) | Clinical | Annotate VCF variants with Ensembl VEP REST, ClinVar significance, gnomAD frequencies |
+| [Clinical Variant Reporter](skills/clinical-variant-reporter/) | Clinical | ACMG-guided clinical variant classification from VCF with GiAB validation |
+| [scRNA Orchestrator](skills/scrna-orchestrator/) | Single-cell | Scanpy automation: QC, optional doublet detection, clustering, markers, annotation |
+| [Equity Scorer](skills/equity-scorer/) | Systemic | HEIM diversity metrics from VCF or ancestry CSV |
+| [DnaSP](skills/dnasp/) | Population *(community)* | Python reimplementation of DnaSP 6: 16 population-genetics analyses (Pi, Tajima's D, Fst, Ka/Ks, McDonald-Kreitman) |
+
+For the complete list including pharmacogenomics extensions, single-cell tooling, proteomics, methylation, metagenomics, structure prediction, clinical reporting, and meta-skills, see [`skills/catalog.json`](skills/catalog.json) or run `python clawbio.py list`.
 
 ### Contributing a Skill
 
