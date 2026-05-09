@@ -22,7 +22,14 @@
 ```bash
 git clone https://github.com/ClawBio/ClawBio.git
 cd ClawBio
-pip install -r requirements.txt    # Python 3.10+
+uv sync                            # Python 3.10+ (installs from pyproject.toml + uv.lock)
+uv run python clawbio.py run pharmgx --demo
+```
+
+Don't have [uv](https://docs.astral.sh/uv/)? Install it with `curl -LsSf https://astral.sh/uv/install.sh | sh` (Linux/macOS) or `brew install uv` (macOS via Homebrew), or use pip instead:
+
+```bash
+pip install -e .                   # reads pyproject.toml
 python clawbio.py run pharmgx --demo
 ```
 
@@ -366,11 +373,11 @@ To experience that orchestration layer conversationally, ClawBio can be used thr
 
 ```bash
 git clone https://github.com/ClawBio/ClawBio.git && cd ClawBio
-pip install -r requirements.txt
-python clawbio.py run pharmgx --demo
+uv sync                                  # or: pip install -e .
+uv run python clawbio.py run pharmgx --demo
 ```
 
-PharmGx demo runs in <2 seconds. Only needs Python 3.10+.
+PharmGx demo runs in <2 seconds. Only needs Python 3.10+. Dependencies and the locked dependency graph live in `pyproject.toml` and `uv.lock`.
 
 > **Note:** ClawBio is currently installed by cloning the repository. There is no `pip install clawbio` package yet (planned for a future release).
 
@@ -447,13 +454,14 @@ python clawbio.py run methylation --geo-id GSE139307 --output results_methylatio
 ### Run tests
 
 ```bash
-pip install pytest
-python -m pytest
+uv run pytest                # or: pip install pytest && python -m pytest
 ```
 
 ### Dependencies
 
-Core dependencies (`requirements.txt`): biopython, pandas, numpy, scikit-learn, matplotlib, openai, pydeseq2. Most skills run with just these.
+Core dependencies are declared in [`pyproject.toml`](pyproject.toml) and pinned in [`uv.lock`](uv.lock): biopython, pandas, numpy, scikit-learn, matplotlib, openai, pydeseq2, google-cloud-bigquery, google-auth, conda-lock, rocrate. Most skills run with just these.
+
+`uv sync` installs everything in a reproducible virtual environment. To add or update a dependency, run `uv add <package>` (or edit `pyproject.toml` and re-run `uv sync`); commit the resulting `uv.lock` change.
 
 Some skills have additional requirements:
 
