@@ -1,12 +1,12 @@
 # Reproducibility Guide
 
-ClawBio's reproducibility support is designed to let someone replay a completed skill run without needing the original agent session. The exact files can vary by skill, but the current helper-backed contract centers on a `reproducibility/` directory written inside the chosen output directory.
+ClawBio's reproducibility support is designed to let someone replay a completed skill run without needing the original agent session. The exact files can vary by skill, but the current shared pattern centers on a `reproducibility/` directory written inside the chosen output directory.
 
 This guide uses [`multiqc-reporter`](../skills/multiqc-reporter/) as the concrete example because it already has a validated direct-script workflow. For this example, the exact recorded replay path is a direct Python invocation of `skills/multiqc-reporter/multiqc_reporter.py` rather than `python clawbio.py run`.
 
 ## What The Bundle Contains
 
-Most helper-backed skills write these files under `<output_dir>/reproducibility/`:
+Many skills write these files under `<output_dir>/reproducibility/`:
 
 - `commands.sh`: a replay script for the same skill run
 - `environment.yml`: a suggested Conda environment snapshot
@@ -14,7 +14,7 @@ Most helper-backed skills write these files under `<output_dir>/reproducibility/
 
 Some skills may also write extra provenance or lock files when supported, such as `runtime-lock.json` or other lock metadata. Do not assume every skill emits the exact same extras.
 
-What the current docs should not imply:
+Keep these limits in mind:
 
 - Reproducibility is not a blanket guarantee that any run will replay unchanged on every machine.
 - External tools still need to be installed when a skill depends on them.
@@ -64,7 +64,7 @@ From the repository checkout, rerun the saved command:
 bash /tmp/multiqc_demo/reproducibility/commands.sh
 ```
 
-For helper-backed scripts, `commands.sh` is self-anchoring:
+For scripts that use the shared reproducibility helpers, `commands.sh` is self-anchoring:
 
 - `OUTPUT_DIR` is derived from the location of `commands.sh`
 - `CLAWBIO_ROOT` defaults to the repository path recorded when the bundle was created

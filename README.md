@@ -62,7 +62,7 @@ Snap a photo of a medication in Telegram. ClawBio identifies the drug from the p
 
 Or take any genetic variant (identified by its rsID — a unique label like [rs9923231](https://www.ncbi.nlm.nih.gov/snp/rs9923231)) and search nine genomic databases at once to find every known disease association, tissue-specific effect, and population frequency. Or estimate your genetic predisposition to conditions like type 2 diabetes by combining thousands of small-effect variants into a single polygenic risk score. Or explore the [UK Biobank](https://www.ukbiobank.ac.uk/) — a half-million-person research dataset — by asking in plain English what fields measure blood pressure, grip strength, or depression, and get back the exact field IDs, descriptions, and linked publications you need.
 
-Helper-backed analyses write a `reproducibility/` bundle with replay commands, environment metadata, and output checksums. Exact files can vary by skill and required external inputs still need to be present. See [docs/reproducibility.md](docs/reproducibility.md).
+Many ClawBio analyses write a `reproducibility/` bundle with replay commands, environment metadata, and output checksums. The exact files can vary by skill, and some replays still require the original external inputs to be present. See [docs/reproducibility.md](docs/reproducibility.md).
 
 ---
 
@@ -130,7 +130,7 @@ python skills/claw-ancestry-pca/ancestry_pca.py --demo --output fig3
 
 Current agentic bioinformatics systems address either the **reasoning layer** (constraining LLM outputs with knowledge graphs or fine-tuning) or the **connectivity layer** (wrapping tools as MCP servers). Neither addresses the **specification layer**: the encoding of a domain expert's analytical decisions into a machine-readable contract that constrains agent behaviour. Without this layer, the agent must reconstruct expert knowledge from its training distribution, a stochastic, unversioned process.
 
-A **skill** is a self-contained directory comprising a declarative specification (`SKILL.md`), validated Python code, demo data, and reproducibility support. In helper-backed skills, that usually includes a `reproducibility/` bundle with `commands.sh`, `environment.yml`, and SHA-256 checksums, sometimes with extra lock metadata such as `runtime-lock.json`. The specification is a contract, not a prompt: it encodes the domain expert's analytical decisions so the LLM orchestrates but does not improvise.
+A **skill** is a self-contained directory comprising a declarative specification (`SKILL.md`), validated Python code, demo data, and reproducibility support. In many skills, that includes a `reproducibility/` bundle with `commands.sh`, `environment.yml`, and SHA-256 checksums, sometimes with extra lock metadata such as `runtime-lock.json`. The specification is a contract, not a prompt: it encodes the domain expert's analytical decisions so the LLM orchestrates but does not improvise.
 
 ```
 Ad-hoc LLM code generation  = stochastic, unversioned, unverifiable
@@ -140,7 +140,7 @@ ClawBio skill                = specification-constrained, versioned, reproducibl
 - **Specification-first**: Domain expertise resides in `SKILL.md`, not in model weights. Specifications are versioned, human-readable, peer-reviewable, and trivially updatable.
 - **Agent-agnostic**: Skills execute identically whether invoked by Claude, ChatGPT, or a locally hosted model via Ollama. Reproducibility is decoupled from any specific AI vendor.
 - **Local-first**: Your genomic data never leaves your laptop. No cloud uploads, no data exfiltration.
-- **Reproducible**: Helper-backed analyses export replay metadata such as `commands.sh`, `environment.yml`, and SHA-256 checksums so runs can be rechecked without the original agent session.
+- **Reproducible**: Many skills export replay metadata such as `commands.sh`, `environment.yml`, and SHA-256 checksums so runs can be rechecked without the original agent session.
 - **MIT licensed**: Open-source, free, community-driven.
 
 ## Why Not Just Use an LLM?
@@ -153,7 +153,7 @@ An LLM should not be improvising these from training data. ClawBio encodes the c
 
 ## Provenance and Reproducibility
 
-ClawBio's current reproducibility contract centers on a **`reproducibility/` bundle** written inside the output directory for helper-backed skills:
+ClawBio's current reproducibility contract centers on a **`reproducibility/` bundle** written inside the output directory for skills that use the shared reproducibility helpers:
 
 ```
 report/

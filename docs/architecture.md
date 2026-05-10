@@ -91,7 +91,7 @@ ClawBio enforces a strict local-first privacy model:
 
 ## Reproducibility Contract
 
-ClawBio's validated reproducibility contract is helper-backed rather than universal. For skills that use the shared reproducibility helpers, the output directory typically includes:
+ClawBio's validated reproducibility contract is not universal across every skill. For skills that use the shared reproducibility helpers, the output directory typically includes:
 
 1. **`reproducibility/commands.sh`**: A replay command for the skill run without needing the original agent session.
 2. **`reproducibility/environment.yml`**: A suggested Conda environment snapshot for the run.
