@@ -260,6 +260,7 @@ class TestWritePortableCommandsSh:
         assert 'OUTPUT_DIR="$(dirname "$SCRIPT_DIR")"' in text
         assert f': "${{CLAWBIO_ROOT:={tmp_path.resolve()}}}"' in text
         assert 'python "$CLAWBIO_ROOT/skills/example/example.py" --demo' in text
+        assert f'python "{(tmp_path.resolve() / "skills/example/example.py")}" --demo' not in text
 
 
 # ---------------------------------------------------------------------------
