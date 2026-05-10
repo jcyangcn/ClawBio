@@ -7,7 +7,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from clawbio.common.audit import write as _audit_write
 from clawbio.common.checksums import sha256_file
+
+_DEFAULT_AUDIT_LOG = Path.home() / ".clawbio" / "audit.jsonl"
 
 DISCLAIMER = (
     "ClawBio is a research and educational tool. It is not a medical device "
@@ -16,9 +19,28 @@ DISCLAIMER = (
 )
 
 
+def write_audit_log(
+    skill: str,
+    version: str,
+    input_checksum: str,
+    output_dir: str,
+    log_path: Path | str = _DEFAULT_AUDIT_LOG,
+) -> None:
+    """Append a skill_run record to the central audit log."""
+    _audit_write(
+        "skill_run",
+        skill=skill,
+        version=version,
+        input_checksum=input_checksum,
+        output_dir=output_dir,
+        log_path=log_path,
+    )
+
+
 def generate_report_header(
     title: str,
     skill_name: str,
+    skill_version: str,
     input_files: list[Path] | None = None,
     extra_metadata: dict[str, str] | None = None,
 ) -> str:
@@ -46,7 +68,9 @@ def generate_report_header(
         "",
         f"**Date**: {now}",
         f"**Skill**: {skill_name}",
+        f"**Version**: {skill_version}",
     ]
+    lines.append(f"**Version**: {skill_version}")
     if extra_metadata:
         for key, val in extra_metadata.items():
             lines.append(f"**{key}**: {val}")
@@ -76,6 +100,7 @@ def write_result_json(
     summary: dict[str, Any],
     data: dict[str, Any],
     input_checksum: str = "",
+    datasets: dict[str, str] | None = None,
 ) -> Path:
     """Write the standardized result.json envelope alongside report.md.
 
@@ -98,6 +123,7 @@ def write_result_json(
         "version": version,
         "completed_at": datetime.now(timezone.utc).isoformat(),
         "input_checksum": f"sha256:{input_checksum}" if input_checksum else "",
+        "datasets": datasets or {},
         "summary": summary,
         "data": data,
     }

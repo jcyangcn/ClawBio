@@ -138,22 +138,12 @@ for _secret in filter(None, [TELEGRAM_BOT_TOKEN, LLM_API_KEY]):
 
 
 # ---------------------------------------------------------------------------
-# Structured audit log (JSONL)
+# Structured audit log (JSONL) — shared with skill layer via clawbio.common.audit
 # ---------------------------------------------------------------------------
-_AUDIT_LOG_DIR = CLAWBIO_DIR / "bot" / "logs"
-_AUDIT_LOG_DIR.mkdir(parents=True, exist_ok=True)
-_AUDIT_LOG_PATH = _AUDIT_LOG_DIR / "audit.jsonl"
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
 
-
-def _audit(event: str, **kwargs):
-    """Append a structured JSON event to the audit log."""
-    from datetime import timezone as _tz
-    entry = {"ts": datetime.now(_tz.utc).isoformat(), "event": event, **kwargs}
-    try:
-        with open(_AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, default=str) + "\n")
-    except OSError:
-        pass
+from clawbio.common.audit import write as _audit
 
 
 def _user_ctx(update: Update) -> dict:
