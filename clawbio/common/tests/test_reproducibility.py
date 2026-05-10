@@ -9,11 +9,13 @@ import pytest
 
 from clawbio.common.checksums import sha256_file
 from clawbio.common.reproducibility import (
+    ReproCommand,
     write_checksums,
     write_environment_yml,
     write_commands_sh,
     write_conda_lock,
     write_ro_crate,
+    write_portable_commands_sh,
 )
 
 
@@ -220,6 +222,26 @@ class TestWriteCommandsSh:
         write_commands_sh(tmp_path, "python skill.py")
         mode = (tmp_path / "reproducibility" / "commands.sh").stat().st_mode
         assert mode & stat.S_IXUSR, "owner execute bit not set"
+
+
+class TestWritePortableCommandsSh:
+    def test_portable_commands_validate_clawbio_root_directory(self, tmp_path):
+        command = ReproCommand(
+            script_path=Path("skills/example/example.py"),
+            args=["--demo"],
+            comment="Replay example run",
+        )
+
+        path = write_portable_commands_sh(
+            tmp_path,
+            command,
+            repo_root=tmp_path,
+        )
+
+        text = path.read_text()
+        assert 'if [ ! -d "$CLAWBIO_ROOT" ]; then' in text
+        assert 'echo "Invalid CLAWBIO_ROOT: $CLAWBIO_ROOT" >&2' in text
+        assert "exit 1" in text
 
 
 # ---------------------------------------------------------------------------
