@@ -1,0 +1,50 @@
+schema_version: "1.0"
+
+# OT-followup case: user found this row in an Open Targets coloc query.
+# OT row provenance:
+#   target.colocalisation:
+#     left_studyId:   gtex_ge_minor_salivary_gland_ensg00000134243
+#     right_studyId:  GCST90269602
+#     h4:             0.998
+#     lead_variant:   1_109274968_G_T
+#   See ot_row.json in this directory for the verbatim OT row.
+#
+# Resolution recipe (see README.md for full text):
+#   left_studyId  -> eqtl_catalogue dataset_id  (one tabix-on-FTP REST call)
+#   right_studyId -> gwas_catalog accession    (already in OT-native form)
+
+lead:
+  variant_id: "1_109274968_G_T"
+  chromosome: "1"
+  position_bp: 109274968
+  window_bp: 1000000
+
+exposure:
+  trait_label: "SORT1 expression — minor salivary gland (gtex_ge)"
+  fetch:
+    source: eqtl_catalogue
+    dataset_id: QTD000276
+    molecular_trait_id: ENSG00000134243
+
+outcome:
+  trait_label: "cholesterol in medium VLDL"
+  fetch:
+    source: gwas_catalog
+    accession: GCST90269602
+
+# Provenance metadata gets carried into the manifest's caveats block
+provenance:
+  ot_release: "26.03"
+  ot_left_study_id: "gtex_ge_minor_salivary_gland_ensg00000134243"
+  ot_right_study_id: "GCST90269602"
+  ot_h4: 0.998
+
+ld:
+  source: 1000g_phase3_grch38
+  super_pop: EUR
+
+gene_track:
+  source: gencode_v39
+
+harmonisation:
+  exclude_palindromic: true

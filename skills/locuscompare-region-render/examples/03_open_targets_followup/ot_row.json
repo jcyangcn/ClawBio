@@ -1,0 +1,15 @@
+{
+  "left_studyId": "gtex_ge_minor_salivary_gland_ensg00000134243",
+  "right_studyId": "GCST90269602",
+  "left_studyLocusId": "530385d959c8072a18305d3a93ed5ba4",
+  "right_studyLocusId": "48d1dbd48ca54deff86a115bfc422220",
+  "h4": 0.9980539141017845,
+  "h3": 0.0019460858982161806,
+  "ot_release": "26.03",
+  "lead_variant": "1_109274968_G_T",
+  "chromosome": "1",
+  "position_bp": 109274968,
+  "left_studyType": "eqtl",
+  "right_studyType": "gwas",
+  "right_traitFromSource": "cholesterol in medium VLDL"
+}

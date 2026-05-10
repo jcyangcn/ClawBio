@@ -893,6 +893,14 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "locuscompare-region": {
+        "script": SKILLS_DIR / "locuscompare-region-render" / "cli.py",
+        "demo_args": ["--demo"],
+        "description": "LocusCompare regional diagnostic — 4-panel coloc visualisation (Liu 2019) for one (eqtl × gwas) pair",
+        "allowed_extra_flags": {"--list-demos", "--no-cache", "--super-pop"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
     "affprot": {
         "script": SKILLS_DIR / "affinity-proteomics" / "affinity_proteomics.py",
         "demo_args": ["--demo", "--platform", "olink"],
