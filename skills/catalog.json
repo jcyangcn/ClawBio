@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 66,
+  "skill_count": 67,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -916,6 +916,39 @@
         "genomebook match",
         "heterozygosity score",
         "breeding pairs"
+      ],
+      "chaining_partners": []
+    },
+    {
+      "name": "gwas-catalog-region-fetch",
+      "cli_alias": null,
+      "description": "Fetch a region of GWAS summary statistics from the NHGRI-EBI GWAS Catalog\nharmonised collection via tabix-on-FTP. Use when an agent needs GWAS beta /\nSE / p-value for every variant in a window for one specific study (GCST\naccession). Input: accession, chromosome, start, end. Output: harmonised\nTSV slice in canonical format.\n",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/gwas-catalogue-region-fetch/gwas_catalog_region_fetch.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "pysam>=0.22",
+        "pandas>=2.0",
+        "requests>=2.28"
+      ],
+      "tags": [
+        "gwas",
+        "gwas-catalog",
+        "region-fetch",
+        "tabix",
+        "summary-statistics",
+        "harmonised"
+      ],
+      "trigger_keywords": [
+        "gwas region fetch",
+        "gwas catalog region",
+        "gwas sumstats slice",
+        "GCST harmonised tabix",
+        "GWAS catalog tabix"
       ],
       "chaining_partners": []
     },

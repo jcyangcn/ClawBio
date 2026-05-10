@@ -675,6 +675,14 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "gwas-region": {
+        "script": SKILLS_DIR / "gwas-catalogue-region-fetch" / "gwas_catalog_region_fetch.py",
+        "demo_args": ["--demo"],
+        "description": "GWAS Catalog region fetch — tabix-on-FTP harmonised summary stats per genomic window",
+        "allowed_extra_flags": {"--list-demos", "--no-cache"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
     "affprot": {
         "script": SKILLS_DIR / "affinity-proteomics" / "affinity_proteomics.py",
         "demo_args": ["--demo", "--platform", "olink"],
