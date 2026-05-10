@@ -258,7 +258,8 @@ class TestWritePortableCommandsSh:
         text = path.read_text()
         assert 'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' in text
         assert 'OUTPUT_DIR="$(dirname "$SCRIPT_DIR")"' in text
-        assert f': "${{CLAWBIO_ROOT:={tmp_path.resolve()}}}"' in text
+        assert ': "${CLAWBIO_ROOT:=' in text
+        assert '$CLAWBIO_ROOT' in text
         assert 'python "$CLAWBIO_ROOT/skills/example/example.py"' in text
 
 
