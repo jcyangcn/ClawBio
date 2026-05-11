@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from datetime import UTC, datetime
@@ -11,6 +10,8 @@ from pathlib import Path
 from typing import Any
 
 import requests
+
+from clawbio.common.reproducibility import write_checksums, write_environment_yml, write_ro_crate
 
 
 DEMO_GENE = "IL6R"
@@ -323,20 +324,6 @@ def write_json(path: Path, content: dict[str, Any]) -> None:
     path.write_text(json.dumps(content, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def sha256_of_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def write_checksums(output_dir: Path, files: list[Path]) -> None:
-    lines = []
-    for file_path in files:
-        lines.append(f"{sha256_of_file(file_path)}  {file_path.name}")
-    write_text(output_dir / "checksums.sha256", "\n".join(lines) + "\n")
-
 
 def main() -> None:
     args = parse_args()
@@ -365,7 +352,27 @@ def main() -> None:
     write_json(evidence_path, evidence)
     write_text(report_path, report)
     write_json(metadata_path, metadata)
-    write_checksums(output_dir, [evidence_path, report_path, metadata_path])
+    write_checksums([evidence_path, report_path, metadata_path], output_dir, anchor=output_dir)
+    write_environment_yml(
+        output_dir,
+        env_name="clawbio-omics-target-evidence-mapper",
+        pip_deps=["requests", "rocrate"],
+        python_version="3.11",
+    )
+    write_ro_crate(
+        output_dir,
+        skill_name="omics-target-evidence-mapper",
+        skill_version="0.1.0",
+        script_path="skills/omics-target-evidence-mapper/omics_target_evidence_mapper.py",
+        description="Aggregate public target-level evidence across omics and translational sources",
+        params={
+            "gene": evidence["query"]["gene"],
+            "disease": evidence["query"].get("disease", ""),
+            "max_papers": args.max_papers,
+            "max_trials": args.max_trials,
+            "demo": args.demo,
+        },
+    )
 
     print(f"Done. Output written to: {output_dir}")
 
