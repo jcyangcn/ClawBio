@@ -635,6 +635,17 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "fastreer": {
+        "script": SKILLS_DIR / "fastreer" / "fastreer.py",
+        "demo_args": ["--demo"],
+        "description": "fastreer: phylogenetic trees and distance matrices from VCF/FASTA",
+        "allowed_extra_flags": {
+            "--command", "--threads", "--mem", "--bootstrap",
+            "--kmer", "--window-bp", "--window-variants", "--verbose",
+        },
+        "no_input_required": False,
+        "accepts_genotypes": False,
+    },
 }
 
 try:
