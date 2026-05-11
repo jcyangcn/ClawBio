@@ -179,29 +179,30 @@ def fetch_open_targets_evidence(gene: str, disease: str | None) -> dict[str, Any
 
 
 def fetch_trials(gene: str, disease: str | None, max_trials: int) -> list[dict[str, Any]]:
-    expr = gene if not disease else f"{gene} AND {disease}"
-    url = "https://clinicaltrials.gov/api/query/study_fields"
+    query = gene if not disease else f"{gene} {disease}"
+    url = "https://clinicaltrials.gov/api/v2/studies"
     params = {
-        "expr": expr,
-        "fields": "NCTId,BriefTitle,OverallStatus,Phase",
-        "min_rnk": 1,
-        "max_rnk": max_trials,
-        "fmt": "json",
+        "query.term": query,
+        "pageSize": max_trials,
+        "format": "json",
     }
     data = safe_request_json("GET", url, params=params)
 
     if not data:
         return []
 
-    studies = data.get("StudyFieldsResponse", {}).get("StudyFields", [])
     results = []
-    for study in studies:
+    for study in data.get("studies", []):
+        proto = study.get("protocolSection", {})
+        id_mod = proto.get("identificationModule", {})
+        status_mod = proto.get("statusModule", {})
+        design_mod = proto.get("designModule", {})
         results.append(
             {
-                "nct_id": (study.get("NCTId") or [None])[0],
-                "title": (study.get("BriefTitle") or [None])[0],
-                "status": (study.get("OverallStatus") or [None])[0],
-                "phase": (study.get("Phase") or [None])[0],
+                "nct_id": id_mod.get("nctId"),
+                "title": id_mod.get("briefTitle"),
+                "status": status_mod.get("overallStatus"),
+                "phase": (design_mod.get("phases") or [None])[0],
             }
         )
     return results
