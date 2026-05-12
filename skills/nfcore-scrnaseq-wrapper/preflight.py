@@ -135,6 +135,10 @@ def _check_profile(profile: str) -> dict[str, str | bool]:
         return _check_podman_profile(profile)
     if profile in {"shifter", "charliecloud"}:
         return _check_hpc_profile(profile)
+    if profile in {"wave", "gpu"}:
+        # Wave and GPU are Nextflow-native features, not external runtimes.
+        # No binary check is needed; Nextflow handles them internally.
+        return {"profile": profile, "backend_path": None, "backend_ready": True}
     return _check_singularity_compatible_profile(profile)
 
 

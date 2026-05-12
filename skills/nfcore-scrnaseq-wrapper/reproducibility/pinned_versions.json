@@ -22,7 +22,9 @@
     "apptainer",
     "podman",
     "shifter",
-    "charliecloud"
+    "charliecloud",
+    "wave",
+    "gpu"
   ],
   "supported_presets": [
     "standard",

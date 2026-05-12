@@ -167,10 +167,21 @@ def test_skip_fastqc_appears_in_params(tmp_path):
     assert loaded["skip_fastqc"] is True
 
 
-def test_skip_emptydrops_maps_to_canonical_skip_cellbender_param(tmp_path):
+def test_skip_emptydrops_writes_independent_param(tmp_path):
+    """skip_emptydrops is a distinct upstream param, not an alias for skip_cellbender."""
     samplesheet = tmp_path / "samplesheet.valid.csv"
     samplesheet.write_text("sample,fastq_1,fastq_2\n", encoding="utf-8")
     args = _base_args(tmp_path, skip_emptydrops=True)
+    path, _ = build_params_file(args, normalized_samplesheet=samplesheet, output_dir=tmp_path)
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert loaded["skip_emptydrops"] is True
+    assert "skip_cellbender" not in loaded
+
+
+def test_skip_cellbender_appears_in_params(tmp_path):
+    samplesheet = tmp_path / "samplesheet.valid.csv"
+    samplesheet.write_text("sample,fastq_1,fastq_2\n", encoding="utf-8")
+    args = _base_args(tmp_path, skip_cellbender=True)
     path, _ = build_params_file(args, normalized_samplesheet=samplesheet, output_dir=tmp_path)
     loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
     assert loaded["skip_cellbender"] is True
@@ -190,9 +201,10 @@ def test_skip_flags_absent_when_false(tmp_path):
     """Skip flags must not pollute params.yaml when not requested."""
     samplesheet = tmp_path / "samplesheet.valid.csv"
     samplesheet.write_text("sample,fastq_1,fastq_2\n", encoding="utf-8")
-    args = _base_args(tmp_path, skip_fastqc=False, skip_emptydrops=False, skip_multiqc=False)
+    args = _base_args(tmp_path, skip_cellbender=False, skip_fastqc=False, skip_emptydrops=False, skip_multiqc=False)
     path, _ = build_params_file(args, normalized_samplesheet=samplesheet, output_dir=tmp_path)
     loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert "skip_cellbender" not in loaded
     assert "skip_fastqc" not in loaded
     assert "skip_emptydrops" not in loaded
     assert "skip_multiqc" not in loaded
@@ -414,3 +426,38 @@ def test_skip_cellrangermulti_vdjref_appears_in_params(tmp_path):
     path, _ = build_params_file(args, normalized_samplesheet=samplesheet, output_dir=tmp_path)
     loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
     assert loaded["skip_cellrangermulti_vdjref"] is True
+
+
+# ── igenomes_ignore suppression ───────────────────────────────────────────────
+
+def test_igenomes_ignore_set_when_fasta_provided(tmp_path):
+    samplesheet = tmp_path / "samplesheet.valid.csv"
+    samplesheet.write_text("sample,fastq_1,fastq_2\n", encoding="utf-8")
+    fasta = tmp_path / "genome.fa"
+    fasta.write_text(">c\nACGT\n", encoding="utf-8")
+    args = _base_args(tmp_path, preset="star", fasta=str(fasta))
+    path, _ = build_params_file(args, normalized_samplesheet=samplesheet, output_dir=tmp_path)
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert loaded.get("igenomes_ignore") is True
+
+
+def test_igenomes_ignore_set_when_star_index_provided(tmp_path):
+    """igenomes_ignore must be True whenever any explicit reference path is given, not just fasta."""
+    samplesheet = tmp_path / "samplesheet.valid.csv"
+    samplesheet.write_text("sample,fastq_1,fastq_2\n", encoding="utf-8")
+    star_idx = tmp_path / "star_idx"
+    star_idx.mkdir()
+    args = _base_args(tmp_path, preset="star", star_index=str(star_idx))
+    path, _ = build_params_file(args, normalized_samplesheet=samplesheet, output_dir=tmp_path)
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert loaded.get("igenomes_ignore") is True
+
+
+def test_igenomes_ignore_absent_when_genome_shortcut_used(tmp_path):
+    """When using an iGenomes shortcut, igenomes_ignore must NOT be set."""
+    samplesheet = tmp_path / "samplesheet.valid.csv"
+    samplesheet.write_text("sample,fastq_1,fastq_2\n", encoding="utf-8")
+    args = _base_args(tmp_path, preset="star", genome="GRCh38")
+    path, _ = build_params_file(args, normalized_samplesheet=samplesheet, output_dir=tmp_path)
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert "igenomes_ignore" not in loaded

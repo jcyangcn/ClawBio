@@ -105,6 +105,48 @@ def test_parser_simpleaf_umi_resolution_rejects_invalid_value():
         parser.parse_args(["--output", "out", "--simpleaf-umi-resolution", "invalid-strategy"])
 
 
+def test_parser_simpleaf_umi_resolution_accepts_cr_like_em():
+    """cr-like-em is correct per the nf-core/scrnaseq 4.1.0 nextflow_schema.json enum."""
+    module = _load_skill_module()
+    parser = module.build_parser()
+    args = parser.parse_args(["--output", "out", "--simpleaf-umi-resolution", "cr-like-em"])
+    assert args.simpleaf_umi_resolution == "cr-like-em"
+
+
+def test_parser_simpleaf_umi_resolution_rejects_cr_like_emp():
+    """cr-like-emp (with trailing p) is NOT in the upstream schema enum and must be rejected."""
+    module = _load_skill_module()
+    parser = module.build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--output", "out", "--simpleaf-umi-resolution", "cr-like-emp"])
+
+
+def test_parser_simpleaf_umi_resolution_rejects_parsimony_emp():
+    """parsimony-emp (with trailing p) is NOT in the upstream schema enum and must be rejected."""
+    module = _load_skill_module()
+    parser = module.build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--output", "out", "--simpleaf-umi-resolution", "parsimony-emp"])
+
+
+def test_parser_accepts_igenomes_base():
+    """--igenomes-base must be accepted and stored as args.igenomes_base."""
+    module = _load_skill_module()
+    parser = module.build_parser()
+    args = parser.parse_args(["--output", "out", "--igenomes-base", "/data/igenomes"])
+    assert args.igenomes_base == "/data/igenomes"
+
+
+def test_parser_wave_and_gpu_profiles_accepted():
+    """wave and gpu are valid nf-core profiles and must be accepted by --profile."""
+    module = _load_skill_module()
+    parser = module.build_parser()
+    args_wave = parser.parse_args(["--output", "out", "--profile", "wave"])
+    assert args_wave.profile == "wave"
+    args_gpu = parser.parse_args(["--output", "out", "--profile", "gpu"])
+    assert args_gpu.profile == "gpu"
+
+
 def test_parser_kb_workflow_rejects_invalid_value():
     """--kb-workflow must reject values not in the nf-core schema enum."""
     module = _load_skill_module()
