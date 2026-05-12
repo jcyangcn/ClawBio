@@ -1,6 +1,6 @@
 """
 tests/test_methylation_cycle.py
-ClawBio · claw-methylation-cycle v0.1.1
+ClawBio · claw-methylation-cycle v0.1.2
 
 Test suite — required per ClawBio TDD mandate.
 Covers: parsing, compute_* functions with known I/O pairs, Safety Rule 6,
