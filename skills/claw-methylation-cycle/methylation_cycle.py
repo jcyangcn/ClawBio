@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ClawBio · claw-methylation-cycle v0.1.1
+ClawBio · claw-methylation-cycle v0.1.2
 Methylation cycle analysis with BH4/neurotransmitter axis interpretation.
 
 Author: Samuel Carmona Aguirre <samuel@unimed-consulting.es>
@@ -140,6 +140,13 @@ DISCLAIMER = (
     "**Research and educational use only (RUO). Not a diagnostic device.**\n"
     "Consult a qualified clinician before modifying supplementation or treatment.\n"
     "Enzymatic activity estimates are population-derived approximations, not direct assays."
+)
+
+CLINICIAN_REVIEW_HEADER = (
+    "> **FOR CLINICIAN REVIEW ONLY - do not self-administer.**\n"
+    "> The following nutrients are reported in the peer-reviewed literature for the\n"
+    "> pathways indicated. Dosing and indication require individualised clinical\n"
+    "> assessment by a qualified clinician."
 )
 
 
@@ -340,7 +347,7 @@ def analyse(genotypes: dict[str, str]) -> dict:
 
     return {
         "metadata": {
-            "tool": "claw-methylation-cycle v0.1.1",
+            "tool": "claw-methylation-cycle v0.1.2",
             "framework": "Holomedicina(R) CAPS Digital UNIMED Consulting",
             "generated_utc": datetime.now(timezone.utc).isoformat(),
             "snps_in_panel": len(PANEL),
@@ -510,10 +517,13 @@ def generate_report(result: dict) -> str:
         f"- Dopamine synthesis pathway: **{s['dopamine_synthesis_impact']}**",
         f"- Serotonin synthesis pathway: **{s['serotonin_synthesis_impact']}**",
         "",
-        "_Clinical implication_: When BH4 capacity is reduced, the clinical presentation",
-        "of ADHD, depression, and anxiety may have an upstream biological substrate that",
-        "5-MTHF + BH4-support nutrients can partially address - prior to or alongside",
-        "pharmacological intervention.",
+        # --- CHANGE 1: Association-based framing, not causal/diagnostic ---
+        "Some literature reports an association between BH4 deficiency and",
+        "ADHD, depression, and anxiety phenotypes",
+        "(Ledford et al., 2021, Nutrients 13(3):768;",
+        " Spuch & Agis-Balboa, 2014, SEBBM 179:18-21).",
+        "This genotype indicates reduced BH4 production capacity.",
+        "A clinician should contextualise this finding with the patient's clinical history.",
         "",
     ]
 
@@ -535,6 +545,8 @@ def generate_report(result: dict) -> str:
     lines += [
         "---",
         "## Clinical Recommendations",
+        "",
+        CLINICIAN_REVIEW_HEADER,
         "",
     ]
 
@@ -580,6 +592,17 @@ def generate_report(result: dict) -> str:
         "Biochem J 380:299-310. doi:10.1042/BJ20031542",
         "- Ledford AW et al. (2021). MTHFR and BH4 in neuropsychiatric disorders. "
         "Nutrients 13:768. doi:10.3390/nu13030768",
+        "- Lamers Y et al. (2004). Supplementation with [6S]-5-methyltetrahydrofolate "
+        "or folic acid equally reduces plasma total homocysteine. "
+        "Am J Clin Nutr 80(5):1234-41.",
+        "- McNulty H et al. (2017). Riboflavin lowers homocysteine in children and adults "
+        "with common MTHFR polymorphism. Am J Clin Nutr 106(1):128-36.",
+        "- Olteanu H et al. (2002). Differences in the efficiency of reductive methylation "
+        "of cob(II)alamin. Biochemistry 41(45):13378-85.",
+        "- Slow S et al. (2004). Plasma betaine and homocysteine. "
+        "Clin Chim Acta 340(1-2):57-67.",
+        "- Esteller M. (2014). Introduccion a la epigenetica. SEBBM 179:4-6.",
+        "- Spuch C, Agis-Balboa RC. (2014). Epigenetica en neurociencias. SEBBM 179:18-21.",
         "- Carmona Aguirre S. (2014/UNESCO 2016). Holomedicina. UNIMED Consulting.",
         "- ClawBio (2026). https://github.com/ClawBio/ClawBio",
     ]
@@ -588,6 +611,11 @@ def generate_report(result: dict) -> str:
 
 
 def _build_recommendations(summary: dict, genes: dict) -> list[str]:
+    """
+    Build genotype-based findings for clinician review.
+    All entries cite peer-reviewed sources per nutrient.
+    Output is for qualified clinician use only - not direct patient instruction.
+    """
     recs = []
     mthfr_act = summary["mthfr_combined_activity"]
     bh4 = summary["bh4_axis_capacity"]
@@ -597,39 +625,50 @@ def _build_recommendations(summary: dict, genes: dict) -> list[str]:
 
     if compound_het or mthfr_act <= 30:
         recs.append(
-            "- **PRIORITY 1** -- Use 5-MTHF (methylfolate) instead of synthetic folic acid. "
-            "MTHFR enzymatic reduction impairs folic acid conversion."
+            "- **Genotype finding** -- MTHFR enzymatic reduction impairs folic acid conversion. "
+            "Literature supports use of 5-MTHF (methylfolate) as the bioavailable form. "
+            "Ref: Lamers Y et al. (2004) Am J Clin Nutr 80(5):1234-41."
         )
     if compound_het:
         recs.append(
-            "- **PRIORITY 1** -- MTHFR compound heterozygous (C677T + A1298C): combined activity "
-            f"significantly reduced ({mthfr_act}%). 5-MTHF + methylcobalamin (B12) supplementation strongly indicated."
+            "- **Genotype finding** -- MTHFR compound heterozygous (C677T + A1298C): combined activity "
+            f"significantly reduced ({mthfr_act}%). Literature reports 5-MTHF + methylcobalamin (B12) "
+            "for this genotype profile. "
+            "Ref: Ledford AW et al. (2021) Nutrients 13(3):768."
         )
     if bh4 < 65:
         recs.append(
-            f"- **PRIORITY 2** -- BH4 capacity at {bh4}% of normal. "
-            "Riboflavin (B2, 200-400 mg/day) supports MTHFR activity and BH4 regeneration. "
-            "Vitamin C (500 mg/day) maintains BH4 in reduced (active) form."
+            f"- **Genotype finding** -- BH4 capacity estimated at {bh4}% of normal. "
+            "Riboflavin (B2, 200-400 mg/day) is reported in the literature as an MTHFR cofactor "
+            "supporting BH4 regeneration. Vitamin C (500 mg/day) maintains BH4 in its reduced (active) form. "
+            "Ref: McNulty H et al. (2017) Am J Clin Nutr 106(1):128-36."
         )
     if bh4 < 40:
+        # --- CHANGE 2: Association-based, not pre-pharma diagnostic directive ---
         recs.append(
-            "- **PRIORITY 2** -- Dopamine and serotonin synthesis may be compromised via reduced BH4. "
-            "Evaluate clinical presentation for neurodevelopmental implications (ADHD, depression, anxiety) "
-            "before pharmacological intervention."
+            "- **Genotype finding** -- Dopamine and serotonin synthesis pathways may be affected "
+            "via estimated BH4 reduction. Some literature reports an association between BH4 deficiency "
+            "and ADHD, depression, and anxiety phenotypes (Ledford et al., 2021). "
+            "Where clinically relevant, a clinician may evaluate whether neurodevelopmental symptoms "
+            "correlate with BH4 capacity for potential non-pharmacological support."
         )
     if mtrr_n >= 1:
         recs.append(
-            "- **PRIORITY 2** -- MTRR variant: prefer methylcobalamin (B12 active form) over cyanocobalamin. "
-            "Consider hydroxocobalamin as alternative."
+            "- **Genotype finding** -- MTRR A66G variant present. Literature reports methylcobalamin "
+            "(B12 active form) as preferred over cyanocobalamin for this genotype. "
+            "Hydroxocobalamin is an alternative. "
+            "Ref: Olteanu H et al. (2002) Biochemistry 41(45):13378-85."
         )
     if bhmt_act <= 60:
         recs.append(
-            "- **PRIORITY 3** -- BHMT variant: support choline-dependent remethylation with "
-            "betaine (TMG, 500-1000 mg/day) and choline-rich foods (eggs, liver)."
+            "- **Genotype finding** -- BHMT R239Q variant with reduced activity. Literature reports "
+            "betaine (TMG, 500-1000 mg/day) and choline-rich foods (eggs, liver) as alternative "
+            "methyl donors for this pathway. "
+            "Ref: Slow S et al. (2004) Clin Chim Acta 340(1-2):57-67."
         )
     if not recs:
         recs.append(
-            "- No high-priority supplementation flags identified. Maintain dietary folate and B12 adequacy."
+            "- No high-priority genotype flags identified. Maintain dietary folate and B12 adequacy."
         )
     return recs
 
