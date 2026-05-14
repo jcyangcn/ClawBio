@@ -22,7 +22,7 @@
 ```bash
 git clone https://github.com/ClawBio/ClawBio.git
 cd ClawBio
-uv sync                            # Python 3.10+ (installs from pyproject.toml + uv.lock)
+uv sync                            # Python 3.11+ (installs from pyproject.toml + uv.lock)
 uv run python clawbio.py run pharmgx --demo
 ```
 
