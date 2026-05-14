@@ -641,7 +641,7 @@ SKILLS = {
         "description": "fastreer: phylogenetic trees and distance matrices from VCF/FASTA",
         "allowed_extra_flags": {
             "--command", "--threads", "--mem", "--bootstrap",
-            "--kmer", "--window-bp", "--window-variants", "--verbose",
+            "--kmer", "--window-bp", "--window-variants", "--timeout", "--verbose",
         },
         "no_input_required": False,
         "accepts_genotypes": False,

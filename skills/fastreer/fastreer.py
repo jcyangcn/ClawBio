@@ -147,14 +147,17 @@ def find_fastreer_bin() -> str | None:
     """Return path to the fastreeR binary, or None if not found.
 
     Checks both 'fastreeR' and 'fastreer' (package versions differ in casing).
-    Looks in the active venv's bin/ alongside sys.executable first, then PATH,
-    so it works whether or not the venv is activated.
+    Prefers the venv's bin/ co-located with sys.executable so that an arbitrary
+    binary on PATH cannot be substituted for the installed package.
+    Falls back to PATH only when the interpreter is not inside a venv.
     """
     venv_dir = Path(sys.executable).parent
     for name in ("fastreeR", "fastreer"):
         candidate = venv_dir / name
         if candidate.exists():
             return str(candidate)
+    # PATH fallback — only reached when running outside a venv
+    for name in ("fastreeR", "fastreer"):
         found = shutil.which(name)
         if found:
             return found
@@ -163,10 +166,20 @@ def find_fastreer_bin() -> str | None:
 
 # ── Core runner ───────────────────────────────────────────────────────────────
 
-def run_fastreer(command: str, input_file: Path, output_dir: Path, args) -> dict:
-    """
-    Run fastreeR and return a dict with output paths and metadata.
-    Falls back to synthetic demo output if the fastreeR binary or Java is unavailable.
+def run_fastreer(
+    command: str,
+    input_file: Path,
+    output_dir: Path,
+    args,
+    *,
+    allow_synthetic: bool = False,
+) -> dict:
+    """Run fastreeR and return a dict with output paths and metadata.
+
+    When allow_synthetic=False (the default for real input), the function exits
+    with a clear error if fastreeR or Java 11+ is missing. Synthetic fallback is
+    only permitted during --demo mode (allow_synthetic=True) so that simulated
+    data is never silently presented as computed results.
     """
     samples = _extract_sample_names(input_file, command)
     n_variants = _count_variants(input_file, command)
@@ -176,18 +189,29 @@ def run_fastreer(command: str, input_file: Path, output_dir: Path, args) -> dict
 
     if bin_path and java:
         return _run_real_fastreer(command, input_file, output_dir, args, samples, bin_path)
-    else:
-        missing = []
-        if not bin_path:
-            missing.append("fastreeR binary (pip install fastreer)")
-        if not java:
-            missing.append("Java 11+")
-        print(
-            f"[fastreer] WARNING: {' and '.join(missing)} not found; "
-            f"generating synthetic demo output.",
-            file=sys.stderr,
+
+    missing = []
+    if not bin_path:
+        missing.append("fastreeR binary (pip install fastreer)")
+    if not java:
+        missing.append("Java 11+")
+
+    if not allow_synthetic:
+        sys.exit(
+            f"ERROR: {' and '.join(missing)} not found. "
+            "Install the missing dependencies and re-run.\n"
+            "  pip install fastreer          # Python wrapper\n"
+            "  sudo apt install default-jre  # Java (Debian/Ubuntu)\n"
+            "  brew install openjdk@17       # Java (macOS)\n"
+            "Run with --demo to see expected output without real data."
         )
-        return _generate_synthetic_output(command, input_file, output_dir, samples, n_variants)
+
+    print(
+        f"[fastreer] WARNING: {' and '.join(missing)} not found; "
+        "generating synthetic demo output (--demo mode).",
+        file=sys.stderr,
+    )
+    return _generate_synthetic_output(command, input_file, output_dir, samples, n_variants)
 
 
 def _run_real_fastreer(
@@ -222,7 +246,15 @@ def _run_real_fastreer(
     if command == "DIST2TREE" and args.verbose:
         cmd += ["-v"]
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    raw_timeout = getattr(args, "timeout", 900)
+    timeout = raw_timeout if raw_timeout > 0 else None  # 0 means no limit
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        sys.exit(
+            f"ERROR: fastreeR did not finish within {raw_timeout}s. "
+            "Increase --timeout or use --timeout 0 to disable the limit."
+        )
     if result.returncode != 0:
         print(result.stderr, file=sys.stderr)
         sys.exit(f"[fastreer] fastreeR exited with code {result.returncode}")
@@ -484,7 +516,7 @@ def run_demo(args) -> None:
 
     print(f"[fastreer] Demo mode: running {command} on synthetic data ({demo_file.name})")
 
-    result = run_fastreer(command, demo_file, output_dir, args)
+    result = run_fastreer(command, demo_file, output_dir, args, allow_synthetic=True)
     write_report(result, output_dir)
     write_result_json(result, output_dir)
     write_reproducibility(args, demo_file, output_dir)
@@ -536,6 +568,10 @@ def main() -> None:
     parser.add_argument("--kmer", type=int, default=4, help="K-mer size for FASTA2DIST (default: 4)")
     parser.add_argument("--window-bp", type=int, dest="window_bp", help="Window size in bp for windowed output")
     parser.add_argument("--window-variants", type=int, dest="window_variants", help="Window size in variant count")
+    parser.add_argument(
+        "--timeout", type=int, default=900,
+        help="Subprocess timeout in seconds (default: 900 = 15 min); 0 disables"
+    )
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
 
     args = parser.parse_args()
@@ -558,7 +594,7 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"[fastreer] Running {args.command} on {input_file.name}")
-    result = run_fastreer(args.command, input_file, output_dir, args)
+    result = run_fastreer(args.command, input_file, output_dir, args, allow_synthetic=False)
     write_report(result, output_dir)
     write_result_json(result, output_dir)
     write_reproducibility(args, input_file, output_dir)
