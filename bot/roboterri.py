@@ -10,11 +10,11 @@ Works with any OpenAI-compatible provider: OpenAI, Anthropic (via proxy),
 Google, Mistral, Groq, Together, OpenRouter, Ollama, LM Studio, etc.
 
 Prerequisites:
-    pip3 install python-telegram-bot[job-queue] openai python-dotenv
+    uv sync --group bot
 
 Usage:
     # Set environment variables in .env (see bot/README.md)
-    python3 bot/roboterri.py
+    uv run python bot/roboterri.py
 """
 
 import asyncio

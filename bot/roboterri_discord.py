@@ -10,11 +10,11 @@ Works with any OpenAI-compatible provider: OpenAI, Anthropic (via proxy),
 Google, Mistral, Groq, Together, OpenRouter, Ollama, LM Studio, etc.
 
 Prerequisites:
-    pip3 install discord.py openai python-dotenv
+    uv sync --group bot
 
 Usage:
     # Set environment variables in .env (see bot/README.md)
-    python3 bot/roboterri_discord.py
+    uv run python bot/roboterri_discord.py
 """
 
 import asyncio
