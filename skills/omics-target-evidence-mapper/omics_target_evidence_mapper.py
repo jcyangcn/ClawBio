@@ -140,34 +140,41 @@ def fetch_open_targets_evidence(gene: str, disease: str | None) -> dict[str, Any
         return {"status": "skipped", "reason": "No disease term provided."}
 
     url = "https://api.platform.opentargets.org/api/v4/graphql"
-    query = """
-    query SearchAndAssociations($geneText: String!, $diseaseText: String!) {
-      targetSearch(queryString: $geneText) {
-        hits {
-          id
-          approvedSymbol
-          approvedName
-        }
+
+    # Step 1: resolve IDs via search
+    search_query = """
+    query Search($geneText: String!, $diseaseText: String!) {
+      geneResult: search(queryString: $geneText, entityNames: ["target"], page: {index: 0, size: 1}) {
+        hits { id }
       }
-      diseaseSearch(queryString: $diseaseText) {
-        hits {
-          id
-          name
-        }
+      diseaseResult: search(queryString: $diseaseText, entityNames: ["disease"], page: {index: 0, size: 1}) {
+        hits { id }
       }
     }
     """
-    variables = {"geneText": gene, "diseaseText": disease}
-    data = safe_request_json("POST", url, json_body={"query": query, "variables": variables})
+    search_data = safe_request_json("POST", url, json_body={"query": search_query, "variables": {"geneText": gene, "diseaseText": disease}})
 
-    if not data or "data" not in data:
+    if not search_data or "data" not in search_data:
         return {"status": "unavailable", "gene": gene, "disease": disease}
 
-    target_hits = data["data"].get("targetSearch", {}).get("hits", [])
-    disease_hits = data["data"].get("diseaseSearch", {}).get("hits", [])
+    target_id = ((search_data["data"].get("geneResult") or {}).get("hits") or [{}])[0].get("id")
+    disease_id = ((search_data["data"].get("diseaseResult") or {}).get("hits") or [{}])[0].get("id")
 
-    target_hit = target_hits[0] if target_hits else None
-    disease_hit = disease_hits[0] if disease_hits else None
+    if not target_id and not disease_id:
+        return {"status": "no_result", "gene_query": gene, "disease_query": disease, "matched_target": None, "matched_disease": None}
+
+    # Step 2: enrich with structured target/disease data
+    enrich_query = """
+    query Enrich($ensemblId: String!, $efoId: String!) {
+      target(ensemblId: $ensemblId) { id approvedSymbol approvedName biotype }
+      disease(efoId: $efoId) { id name description }
+    }
+    """
+    enrich_data = safe_request_json("POST", url, json_body={"query": enrich_query, "variables": {"ensemblId": target_id or "", "efoId": disease_id or ""}})
+
+    enrich = (enrich_data or {}).get("data", {})
+    target_hit = enrich.get("target")
+    disease_hit = enrich.get("disease")
 
     return {
         "status": "ok" if target_hit or disease_hit else "no_result",
@@ -179,29 +186,30 @@ def fetch_open_targets_evidence(gene: str, disease: str | None) -> dict[str, Any
 
 
 def fetch_trials(gene: str, disease: str | None, max_trials: int) -> list[dict[str, Any]]:
-    expr = gene if not disease else f"{gene} AND {disease}"
-    url = "https://clinicaltrials.gov/api/query/study_fields"
+    query = gene if not disease else f"{gene} {disease}"
+    url = "https://clinicaltrials.gov/api/v2/studies"
     params = {
-        "expr": expr,
-        "fields": "NCTId,BriefTitle,OverallStatus,Phase",
-        "min_rnk": 1,
-        "max_rnk": max_trials,
-        "fmt": "json",
+        "query.term": query,
+        "pageSize": max_trials,
+        "format": "json",
     }
     data = safe_request_json("GET", url, params=params)
 
     if not data:
         return []
 
-    studies = data.get("StudyFieldsResponse", {}).get("StudyFields", [])
     results = []
-    for study in studies:
+    for study in data.get("studies", []):
+        proto = study.get("protocolSection", {})
+        id_mod = proto.get("identificationModule", {})
+        status_mod = proto.get("statusModule", {})
+        design_mod = proto.get("designModule", {})
         results.append(
             {
-                "nct_id": (study.get("NCTId") or [None])[0],
-                "title": (study.get("BriefTitle") or [None])[0],
-                "status": (study.get("OverallStatus") or [None])[0],
-                "phase": (study.get("Phase") or [None])[0],
+                "nct_id": id_mod.get("nctId"),
+                "title": id_mod.get("briefTitle"),
+                "status": status_mod.get("overallStatus"),
+                "phase": (design_mod.get("phases") or [None])[0],
             }
         )
     return results
