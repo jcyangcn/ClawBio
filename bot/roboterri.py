@@ -24,6 +24,7 @@ import logging
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -59,6 +60,35 @@ from bot.tool_loop_utils import (
     synthetic_tool_result_messages,
     tool_error_content,
 )
+
+try:  # Allow running as `python bot/roboterri.py` and as a package import.
+    from action_offers import (
+        choice_list_text,
+        execute_stored_action,
+        extract_action_offer,
+        extract_chat_summary_lines,
+        is_cancel_reply,
+        is_pending_action_expired,
+        load_bundle_fields,
+        looks_like_action_followup,
+        make_pending_action_entry,
+        parse_action_reply,
+        render_action_offer,
+    )
+except ImportError:  # pragma: no cover - package import fallback
+    from bot.action_offers import (
+        choice_list_text,
+        execute_stored_action,
+        extract_action_offer,
+        extract_chat_summary_lines,
+        is_cancel_reply,
+        is_pending_action_expired,
+        load_bundle_fields,
+        looks_like_action_followup,
+        make_pending_action_entry,
+        parse_action_reply,
+        render_action_offer,
+    )
 
 # --------------------------------------------------------------------------- #
 # Config
@@ -223,6 +253,11 @@ _pending_media: dict[int, list[dict]] = {}
 # Pending text queue: bypass LLM paraphrasing for compare/drugphoto
 _pending_text: dict[int, list[str]] = {}
 
+# Pending suggested actions: chat_id -> stored offer bundle. This is the safety
+# boundary for confirmations: users can only select one of these stored
+# structured requests, never provide fresh executable text.
+_pending_actions: dict[int, dict] = {}
+
 BOT_START_TIME = time.time()
 
 _SKILL_REGISTRY = load_default_skill_registry(CLAWBIO_DIR)
@@ -331,6 +366,13 @@ TOOLS = [
                         "description": (
                             "rsID for GWAS variant lookup (e.g. 'rs3798220'). "
                             "Used with gwas skill."
+                        ),
+                    },
+                    "request": {
+                        "type": "object",
+                        "description": (
+                            "Structured nested request payload for skills that document "
+                            "a JSON request contract."
                         ),
                     },
                 },
@@ -445,6 +487,167 @@ TOOLS = [
 # --------------------------------------------------------------------------- #
 
 
+def _run_skill_local_sync(
+    *,
+    skill_name: str,
+    input_path: str | None = None,
+    output_dir: str | None = None,
+    demo: bool = False,
+    extra_args: list[str] | None = None,
+    timeout: int = 300,
+    profile_path: str | None = None,
+) -> dict:
+    """Run a stored follow-up action through the same CLI path used by the bot."""
+    cmd = [sys.executable, str(CLAWBIO_PY), "run", skill_name]
+    if demo:
+        cmd.append("--demo")
+    elif profile_path:
+        cmd.extend(["--profile", profile_path])
+    elif input_path:
+        cmd.extend(["--input", str(input_path)])
+    if output_dir:
+        cmd.extend(["--output", str(output_dir)])
+    if extra_args:
+        cmd.extend(extra_args)
+
+    proc = subprocess.run(
+        cmd,
+        cwd=str(CLAWBIO_DIR),
+        text=True,
+        capture_output=True,
+        timeout=timeout,
+    )
+    return _skill_result_from_output(
+        skill_name=skill_name,
+        stdout=proc.stdout,
+        stderr=proc.stderr,
+        exit_code=proc.returncode,
+        output_dir=output_dir,
+    )
+
+
+def _skill_result_from_output(
+    *,
+    skill_name: str,
+    stdout: str,
+    stderr: str,
+    exit_code: int,
+    output_dir: str | Path | None,
+) -> dict:
+    """Build the runner-like result shape consumed by the chat renderer."""
+    out_dir = Path(output_dir) if output_dir else None
+    files = (
+        sorted(str(f.relative_to(out_dir)) for f in out_dir.rglob("*") if f.is_file())
+        if out_dir and out_dir.exists()
+        else []
+    )
+    result = {
+        "skill": skill_name,
+        "success": exit_code == 0,
+        "exit_code": exit_code,
+        "output_dir": str(out_dir) if out_dir else None,
+        "files": files,
+        "stdout": stdout,
+        "stderr": stderr,
+    }
+    if exit_code == 0:
+        result.update(load_bundle_fields(out_dir))
+    return result
+
+
+def _trim_report_for_chat(report_text: str) -> str:
+    """Trim verbose report sections while keeping the disclaimer."""
+    keep_lines: list[str] = []
+    skip = False
+    for line in report_text.split("\n"):
+        if line.startswith("## Chromosome Breakdown"):
+            skip = True
+        elif line.startswith("## Ancestry Composition"):
+            skip = False
+        elif line.startswith("## Methods"):
+            skip = True
+        elif line.startswith("## About"):
+            skip = False
+        elif line.startswith("## Reproducibility"):
+            skip = True
+        elif line.startswith("## Disclaimer"):
+            skip = False
+        if line.startswith("!["):
+            continue
+        if not skip:
+            keep_lines.append(line)
+    return "\n".join(keep_lines).strip()
+
+
+def _queue_output_media(chat_id: int, output_dir: Path | None) -> None:
+    """Queue generated reports and figures for chat delivery."""
+    if output_dir is None or not output_dir.exists():
+        return
+    media_items: list[dict[str, str]] = []
+    for f in sorted(output_dir.rglob("*")):
+        if not f.is_file():
+            continue
+        if f.suffix in (".md", ".html"):
+            media_items.append({"type": "document", "path": str(f)})
+        elif f.suffix == ".png":
+            media_items.append({"type": "photo", "path": str(f)})
+    if media_items:
+        _pending_media[chat_id] = _pending_media.get(chat_id, []) + media_items
+
+
+def _render_skill_result(chat_id: int, skill_key: str, result: dict) -> str:
+    """Turn a structured skill result into a chat reply."""
+    output_dir = Path(result["output_dir"]) if result.get("output_dir") else None
+    _queue_output_media(chat_id, output_dir)
+
+    raw_output = str(result.get("stdout", "") or "").strip()
+    report_text = str(result.get("report_md", "") or "").strip()
+    summary_lines = extract_chat_summary_lines(result)
+    actions = extract_action_offer(result)
+
+    if actions:
+        reply_parts: list[str] = []
+        if summary_lines:
+            reply_parts.append("\n".join(summary_lines))
+        elif report_text:
+            reply_parts.append(_trim_report_for_chat(report_text))
+        elif raw_output:
+            reply_parts.append(raw_output)
+        else:
+            reply_parts.append(f"{skill_key} completed.")
+        reply_parts.append(render_action_offer(actions))
+        rendered = "\n\n".join(part for part in reply_parts if part).strip()
+        _pending_actions[chat_id] = make_pending_action_entry(
+            skill=skill_key,
+            actions=actions,
+            source_summary=summary_lines,
+            source_output_dir=str(output_dir) if output_dir else None,
+        )
+        _audit(
+            "action_offer",
+            chat_id=chat_id,
+            skill=skill_key,
+            action_ids=[action.get("action_id") for action in actions],
+            output_dir=str(output_dir) if output_dir else None,
+        )
+        _pending_text.setdefault(chat_id, []).append(rendered)
+        return "Result sent directly to chat. Do not repeat or paraphrase it."
+
+    _pending_actions.pop(chat_id, None)
+
+    if skill_key in ("compare", "drugphoto", "profile"):
+        rendered = raw_output or report_text or f"{skill_key} completed."
+        if rendered:
+            _pending_text.setdefault(chat_id, []).append(rendered)
+        return "Result sent directly to chat. Do not repeat or paraphrase it."
+
+    if summary_lines:
+        return "\n".join(summary_lines)
+    if report_text:
+        return _trim_report_for_chat(report_text)
+    return raw_output if raw_output else f"{skill_key} completed. Output: {output_dir}"
+
+
 async def execute_clawbio(args: dict) -> str:
     """Execute a ClawBio bioinformatics skill via subprocess."""
     skill_key = args.get("skill", "auto")
@@ -453,6 +656,20 @@ async def execute_clawbio(args: dict) -> str:
     raw_user_text = args.get("_raw_user_text") or query or ""
     skill_registry = _SKILL_REGISTRY
     preplanned_plan = None
+    request_input_path: Path | None = None
+    request_payload = args.get("request")
+    if isinstance(request_payload, dict):
+        handle = tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            suffix=".json",
+            prefix="clawbio_request_",
+            delete=False,
+        )
+        with handle:
+            json.dump(request_payload, handle, indent=2, ensure_ascii=True)
+            handle.write("\n")
+        request_input_path = Path(handle.name)
 
     def _error(error_type: str, message: str, **details) -> str:
         clean_details = {k: v for k, v in details.items() if v is not None}
@@ -546,6 +763,8 @@ async def execute_clawbio(args: dict) -> str:
     if file_info:
         input_path = file_info.get("path")
         profile_path = file_info.get("profile_path")
+    if request_input_path is not None:
+        input_path = str(request_input_path)
 
     if mode == "file" and not input_path and not profile_path:
         # Fall back to owner's genome for admin users
@@ -659,81 +878,22 @@ async def execute_clawbio(args: dict) -> str:
 
     skill_key = executed_skills[-1] if executed_skills else skill_key
     stdout_str = "\n".join(part for part in stdout_parts if part)
+    stderr_str = "\n".join(part for part in stderr_parts if part)
     out_dir = output_dirs[-1] if output_dirs else OUTPUT_DIR / f"{skill_key}_{ts}"
 
-    # For compare / drugphoto / profile: send stdout directly (bypass LLM paraphrasing)
-    if any(item in ("compare", "drugphoto", "profile") for item in executed_skills):
-        raw_output = stdout_str.strip()
-        if raw_output:
-            chat_id = args.get("_chat_id")
-            if chat_id:
-                _pending_text.setdefault(chat_id, []).append(raw_output)
-        return "Result sent directly to chat. Do not repeat or paraphrase it."
-
-    # For other skills: collect report + figures from output directory
-    output_files = []
-    for bundle_dir in output_dirs:
-        if bundle_dir.exists():
-            output_files.extend(f.name for f in bundle_dir.rglob("*") if f.is_file())
-    output_files = sorted(output_files)
-
-    # Queue figures and reports for Telegram delivery
-    media_items = []
-    for bundle_dir in output_dirs:
-        if not bundle_dir.exists():
-            continue
-        for f in sorted(bundle_dir.rglob("*")):
-            if not f.is_file():
-                continue
-            if f.suffix in (".md", ".html"):
-                media_items.append({"type": "document", "path": str(f)})
-            elif f.suffix == ".png":
-                media_items.append({"type": "photo", "path": str(f)})
-    if media_items:
-        _pending_media[chat_id] = _pending_media.get(chat_id, []) + media_items
-
-    # Read report for chat display
-    report_text = ""
-    for bundle_dir in output_dirs:
-        if not bundle_dir.exists():
-            continue
-        for pattern in ["report.md", "*_report.md", "*.md"]:
-            for md_file in sorted(bundle_dir.glob(pattern)):
-                if md_file.name.startswith("."):
-                    continue
-                report_text = md_file.read_text(encoding="utf-8")
-                break
-            if report_text:
-                break
-        if report_text:
-            break
-
-    if not report_text:
-        return stdout_str if stdout_str else f"{skill_key} completed. Output: {out_dir}"
-
-    # Trim verbose sections for Telegram readability but ALWAYS keep disclaimer.
-    # Full report is preserved on disk at out_dir.
-    keep_lines = []
-    skip = False
-    for line in report_text.split("\n"):
-        if line.startswith("## Chromosome Breakdown"):
-            skip = True
-        elif line.startswith("## Ancestry Composition"):
-            skip = False
-        elif line.startswith("## Methods"):
-            skip = True
-        elif line.startswith("## About"):
-            skip = False
-        elif line.startswith("## Reproducibility"):
-            skip = True
-        elif line.startswith("## Disclaimer"):
-            skip = False  # always show disclaimer
-        if line.startswith("!["):
-            continue
-        if not skip:
-            keep_lines.append(line)
-
-    return "\n".join(keep_lines).strip()
+    result = _skill_result_from_output(
+        skill_name=skill_key,
+        stdout=stdout_str,
+        stderr=stderr_str,
+        exit_code=0,
+        output_dir=None if skill_key in ("compare", "drugphoto") else out_dir,
+    )
+    if request_input_path is not None:
+        try:
+            request_input_path.unlink()
+        except OSError:
+            pass
+    return _render_skill_result(chat_id or 0, skill_key, result)
 
 
 # --------------------------------------------------------------------------- #
@@ -1246,6 +1406,135 @@ async def send_long_message(update: Update, text: str):
             await update.message.reply_text(chunk)
 
 
+async def _maybe_handle_pending_action_reply(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_text: str,
+) -> bool:
+    """Handle confirmation/cancel replies for structured suggested actions."""
+    chat_id = update.effective_chat.id
+    pending = _pending_actions.get(chat_id)
+    if not pending:
+        if looks_like_action_followup(user_text):
+            await update.message.reply_text(
+                "I don't have a pending ClawBio action to run. "
+                "Please choose an action from the latest skill result, "
+                "or rerun that request first."
+            )
+            return True
+        return False
+
+    if is_pending_action_expired(pending):
+        _pending_actions.pop(chat_id, None)
+        _audit("action_offer_expired", chat_id=chat_id, skill=pending.get("skill"))
+        await update.message.reply_text(
+            "That earlier action offer has expired. Please rerun the skill request."
+        )
+        return True
+
+    actions = pending.get("actions", [])
+    selected_action = pending.get("selected_action")
+    if selected_action is not None:
+        if is_cancel_reply(user_text):
+            _pending_actions.pop(chat_id, None)
+            _audit("action_cancelled", chat_id=chat_id, skill=pending.get("skill"))
+            await update.message.reply_text("Okay -- I won't run that follow-up action.")
+            return True
+        parsed = parse_action_reply(user_text, [selected_action])
+        if parsed.get("kind") == "matched" and parsed.get("confirmed"):
+            action = selected_action
+        else:
+            await update.message.reply_text("Please reply `yes` to run it, or `cancel`.")
+            return True
+    else:
+        parsed = parse_action_reply(user_text, actions)
+        if parsed["kind"] == "none":
+            return False
+        if parsed["kind"] == "cancel":
+            _pending_actions.pop(chat_id, None)
+            _audit("action_cancelled", chat_id=chat_id, skill=pending.get("skill"))
+            await update.message.reply_text("Okay -- I won't run any of those follow-up actions.")
+            return True
+        if parsed["kind"] == "ambiguous":
+            await update.message.reply_text(
+                f"Which one would you like me to run: {choice_list_text(actions)}?"
+            )
+            return True
+        action = parsed["action"]
+        if action.get("requires_confirmation") is not False and not parsed.get("confirmed"):
+            pending["selected_action"] = action
+            _audit(
+                "action_confirmation_requested",
+                chat_id=chat_id,
+                skill=pending.get("skill"),
+                action_id=action.get("action_id"),
+            )
+            await update.message.reply_text(
+                f"Please confirm: run {action.get('label', 'that action')}? "
+                "Reply `yes` or `cancel`."
+            )
+            return True
+
+    action_id = action.get("action_id")
+    label = str(action.get("label") or action_id or "that action")
+    _pending_actions.pop(chat_id, None)
+    _audit(
+        "action_confirmed",
+        chat_id=chat_id,
+        skill=pending.get("skill"),
+        action_id=action_id,
+        label=label,
+    )
+
+    await update.message.reply_text(f"Running {label}...")
+    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+
+    try:
+        result = await asyncio.to_thread(
+            execute_stored_action,
+            pending,
+            action,
+            runner=_run_skill_local_sync,
+            output_root=OUTPUT_DIR,
+        )
+    except Exception as exc:
+        _audit(
+            "action_execute_error",
+            chat_id=chat_id,
+            skill=pending.get("skill"),
+            action_id=action_id,
+            error=str(exc)[:300],
+        )
+        await update.message.reply_text(
+            f"That follow-up action failed before it could start properly: {exc}"
+        )
+        return True
+
+    _audit(
+        "action_execute",
+        chat_id=chat_id,
+        skill=pending.get("skill"),
+        action_id=action_id,
+        success=bool(result.get("success")),
+        output_dir=result.get("output_dir"),
+    )
+
+    if result.get("success"):
+        reply = _render_skill_result(chat_id, str(pending.get("skill") or ""), result)
+    else:
+        err = str(result.get("stderr") or result.get("stdout") or "unknown error")
+        reply = (
+            f"{pending.get('skill', 'follow-up action')} failed "
+            f"(exit {result.get('exit_code', -1)}):\n{err[-1500:]}"
+        )
+    pending_text = _pending_text.pop(chat_id, None)
+    if pending_text:
+        reply = "\n\n".join(pending_text)
+    await send_long_message(update, reply)
+    await _drain_pending_media(update, context)
+    return True
+
+
 # --------------------------------------------------------------------------- #
 # Command handlers
 # --------------------------------------------------------------------------- #
@@ -1476,6 +1765,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
            text_len=len(user_text))
 
     try:
+        if await _maybe_handle_pending_action_reply(update, context, user_text):
+            return
         await context.bot.send_chat_action(
             chat_id=update.effective_chat.id, action="typing"
         )

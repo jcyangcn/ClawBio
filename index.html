@@ -120,7 +120,7 @@
   </nav>
   <a href="/benchmarks.html" style="display:block;background:linear-gradient(90deg,#238636,#1f6feb);color:#fff;text-align:center;padding:0.7rem 1rem;font-size:0.95rem;font-weight:600;text-decoration:none;">📊 Public Benchmark Leaderboard | 168/182 passing (92.3%) | Up from 80/140 (57.1%) at original audit | Every failure documented &rarr;</a>
   <section class="hero">
-    <div class="hero-badge">📊 Publicly benchmarked · 795 stars · 63 skills · 24 contributors · 1,756 tests</div>
+    <div class="hero-badge">📊 Publicly benchmarked · 825 stars · 63 skills · 24 contributors · 1,756 tests</div>
     <h1>The first <em>bioinformatics-native</em><br>AI agent skill library</h1>
     <p>ClawBio is where biological AI gets its skills: a curated, reproducible, open repository any agent can call.</p>
     <div class="hero-ctas">
@@ -167,16 +167,16 @@
         <div>
           <div class="code-block">
             <div class="comment"># With ClawBio</div>
-            <div class="cmd">$ python ancestry_pca.py --demo --output fig3</div>
+            <div class="cmd">$ python skills/multiqc-reporter/multiqc_reporter.py --demo --output /tmp/multiqc_demo</div>
             <br>
-            <div class="success">✓ Figure 3 reproduced.</div>
-            <div class="success">✓ Identical. SHA-256 verified.</div>
-            <div class="success">✓ 30 seconds.</div>
+            <div class="success">✓ Demo report regenerated.</div>
+            <div class="success">✓ Replay command saved alongside outputs.</div>
+            <div class="success">✓ Checksums available for verification.</div>
             <br>
             <div class="comment"># Or with natural language:</div>
             <div class="cmd">$ openclaw &quot;Profile my pharmacogenes&quot;</div>
           </div>
-          <p style="color:var(--text-muted);font-size:0.9rem;margin-top:1rem;">Every skill exports <code style="background:var(--bg3);padding:0.1rem 0.4rem;border-radius:4px;font-size:0.85rem;">commands.sh</code>, <code style="background:var(--bg3);padding:0.1rem 0.4rem;border-radius:4px;font-size:0.85rem;">environment.yml</code>, and SHA-256 checksums — anyone can reproduce without the agent.</p>
+          <p style="color:var(--text-muted);font-size:0.9rem;margin-top:1rem;">Many skills write a <code style="background:var(--bg3);padding:0.1rem 0.4rem;border-radius:4px;font-size:0.85rem;">reproducibility/</code> bundle with replay commands, environment metadata, and output checksums. Exact files vary by skill, and some replays still require local tools or original inputs.</p>
         </div>
       </div>
     </div>
@@ -188,7 +188,7 @@
       <p class="section-sub">ChatGPT and Claude are smart generalists. ClawBio skills are domain experts' proven pipelines — executed correctly every time.</p>
       <div class="features-grid">
         <div class="feature-card"><div class="feature-icon">🏠</div><div class="feature-title">Local-first</div><div class="feature-desc">Your genomic data never leaves your laptop. No cloud uploads, no data exfiltration. Full privacy by design.</div></div>
-        <div class="feature-card"><div class="feature-icon">🔁</div><div class="feature-title">Reproducible</div><div class="feature-desc">Every analysis exports a reproducibility bundle — commands, environment, and SHA-256 checksums. Reproduce without the agent.</div></div>
+        <div class="feature-card"><div class="feature-icon">🔁</div><div class="feature-title">Reproducible</div><div class="feature-desc">Many skills export replay bundles with commands, environment metadata, and output checksums so runs can be rechecked without the original agent session.</div></div>
         <div class="feature-card"><div class="feature-icon">🧩</div><div class="feature-title">Modular</div><div class="feature-desc">Each skill is a self-contained directory (SKILL.md + Python scripts) that plugs into the orchestrator — or runs standalone.</div></div>
         <div class="feature-card"><div class="feature-icon">⚖️</div><div class="feature-title">MIT Licensed</div><div class="feature-desc">Open-source, free, community-driven. Clone it, run it, build a skill, submit a PR.</div></div>
         <div class="feature-card"><div class="feature-icon">🌍</div><div class="feature-title">Equity-aware</div><div class="feature-desc">Built-in support for underrepresented populations. HEIM diversity metrics baked into the roadmap.</div></div>
@@ -230,7 +230,7 @@
         <div>
           <div class="showcase-name">RoboTerri</div>
           <div class="showcase-role">Telegram AI Agent</div>
-          <div class="showcase-desc">A bioinformatics intelligence agent on Telegram — inspired by Professor Teresa K. Attwood, a pioneer of bioinformatics education and research. Run pharmacogenomics reports from your own genetic data. Snap a photo of your medication, get personalised dosage guidance. All local-first, all reproducible.</div>
+          <div class="showcase-desc">A bioinformatics intelligence agent on Telegram — inspired by Professor Teresa K. Attwood, a pioneer of bioinformatics education and research. Run pharmacogenomics reports from your own genetic data. Snap a photo of your medication, get personalised dosage guidance. Local-first, with reproducibility support where the underlying skill writes a replay bundle.</div>
           <div class="showcase-skills">
             <span class="showcase-skill">PharmGx Reporter</span>
             <span class="showcase-skill">Drug Photo Lookup</span>
@@ -283,7 +283,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr style="border-bottom:1px solid var(--border);background:rgba(63,185,80,0.05);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/ClawBio/ClawBio" target="_blank" style="color:var(--accent);">ClawBio</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">795</td><td style="padding:0.6rem 1rem;text-align:right;">164</td><td style="padding:0.6rem 1rem;text-align:right;">63</td></tr>
+            <tr style="border-bottom:1px solid var(--border);background:rgba(63,185,80,0.05);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/ClawBio/ClawBio" target="_blank" style="color:var(--accent);">ClawBio</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">825</td><td style="padding:0.6rem 1rem;text-align:right;">169</td><td style="padding:0.6rem 1rem;text-align:right;">63</td></tr>
             <tr style="border-bottom:1px solid var(--border);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/FreedomIntelligence/OpenClaw-Medical-Skills" target="_blank" style="color:var(--accent2);">OpenClaw-Medical-Skills</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">1,037</td><td style="padding:0.6rem 1rem;text-align:right;">123</td><td style="padding:0.6rem 1rem;text-align:right;">869</td></tr>
             <tr style="border-bottom:1px solid var(--border);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/GPTomics/bioSkills" target="_blank" style="color:var(--accent2);">bioSkills</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">331</td><td style="padding:0.6rem 1rem;text-align:right;">52</td><td style="padding:0.6rem 1rem;text-align:right;">425</td></tr>
             <tr style="border-bottom:1px solid var(--border);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/wu-yc/LabClaw" target="_blank" style="color:var(--accent2);">LabClaw</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">317</td><td style="padding:0.6rem 1rem;text-align:right;">54</td><td style="padding:0.6rem 1rem;text-align:right;">211</td></tr>
@@ -300,6 +300,13 @@
       <div class="section-label">Recent Updates</div>
       <div class="section-title">Latest from the community</div>
       <div style="display:grid;gap:0.75rem;max-width:700px;">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
+          <span style="font-size:1.5rem;flex-shrink:0;">📦</span>
+          <div>
+            <div style="font-weight:600;font-size:0.95rem;">Proteomics-DE: RO-Crate provenance metadata (W3C JSON-LD standard for reproducible research objects) and shared reproducibility helper migration. Every proteomics analysis will generate a machine-readable Research Object Crate alongside the standard reproducibility bundle. Contributed by Cam Lloyd (@camlloyd). <span style="color:var(--accent2);font-size:0.88rem;">Under review.</span></div>
+            <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.15rem;">PR #246 · open · 11 May 2026</div>
+          </div>
+        </div>
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
           <span style="font-size:1.5rem;flex-shrink:0;">🔧</span>
           <div>
@@ -322,6 +329,13 @@
           </div>
         </div>
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
+          <span style="font-size:1.5rem;flex-shrink:0;">🔁</span>
+          <div>
+            <div style="font-weight:600;font-size:0.95rem;">Reproducibility module: W3C RO-Crate provenance metadata is now built into the shared reproducibility helper. Every skill that calls <code style="background:var(--bg3);padding:0.1rem 0.3rem;border-radius:3px;font-size:0.82rem;">write_ro_crate()</code> generates a machine-readable Research Object Crate (JSON-LD) alongside the standard <code style="background:var(--bg3);padding:0.1rem 0.3rem;border-radius:3px;font-size:0.82rem;">commands.sh</code> and <code style="background:var(--bg3);padding:0.1rem 0.3rem;border-radius:3px;font-size:0.82rem;">checksums.sha256</code>.</div>
+            <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.15rem;">PR #112 · 8 May 2026</div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
           <span style="font-size:1.5rem;flex-shrink:0;">🤖</span>
           <div>
             <div style="font-weight:600;font-size:0.95rem;">CI benchmark automation: the public leaderboard now self-updates. A GitHub Actions workflow runs <code style="background:var(--bg3);padding:0.1rem 0.3rem;border-radius:3px;font-size:0.82rem;">clawbio_bench --smoke</code> weekly and opens a PR with the updated scores. Fine-mapping is now included at 19/20 (95.0%). Total: <a href="/benchmarks.html" style="color:var(--accent2);">168 / 182 passing (92.3%)</a>.</div>
@@ -338,7 +352,7 @@
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
           <span style="font-size:1.5rem;flex-shrink:0;">🔁</span>
           <div>
-            <div style="font-weight:600;font-size:0.95rem;">Portable reproducibility bundles: every skill now writes a <code style="background:var(--bg3);padding:0.1rem 0.3rem;border-radius:3px;font-size:0.82rem;">commands.sh</code> with portable paths, anchor-relative replay, and non-deterministic output exclusions. Anyone can rerun an analysis without the agent and verify the result.</div>
+            <div style="font-weight:600;font-size:0.95rem;">Portable reproducibility bundles: skills that use the shared helpers now write a <code style="background:var(--bg3);padding:0.1rem 0.3rem;border-radius:3px;font-size:0.82rem;">commands.sh</code> with anchor-relative replay and path handling to reduce checkout friction. Replays still depend on the skill, the local toolchain, and the required inputs being available.</div>
             <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.15rem;">PR #146 · 3 May 2026</div>
           </div>
         </div>

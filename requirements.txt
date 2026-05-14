@@ -1,4 +1,5 @@
 conda-lock>=2.0
+pyyaml>=6.0
 biopython>=1.82
 pandas>=2.0
 numpy>=1.24

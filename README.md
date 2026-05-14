@@ -9,7 +9,7 @@
   <a href="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml"><img src="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="#quick-start"><img src="https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=white" alt="Python 3.10+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
-  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-63_skills-orange" alt="ClawHub Skills"></a>
+  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-64_skills-orange" alt="ClawHub Skills"></a>
   <a href="https://doi.org/10.5281/zenodo.19420648"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.19420648.svg" alt="DOI"></a>
   <a href="https://github.com/ClawBio/ClawBio/issues"><img src="https://img.shields.io/github/issues/ClawBio/ClawBio" alt="Open Issues"></a>
   <a href="https://clawbio.github.io/ClawBio/slides/"><img src="https://img.shields.io/badge/slides-London_Bioinformatics_Meetup-purple" alt="Slides"></a>
@@ -47,7 +47,7 @@ Or install as a [Claude Code](https://claude.ai/claude-code) plugin: `/plugin ma
 
 ## What ClawBio Does Today
 
-**63 skills + 8,000 Galaxy tools + 1,756 tests + benchmark validation. Local-first. No cloud. No guessing.**
+**64 skills + 8,000 Galaxy tools + 1,756 tests + benchmark validation. Local-first. No cloud. No guessing.**
 
 > **v0.5.0 released** (4 Apr 2026): Validation and Benchmark Infrastructure. AD ground truth benchmark, mock API server for offline testing, swappable fine-mapping pipeline (SuSiE vs ABF), 74 benchmark tests, red/green TDD mandate. [Release notes](https://github.com/ClawBio/ClawBio/releases/tag/v0.5.0). DOI: [10.5281/zenodo.19420648](https://doi.org/10.5281/zenodo.19420648).
 
@@ -62,7 +62,7 @@ Snap a photo of a medication in Telegram. ClawBio identifies the drug from the p
 
 Or take any genetic variant (identified by its rsID — a unique label like [rs9923231](https://www.ncbi.nlm.nih.gov/snp/rs9923231)) and search nine genomic databases at once to find every known disease association, tissue-specific effect, and population frequency. Or estimate your genetic predisposition to conditions like type 2 diabetes by combining thousands of small-effect variants into a single polygenic risk score. Or explore the [UK Biobank](https://www.ukbiobank.ac.uk/) — a half-million-person research dataset — by asking in plain English what fields measure blood pressure, grip strength, or depression, and get back the exact field IDs, descriptions, and linked publications you need.
 
-Every result ships with a reproducibility bundle: `commands.sh`, `environment.yml`, and SHA-256 checksums. A reviewer can reproduce your Figure 3 in 30 seconds without emailing you.
+Many ClawBio analyses write a `reproducibility/` bundle with replay commands, environment metadata, and output checksums. The exact files can vary by skill, and some replays still require the original external inputs to be present. See [docs/reproducibility.md](docs/reproducibility.md).
 
 ---
 
@@ -118,11 +118,11 @@ You read a paper. You want to reproduce Figure 3. So you:
 Now imagine the same paper published a **skill**:
 
 ```bash
-python ancestry_pca.py --demo --output fig3
-# Figure 3 reproduced. Identical. SHA-256 verified. 30 seconds.
+python skills/claw-ancestry-pca/ancestry_pca.py --demo --output fig3
+# Example demo output regenerated. Verify bundled checksums where provided.
 ```
 
-**That's ClawBio.** Every figure in your paper should be one command away from reproduction.
+**That's ClawBio.** The goal is to make replayable bioinformatics workflows straightforward when a skill ships demo data and helper-backed reproducibility outputs.
 
 ---
 
@@ -130,7 +130,7 @@ python ancestry_pca.py --demo --output fig3
 
 Current agentic bioinformatics systems address either the **reasoning layer** (constraining LLM outputs with knowledge graphs or fine-tuning) or the **connectivity layer** (wrapping tools as MCP servers). Neither addresses the **specification layer**: the encoding of a domain expert's analytical decisions into a machine-readable contract that constrains agent behaviour. Without this layer, the agent must reconstruct expert knowledge from its training distribution, a stochastic, unversioned process.
 
-A **skill** is a self-contained directory comprising a declarative specification (`SKILL.md`), validated Python code, demo data, and a reproducibility bundle (`commands.sh`, `environment.yml`, SHA-256 checksums). The specification is a contract, not a prompt: it encodes the domain expert's analytical decisions so the LLM orchestrates but does not improvise.
+A **skill** is a self-contained directory comprising a declarative specification (`SKILL.md`), validated Python code, demo data, and reproducibility support. In many skills, that includes a `reproducibility/` bundle with `commands.sh`, `environment.yml`, and SHA-256 checksums, sometimes with extra lock metadata such as `runtime-lock.json`. The specification is a contract, not a prompt: it encodes the domain expert's analytical decisions so the LLM orchestrates but does not improvise.
 
 ```
 Ad-hoc LLM code generation  = stochastic, unversioned, unverifiable
@@ -140,7 +140,7 @@ ClawBio skill                = specification-constrained, versioned, reproducibl
 - **Specification-first**: Domain expertise resides in `SKILL.md`, not in model weights. Specifications are versioned, human-readable, peer-reviewable, and trivially updatable.
 - **Agent-agnostic**: Skills execute identically whether invoked by Claude, ChatGPT, or a locally hosted model via Ollama. Reproducibility is decoupled from any specific AI vendor.
 - **Local-first**: Your genomic data never leaves your laptop. No cloud uploads, no data exfiltration.
-- **Reproducible**: Every analysis exports `commands.sh`, `environment.yml`, and SHA-256 checksums. Anyone can reproduce it without the agent.
+- **Reproducible**: Many skills export replay metadata such as `commands.sh`, `environment.yml`, and SHA-256 checksums so runs can be rechecked without the original agent session.
 - **MIT licensed**: Open-source, free, community-driven.
 
 ## Why Not Just Use an LLM?
@@ -153,25 +153,27 @@ An LLM should not be improvising these from training data. ClawBio encodes the c
 
 ## Provenance and Reproducibility
 
-Every ClawBio analysis ships with a **reproducibility bundle** — not as an afterthought, but as part of the output:
+ClawBio's current reproducibility contract centers on a **`reproducibility/` bundle** written inside the output directory for skills that use the shared reproducibility helpers:
 
 ```
 report/
 ├── report.md              # Full analysis with figures and tables
 ├── figures/               # Publication-quality PNGs
 ├── tables/                # CSV data tables
-├── commands.sh            # Exact commands to reproduce
-├── environment.yml        # Conda environment snapshot
-└── checksums.sha256       # SHA-256 of every input and output file
+├── reproducibility/
+│   ├── commands.sh        # Replay command for this run
+│   ├── environment.yml    # Suggested Conda environment snapshot
+│   ├── checksums.sha256   # SHA-256 for selected output files
+│   └── runtime-lock.json  # Optional extra lock metadata when supported
 ```
 
-**Why this matters**: a reviewer can re-run your analysis in 30 seconds. A collaborator can reproduce your Figure 3 without emailing you. Future-you can regenerate results two years later from the same bundle.
+The exact contents can vary by skill, and some replays also require the original external inputs or tools to be available locally. For a user-facing walkthrough, including a truthful `multiqc-reporter` example based on direct script invocation, see [docs/reproducibility.md](docs/reproducibility.md).
 
 ---
 
 ## Featured Skills
 
-A curated cross-section of ClawBio's 63 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
+A curated cross-section of ClawBio's 64 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
 
 | Skill | Scale | Description |
 |-------|-------|-------------|
@@ -186,6 +188,7 @@ A curated cross-section of ClawBio's 63 skills. The full machine-readable catalo
 | [Galaxy Bridge](skills/galaxy-bridge/) | Research | Search, run, and chain 8,000+ Galaxy bioinformatics tools |
 | [Variant Annotation](skills/variant-annotation/) | Clinical | Annotate VCF variants with Ensembl VEP REST, ClinVar significance, gnomAD frequencies |
 | [Clinical Variant Reporter](skills/clinical-variant-reporter/) | Clinical | ACMG-guided clinical variant classification from VCF with GiAB validation |
+| [nf-core scRNA Wrapper](skills/nfcore-scrnaseq-wrapper/) | Single-cell | Upstream FASTQ → h5ad preprocessing via nf-core/scrnaseq (simpleaf, STARsolo, kallisto, CellRanger) with strict preflight and reproducibility bundle |
 | [scRNA Orchestrator](skills/scrna-orchestrator/) | Single-cell | Scanpy automation: QC, optional doublet detection, clustering, markers, annotation |
 | [Equity Scorer](skills/equity-scorer/) | Systemic | HEIM diversity metrics from VCF or ancestry CSV |
 | [DnaSP](skills/dnasp/) | Population *(community)* | Python reimplementation of DnaSP 6: 16 population-genetics analyses (Pi, Tajima's D, Fst, Ka/Ks, McDonald-Kreitman) |
