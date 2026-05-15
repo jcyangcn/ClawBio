@@ -108,6 +108,10 @@ def write_portable_commands_sh(
         'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"',
         'OUTPUT_DIR="$(dirname "$SCRIPT_DIR")"',
         f': "${{CLAWBIO_ROOT:={default_root}}}"',
+        'if [ ! -d "$CLAWBIO_ROOT" ]; then',
+        '  echo "Invalid CLAWBIO_ROOT: $CLAWBIO_ROOT" >&2',
+        "  exit 1",
+        "fi",
         "",
     ]
     if command.preflight:
