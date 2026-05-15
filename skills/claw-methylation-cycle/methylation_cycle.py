@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """
-ClawBio · claw-methylation-cycle v0.1.2
+ClawBio · claw-methylation-cycle v0.1.3
 Methylation cycle analysis with BH4/neurotransmitter axis interpretation.
 
 Author: Samuel Carmona Aguirre <samuel@unimed-consulting.es>
-Framework: Holomedicina® · CAPS Digital · UNIMED Consulting
 License: MIT
 
 Research and educational use only (RUO). Not a diagnostic device.
 Consult a qualified clinician before modifying supplementation or treatment.
+
+Conflict of Interest: The author develops clinical genomics workflows that may
+use this tool as a component. This skill operates as a standalone open-source
+genotype reporting tool; clinical integration decisions rest with the end user.
 """
 
 import argparse
@@ -347,8 +350,8 @@ def analyse(genotypes: dict[str, str]) -> dict:
 
     return {
         "metadata": {
-            "tool": "claw-methylation-cycle v0.1.2",
-            "framework": "Holomedicina(R) CAPS Digital UNIMED Consulting",
+            "tool": "claw-methylation-cycle v0.1.3",
+            "author": "Samuel Carmona Aguirre <samuel@unimed-consulting.es>",
             "generated_utc": datetime.now(timezone.utc).isoformat(),
             "snps_in_panel": len(PANEL),
             "snps_found": len(found_rsids),
@@ -456,7 +459,7 @@ def generate_report(result: dict) -> str:
         "",
         f"**Date**: {m['generated_utc']}",
         f"**Tool**: {m['tool']}",
-        f"**Framework**: {m['framework']}",
+        f"**Author**: {m['author']}",
         f"**SNPs assessed**: {m['snps_found']}/{m['snps_in_panel']}",
         "",
         f"> {DISCLAIMER}",
@@ -537,7 +540,8 @@ def generate_report(result: dict) -> str:
             "Both MTHFR variants are present simultaneously. This combination reduces",
             "total MTHFR enzymatic activity more than either variant alone.",
             "It is the most clinically significant single-gene methylation finding.",
-            "Active folate (5-MTHF) supplementation is strongly indicated.",
+            "Literature reports active folate (5-MTHF) as preferred over synthetic folic acid",
+            "for this genotype; clinician assessment required.",
             "source: doi:10.1086/301927 (van der Put et al., Am J Hum Genet 1998)",
             "",
         ]
@@ -639,8 +643,9 @@ def _build_recommendations(summary: dict, genes: dict) -> list[str]:
     if bh4 < 65:
         recs.append(
             f"- **Genotype finding** -- BH4 capacity estimated at {bh4}% of normal. "
-            "Riboflavin (B2, 200-400 mg/day) is reported in the literature as an MTHFR cofactor "
-            "supporting BH4 regeneration. Vitamin C (500 mg/day) maintains BH4 in its reduced (active) form. "
+            "Riboflavin (B2) is reported in the literature as an MTHFR cofactor "
+            "supporting BH4 regeneration. Vitamin C is reported to maintain BH4 in its reduced (active) form. "
+            "Dosing and indication require clinician assessment. "
             "Ref: McNulty H et al. (2017) Am J Clin Nutr 106(1):128-36."
         )
     if bh4 < 40:
@@ -662,8 +667,8 @@ def _build_recommendations(summary: dict, genes: dict) -> list[str]:
     if bhmt_act <= 60:
         recs.append(
             "- **Genotype finding** -- BHMT R239Q variant with reduced activity. Literature reports "
-            "betaine (TMG, 500-1000 mg/day) and choline-rich foods (eggs, liver) as alternative "
-            "methyl donors for this pathway. "
+            "betaine (trimethylglycine) and choline-rich foods (eggs, liver) as alternative "
+            "methyl donors for this pathway. Dosing and indication require clinician assessment. "
             "Ref: Slow S et al. (2004) Clin Chim Acta 340(1-2):57-67."
         )
     if not recs:
@@ -679,7 +684,7 @@ def _build_recommendations(summary: dict, genes: dict) -> list[str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="ClawBio claw-methylation-cycle - Methylation cycle analysis with BH4 axis"
+        description="ClawBio claw-methylation-cycle v0.1.3 - Methylation cycle analysis with BH4 axis"
     )
     parser.add_argument(
         "--input", required=True, type=Path,
