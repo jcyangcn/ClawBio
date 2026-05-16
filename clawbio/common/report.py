@@ -40,7 +40,7 @@ def write_audit_log(
 def generate_report_header(
     title: str,
     skill_name: str,
-    skill_version: str,
+    skill_version: str = "",
     input_files: list[Path] | None = None,
     extra_metadata: dict[str, str] | None = None,
 ) -> str:
