@@ -141,7 +141,6 @@ def test_tool_call_captures_exit_code_on_failure(tmp_path):
     assert "exit_code" in cli
 
 
-
 @pytest.mark.skipif(sys.platform != "darwin", reason="chflags is macOS-only")
 def test_uappend_flag_prevents_truncation(tmp_path):
     log = tmp_path / "audit.jsonl"
