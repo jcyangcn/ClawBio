@@ -70,7 +70,6 @@ def generate_report_header(
         f"**Skill**: {skill_name}",
         f"**Version**: {skill_version}",
     ]
-    lines.append(f"**Version**: {skill_version}")
     if extra_metadata:
         for key, val in extra_metadata.items():
             lines.append(f"**{key}**: {val}")

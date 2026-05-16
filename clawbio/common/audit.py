@@ -91,7 +91,12 @@ def skill_run(
     output_dir: str = "",
     log_path: Path | str = _DEFAULT_LOG,
 ):
-    """Root trace for a skill invocation. Yields the span_id (16-char hex)."""
+    """Root trace for a skill invocation. Yields the span_id (16-char hex).
+
+    PII warning: ``input_file``, ``output_dir``, and any future kwargs are written
+    to ``~/.clawbio/audit.jsonl``. Callers must scrub patient identifiers (VCF
+    paths, sample IDs, free-text fields) before passing them here.
+    """
     provider = TracerProvider()
     provider.add_span_processor(SimpleSpanProcessor(_JsonlExporter(Path(log_path))))
     tracer = provider.get_tracer("clawbio")
@@ -125,6 +130,10 @@ def tool_call(
 
     Span name: ``execute_tool {name}``
     Pass cmd to run a subprocess and capture its exit code automatically.
+
+    PII warning: ``cmd`` tokens and ``**attrs`` are written verbatim to the audit
+    log. Callers must scrub file paths, sample IDs, and any patient-identifiable
+    values before passing them here.
     """
     tracer = _otel_context.get_value(_TRACER_KEY)
     if tracer is None:
