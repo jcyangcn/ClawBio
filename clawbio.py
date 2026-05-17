@@ -717,6 +717,13 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "sample-qc": {
+        "script": SKILLS_DIR / "sample-qc-forensics" / "sample_qc_forensics.py",
+        "demo_args": ["--demo"],
+        "description": "Sample QC forensics (identity, sex, contamination, batch-shift outlier triage)",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
     "fastreer": {
         "script": SKILLS_DIR / "fastreer" / "fastreer.py",
         "demo_args": ["--demo"],
