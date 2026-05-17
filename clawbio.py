@@ -717,6 +717,13 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "spatial-map": {
+        "script": SKILLS_DIR / "spatial-transcriptomics-mapper" / "spatial_transcriptomics_mapper.py",
+        "demo_args": ["--demo"],
+        "description": "Spatial transcriptomics mapper (marker-based spot regions + SVG map)",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
     "fastreer": {
         "script": SKILLS_DIR / "fastreer" / "fastreer.py",
         "demo_args": ["--demo"],

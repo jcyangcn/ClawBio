@@ -210,6 +210,7 @@ FOLDER_TO_ALIAS = {
     "nfcore-scrnaseq-wrapper": "scrnaseq-pipeline",
     "rnaseq-de": "rnaseq",
     "diff-visualizer": "diffviz",
+    "spatial-transcriptomics-mapper": "spatial-map",
     "llm-biobank-bench": "llm-bench",
 }
 
@@ -225,6 +226,7 @@ MVP_FOLDERS = {
     "profile-report", "bio-orchestrator", "claw-ancestry-pca", "claw-semantic-sim",
     "ukb-navigator", "galaxy-bridge", "rnaseq-de", "diff-visualizer",
     "bioconductor-bridge",
+    "spatial-transcriptomics-mapper",
     "llm-biobank-bench",
     "analyze-fasta",
 }
@@ -254,6 +256,7 @@ TRIGGER_KEYWORDS: dict[str, list[str]] = {
     "llm-biobank-bench": ["llm benchmark", "benchmark language models", "biobank knowledge retrieval", "coverage score", "weighted coverage", "model comparison biobank"],
     "galaxy-bridge": ["galaxy", "usegalaxy", "tool shed", "bioblend", "run on galaxy", "galaxy tool", "galaxy workflow", "NGS pipeline"],
     "bioconductor-bridge": ["bioconductor", "bioc", "biocmanager", "summarizedexperiment", "singlecellexperiment", "genomicranges", "variantannotation", "annotationhub", "experimenthub"],
+    "spatial-transcriptomics-mapper": ["spatial transcriptomics", "map spatial spots", "marker-based tissue regions", "tumor core", "immune edge"],
     "analyze-fasta": ["fasta", "analyze fasta", "gc content", "find orfs", "isoelectric point", "gravy index", "protein properties"],
 }
 
@@ -282,6 +285,7 @@ CHAINING: dict[str, list[str]] = {
     "llm-biobank-bench": ["ukb-navigator", "pubmed-summariser", "lit-synthesizer"],
     "galaxy-bridge": ["pharmgx-reporter", "claw-metagenomics", "equity-scorer", "vcf-annotator"],
     "bioconductor-bridge": ["rnaseq-de", "scrna-orchestrator", "diff-visualizer", "bio-orchestrator"],
+    "spatial-transcriptomics-mapper": ["scrna-orchestrator", "diff-visualizer"],
     "analyze-fasta": ["struct-predictor", "variant-annotation", "pubmed-summariser"],
 }
 
