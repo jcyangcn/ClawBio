@@ -717,6 +717,13 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "crispr-prioritize": {
+        "script": SKILLS_DIR / "crispr-screen-prioritizer" / "crispr_screen_prioritizer.py",
+        "demo_args": ["--demo"],
+        "description": "CRISPR screen prioritizer (deterministic guide-level hit ranking)",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
     "fastreer": {
         "script": SKILLS_DIR / "fastreer" / "fastreer.py",
         "demo_args": ["--demo"],
