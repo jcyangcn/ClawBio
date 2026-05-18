@@ -51,6 +51,7 @@ for _p in (
     _SKILLS_ROOT / "eqtl-catalogue-region-fetch",
     _SKILLS_ROOT / "gwas-catalogue-region-fetch",
     _SKILLS_ROOT / "ld-1000g-region-compute",
+    _SKILLS_ROOT / "ukb-ppp-region-fetch",
 ):
     if _p.exists() and str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
@@ -70,6 +71,11 @@ from ld_1000g_region_compute import (
     LDComputeError,
     Plink2LDClient,
     SuperPop,
+)
+from ukb_ppp_region_fetch import (
+    RegionResult as UKBPPPRegionResult,
+    UKBPPPAccessError,
+    UKBPPPClient,
 )
 from regional_plot import (
     GeneTrackEntry,
@@ -93,15 +99,48 @@ from skills.decision.target_validation.renderers import (
 )
 
 
+# Exposure kind dispatch (v1.3). The eQTL Catalogue fetcher serves
+# eQTL + sQTL + sceQTL via the same code path; UKB-PPP serves pQTL.
+# Unknown prefixes raise Tier2NotAvailable so the caller falls back to
+# Tier-1 (credible-set-only) with the documented caption flag.
+EXPOSURE_KIND_EQTL_CATALOGUE = "eqtl_catalogue"
+EXPOSURE_KIND_UKB_PPP = "ukb_ppp"
+
+
+def is_pqtl_study_id(ot_study_id: str) -> bool:
+    """Return True iff an OT QTL studyId references a UKB-PPP pQTL study.
+
+    UKB-PPP pQTL studyIds follow the `UKB_PPP_<ancestry>_<protein>` pattern.
+    The prefix match is case-insensitive against the canonical OT export.
+    """
+    return ot_study_id.upper().startswith("UKB_PPP_")
+
+
+def dispatch_exposure_kind(ot_study_id: str) -> str:
+    """Map an OT QTL studyId to the exposure-fetcher kind.
+
+    Returns one of EXPOSURE_KIND_EQTL_CATALOGUE or EXPOSURE_KIND_UKB_PPP.
+    The default is eQTL Catalogue because that fetcher serves all four
+    eQTL-Catalogue-hosted quant methods (ge / exon / tx / txrev /
+    leafcutter) plus the sceQTL studies in v7+.
+    """
+    if is_pqtl_study_id(ot_study_id):
+        return EXPOSURE_KIND_UKB_PPP
+    return EXPOSURE_KIND_EQTL_CATALOGUE
+
+
 @dataclass
 class StudyIdMapping:
     """Per-row resolution of OT studyIds to upstream-source ids.
 
     The OT studyId of the QTL credible set (e.g.
     `quach_2016_ge_monocyte_iav_ensg00000115808`) maps to an eQTL Catalogue
-    `dataset_id` (e.g. `QTD000110`). The OT outcome studyId (e.g.
-    `FINNGEN_R12_I9_HEARTFAIL`) maps to a GWAS Catalog `accession` (e.g.
-    `GCST90475990`).
+    `dataset_id` (e.g. `QTD000110`). For UKB-PPP pQTL rows the studyId
+    encodes the protein + ancestry (e.g. `UKB_PPP_EUR_SORT1`); the mapping
+    additionally captures the canonical HGNC protein label + ancestry code
+    for the fetcher's name -> Synapse-fileID resolver. The OT outcome
+    studyId (e.g. `FINNGEN_R12_I9_HEARTFAIL`) maps to a GWAS Catalog
+    `accession` (e.g. `GCST90475990`).
 
     The canonical mapping table is auto-resolvable for most rows; manual
     lookup is acceptable as a starting point. This dataclass is the row-
@@ -111,12 +150,22 @@ class StudyIdMapping:
     `outcome_trait_label` is human-readable text for the panel title (e.g.
     "hypertrophic cardiomyopathy"). The exposure side's tissue / condition /
     quant labels come from the eQTL Catalogue dataset metadata at fetch time
-    so they don't need to be repeated in the YAML lookup.
+    so they don't need to be repeated in the YAML lookup. For pQTL rows
+    the Olink panel + ancestry-label are read from UKB-PPP at fetch time
+    too; only protein_label + ancestry are needed in the YAML.
+
+    Per v1.3 dispatch, exactly one of `eqtl_catalogue_dataset_id` or
+    (`ukb_ppp_protein_label`, `ukb_ppp_ancestry`) must be populated for
+    the row to resolve. The contract is validated at fetch time, not at
+    dataclass construction, so YAML round-trips don't break for in-
+    progress rows.
     """
     ot_left_study_id: str
-    eqtl_catalogue_dataset_id: str
     ot_right_study_id: str
     gwas_catalog_accession: str
+    eqtl_catalogue_dataset_id: str = ""
+    ukb_ppp_protein_label: str = ""
+    ukb_ppp_ancestry: str = ""
     ancestry_left: str = "EUR"
     ancestry_right: str = "EUR"
     outcome_trait_label: str = ""
@@ -148,6 +197,12 @@ class LocusCompareSpec:
     fine-mapping chain, raw user-supplied harmonised TSVs) or by the OT-shim
     wrapper `render_tier2_for_lead` which translates a `StudyIdMapping` into
     this generic spec.
+
+    `exposure_kind` selects the fetcher backend: EXPOSURE_KIND_EQTL_CATALOGUE
+    consumes `eqtl_dataset_id` + `molecular_trait_id`; EXPOSURE_KIND_UKB_PPP
+    consumes `pqtl_protein_label` + `pqtl_ancestry`. Adding a new molQTL
+    backend means adding a new EXPOSURE_KIND_* + the corresponding fields
+    here + the dispatch branch in `_render_for_spec`.
     """
     lead_variant_id: str
     chromosome: str
@@ -158,6 +213,10 @@ class LocusCompareSpec:
     molecular_trait_id: str | None
 
     gwas_accession: str
+
+    exposure_kind: str = EXPOSURE_KIND_EQTL_CATALOGUE
+    pqtl_protein_label: str = ""
+    pqtl_ancestry: str = ""
 
     exposure_gene_symbol: str = ""
     outcome_trait_label: str = ""
@@ -189,11 +248,12 @@ def render_locuscompare_for_lead(
     gwas_client: GWASCatalogClient,
     ld_client: Plink2LDClient | None,
     out_path: Path,
+    ukb_ppp_client: UKBPPPClient | None = None,
 ) -> Tier2Result:
     """Run the full locuscompare pipeline for one lead variant. Generic, no OT.
 
     Steps:
-    1. Fetch exposure region from eQTL Catalogue.
+    1. Fetch exposure region (eQTL Catalogue or UKB-PPP, per `spec.exposure_kind`).
     2. Fetch outcome region from GWAS Catalog harmonised.
     3. Compute r² between the lead and every harmonised partner via plink2.
     4. Join + harmonise per skills.knowledge.wald_ratio.harmonise_regions_for_locuscompare.
@@ -206,6 +266,7 @@ def render_locuscompare_for_lead(
         gwas_client=gwas_client,
         ld_client=ld_client,
         out_path=out_path,
+        ukb_ppp_client=ukb_ppp_client,
     )
 
 
@@ -226,18 +287,26 @@ def render_tier2_for_lead(
     extra_caveats: list[str] | None = None,
     gencode_gtf_path: Path | None = None,
     gene_biotypes: tuple[str, ...] | None = ("protein_coding",),
+    ukb_ppp_client: UKBPPPClient | None = None,
 ) -> Tier2Result:
     """OT-shim wrapper. Resolves an OT row into a generic LocusCompareSpec
     and delegates to `render_locuscompare_for_lead`.
 
     Existing callers (tier2_cli, tests, downstream orchestrators) continue
     to work unchanged. The OT-specific work is concentrated here:
+    - Dispatch by OT studyId prefix: `UKB_PPP_*` -> UKB-PPP pQTL fetcher;
+      everything else -> eQTL Catalogue fetcher (the existing
+      ge/exon/tx/txrev/leafcutter/sceQTL path).
     - Extract ENSG from OT QTL studyId for the eQTL Cat molecular_trait_id.
     - Trigger the FinnGen ancestry caveat.
     - Format OT-flavored label / provenance strings.
-    """
-    molecular_trait_id = _extract_ensg_from_ot_study_id(study_mapping.ot_left_study_id)
 
+    The dispatched exposure-fetcher must be passed in (`eqtl_client` for
+    eQTL/sQTL/sceQTL rows, `ukb_ppp_client` for pQTL rows). When dispatch
+    selects a backend whose client was not supplied, raises
+    `Tier2NotAvailable` so the caller falls back to Tier-1 with the
+    documented caption flag.
+    """
     runtime_caveats = list(extra_caveats or [])
     if "finngen" in study_mapping.ot_right_study_id.lower():
         runtime_caveats.append(
@@ -245,33 +314,83 @@ def render_tier2_for_lead(
             "Common-variant LD agrees within ~0.05 r² per Locke 2019."
         )
 
-    spec = LocusCompareSpec(
-        lead_variant_id=lead_variant_id,
-        chromosome=chromosome,
-        lead_position_bp=lead_position_bp,
-        window_bp=window_bp,
-        eqtl_dataset_id=study_mapping.eqtl_catalogue_dataset_id,
-        molecular_trait_id=molecular_trait_id,
-        gwas_accession=study_mapping.gwas_catalog_accession,
-        exposure_gene_symbol=study_mapping.exposure_gene_symbol,
-        outcome_trait_label=study_mapping.outcome_trait_label,
-        exposure_id_extra=f" (OT studyId {study_mapping.ot_left_study_id})",
-        outcome_id_extra=f" (OT studyId {study_mapping.ot_right_study_id})",
-        provenance_prefix=f"OT release: {ot_release} | ",
-        release_tag=ot_release,
-        notes=list(study_mapping.notes),
-        super_pop=super_pop,
-        intersected_pip_product=intersected_pip_product,
-        extra_caveats=runtime_caveats,
-        gencode_gtf_path=gencode_gtf_path,
-        gene_biotypes=gene_biotypes,
-    )
+    exposure_kind = dispatch_exposure_kind(study_mapping.ot_left_study_id)
+
+    if exposure_kind == EXPOSURE_KIND_UKB_PPP:
+        if ukb_ppp_client is None:
+            raise Tier2NotAvailable(
+                f"OT studyId {study_mapping.ot_left_study_id!r} is a UKB-PPP "
+                f"pQTL row but no ukb_ppp_client was supplied; fall back to "
+                f"Tier-1 (CS-only) and caption 'UKB-PPP client not "
+                f"configured for this render'."
+            )
+        if not study_mapping.ukb_ppp_protein_label:
+            raise Tier2NotAvailable(
+                f"OT studyId {study_mapping.ot_left_study_id!r} is a UKB-PPP "
+                f"pQTL row but `ukb_ppp_protein_label` is empty in the "
+                f"mapping; fix the YAML row or fall back to Tier-1."
+            )
+        spec = LocusCompareSpec(
+            lead_variant_id=lead_variant_id,
+            chromosome=chromosome,
+            lead_position_bp=lead_position_bp,
+            window_bp=window_bp,
+            # eqtl_dataset_id + molecular_trait_id unused by the pQTL path
+            # but the dataclass requires them; pass safe defaults.
+            eqtl_dataset_id="",
+            molecular_trait_id=None,
+            gwas_accession=study_mapping.gwas_catalog_accession,
+            exposure_kind=EXPOSURE_KIND_UKB_PPP,
+            pqtl_protein_label=study_mapping.ukb_ppp_protein_label,
+            pqtl_ancestry=study_mapping.ukb_ppp_ancestry or "EUR",
+            exposure_gene_symbol=study_mapping.exposure_gene_symbol or
+            study_mapping.ukb_ppp_protein_label,
+            outcome_trait_label=study_mapping.outcome_trait_label,
+            exposure_id_extra=f" (OT studyId {study_mapping.ot_left_study_id})",
+            outcome_id_extra=f" (OT studyId {study_mapping.ot_right_study_id})",
+            provenance_prefix=f"OT release: {ot_release} | ",
+            release_tag=ot_release,
+            notes=list(study_mapping.notes),
+            super_pop=super_pop,
+            intersected_pip_product=intersected_pip_product,
+            extra_caveats=runtime_caveats,
+            gencode_gtf_path=gencode_gtf_path,
+            gene_biotypes=gene_biotypes,
+        )
+    else:
+        molecular_trait_id = _extract_ensg_from_ot_study_id(
+            study_mapping.ot_left_study_id,
+        )
+        spec = LocusCompareSpec(
+            lead_variant_id=lead_variant_id,
+            chromosome=chromosome,
+            lead_position_bp=lead_position_bp,
+            window_bp=window_bp,
+            eqtl_dataset_id=study_mapping.eqtl_catalogue_dataset_id,
+            molecular_trait_id=molecular_trait_id,
+            gwas_accession=study_mapping.gwas_catalog_accession,
+            exposure_kind=EXPOSURE_KIND_EQTL_CATALOGUE,
+            exposure_gene_symbol=study_mapping.exposure_gene_symbol,
+            outcome_trait_label=study_mapping.outcome_trait_label,
+            exposure_id_extra=f" (OT studyId {study_mapping.ot_left_study_id})",
+            outcome_id_extra=f" (OT studyId {study_mapping.ot_right_study_id})",
+            provenance_prefix=f"OT release: {ot_release} | ",
+            release_tag=ot_release,
+            notes=list(study_mapping.notes),
+            super_pop=super_pop,
+            intersected_pip_product=intersected_pip_product,
+            extra_caveats=runtime_caveats,
+            gencode_gtf_path=gencode_gtf_path,
+            gene_biotypes=gene_biotypes,
+        )
+
     return _render_for_spec(
         spec=spec,
         eqtl_client=eqtl_client,
         gwas_client=gwas_client,
         ld_client=ld_client,
         out_path=out_path,
+        ukb_ppp_client=ukb_ppp_client,
     )
 
 
@@ -282,11 +401,13 @@ def _render_for_spec(
     gwas_client: GWASCatalogClient,
     ld_client: Plink2LDClient | None,
     out_path: Path,
+    ukb_ppp_client: UKBPPPClient | None = None,
 ) -> Tier2Result:
     """Core implementation shared by both entry points.
 
     Lifted from the original render_tier2_for_lead body, with all
-    `study_mapping.X` references replaced by `spec.X` reads.
+    `study_mapping.X` references replaced by `spec.X` reads. v1.3 adds
+    a UKB-PPP exposure-fetch branch on `spec.exposure_kind`.
     """
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -311,24 +432,96 @@ def _render_for_spec(
     gwas_accession = spec.gwas_accession
     molecular_trait_id = spec.molecular_trait_id
 
-    # 1. Exposure region (eQTL Catalogue).
-    try:
-        exposure: EQTLRegionResult = eqtl_client.fetch_region(
-            dataset_id=eqtl_dataset_id,
-            chromosome=chromosome.lstrip("chr"),
-            start_bp=start_bp,
-            end_bp=end_bp,
-            molecular_trait_id=molecular_trait_id,
-        )
-    except EQTLCatalogueAPIError as e:
-        raise Tier2NotAvailable(
-            f"eQTL Catalogue cannot resolve dataset {eqtl_dataset_id}: {e!s}"
-        ) from e
-    if exposure.n_variants == 0:
-        raise Tier2NotAvailable(
-            f"eQTL Catalogue returned zero variants for "
-            f"{eqtl_dataset_id} at {chromosome}:{start_bp}-{end_bp}"
-        )
+    # 1. Exposure region. v1.3 dispatch by spec.exposure_kind. The two
+    # backends return shape-compatible RegionResult objects (same
+    # variant fields, equivalent release metadata); downstream join +
+    # render code is agnostic to which produced the rows. `exposure`
+    # plus `exposure_source`, `exposure_source_release`, and
+    # `exposure_study_id` capture all the source-specific metadata that
+    # the manifest block + caption builder consume.
+    pqtl = None
+    if spec.exposure_kind == EXPOSURE_KIND_UKB_PPP:
+        if ukb_ppp_client is None:
+            raise Tier2NotAvailable(
+                "spec.exposure_kind == ukb_ppp but no ukb_ppp_client supplied"
+            )
+        try:
+            pqtl = ukb_ppp_client.fetch_region(
+                protein_label=spec.pqtl_protein_label,
+                ancestry=spec.pqtl_ancestry or "EUR",
+                chromosome=chromosome.lstrip("chr"),
+                start_bp=start_bp,
+                end_bp=end_bp,
+            )
+        except UKBPPPAccessError as e:
+            raise Tier2NotAvailable(
+                f"UKB-PPP cannot resolve {spec.pqtl_protein_label!r} "
+                f"in ancestry {spec.pqtl_ancestry or 'EUR'}: {e!s}"
+            ) from e
+        if pqtl.n_variants == 0:
+            raise Tier2NotAvailable(
+                f"UKB-PPP returned zero variants for "
+                f"{spec.pqtl_protein_label} ({spec.pqtl_ancestry or 'EUR'}) "
+                f"at {chromosome}:{start_bp}-{end_bp}"
+            )
+        exposure_variants = pqtl.variants
+        exposure_source = "ukb_ppp"
+        exposure_source_release = pqtl.release.release_label
+        exposure_study_id = pqtl.release.synapse_id
+        exposure_protein_label = pqtl.release.protein_label
+        exposure_ancestry_code = pqtl.release.ancestry
+        exposure_ancestry_label = pqtl.release.ancestry_label
+        # eQTL Catalogue path leaves these unset; mark for the
+        # _build_short_labels switch.
+        exposure_eqtl_release = None
+    else:
+        try:
+            # Filter on the `gene_id` column, not `molecular_trait_id`.
+            # spec.molecular_trait_id is the parent ENSG (extracted from
+            # the OT studyId). For `ge` / `microarray` the molecular_trait_id
+            # column equals gene_id, so both work; for splicing / exon /
+            # transcript quant methods the molecular_trait_id column is a
+            # cluster / exon / transcript id and would never match the ENSG.
+            # `gene_id` is the portable filter across all quant methods.
+            exposure: EQTLRegionResult = eqtl_client.fetch_region(
+                dataset_id=eqtl_dataset_id,
+                chromosome=chromosome.lstrip("chr"),
+                start_bp=start_bp,
+                end_bp=end_bp,
+                gene_id=molecular_trait_id,
+            )
+        except EQTLCatalogueAPIError as e:
+            raise Tier2NotAvailable(
+                f"eQTL Catalogue cannot resolve dataset {eqtl_dataset_id}: {e!s}"
+            ) from e
+        if exposure.n_variants == 0:
+            raise Tier2NotAvailable(
+                f"eQTL Catalogue returned zero variants for "
+                f"{eqtl_dataset_id} at {chromosome}:{start_bp}-{end_bp}"
+            )
+        exposure_variants = exposure.variants
+        exposure_source = "eqtl_catalogue"
+        exposure_source_release = exposure.release.dataset_release or "v7+"
+        exposure_study_id = eqtl_dataset_id
+        exposure_protein_label = ""
+        exposure_ancestry_code = ""
+        exposure_ancestry_label = ""
+        exposure_eqtl_release = exposure.release
+        # Surface the file-class disclosure for non-ge / non-microarray
+        # exposures. The fetcher uses .cc.tsv.gz (credible-set-filtered
+        # sumstats) for splicing / exon / transcript quant methods because
+        # the eQTL Catalogue does not ship .all.tsv.gz for them. The .cc
+        # file retains the strongest molecular trait per fine-mapped signal
+        # (the same trait used for the upstream coloc), so coloc inference
+        # is preserved, but the rendered window is sparser than a true
+        # nominal-pass run. Let the user see this in the caveats list.
+        _qm = (exposure.release.quant_method or "").lower()
+        if _qm and _qm not in {"ge", "microarray"}:
+            extra_caveats.append(
+                f"sumstats are credible-set-filtered (eQTL Catalogue "
+                f".cc.tsv.gz; quant_method={_qm}); retains the strongest "
+                f"molecular trait per fine-mapped signal"
+            )
 
     # 2. Outcome region (GWAS Catalog harmonised).
     try:
@@ -354,7 +547,7 @@ def _render_for_spec(
     panel_id = "none"
     panel_version = ""
     if ld_client is not None:
-        partner_ids = [v.variant_id for v in exposure.variants if v.variant_id != lead_variant_id]
+        partner_ids = [v.variant_id for v in exposure_variants if v.variant_id != lead_variant_id]
         try:
             ld = ld_client.r2_with_lead(
                 lead=lead_variant_id,
@@ -377,14 +570,14 @@ def _render_for_spec(
 
     # 4. Harmonise + join.
     pairs = harmonise_regions_for_locuscompare(
-        exposure_variants=exposure.variants,
+        exposure_variants=exposure_variants,
         outcome_variants=outcome.variants,
         r2_by_variant=r2_by_variant,
         lead_variant_id=lead_variant_id,
     )
     if not pairs:
         raise Tier2NotAvailable(
-            f"no joinable variants between exposure {eqtl_dataset_id} "
+            f"no joinable variants between exposure {exposure_study_id} "
             f"and outcome {gwas_accession} at "
             f"{chromosome}:{start_bp}-{end_bp}"
         )
@@ -400,12 +593,15 @@ def _render_for_spec(
     # Convert the raw exposure / outcome region rows to wald_ratio LocusVariant
     # so the renderer's per-side manhattan tracks can show ALL variants in the
     # source's region (LocusZoom-style "bottom of plot fills the window"),
-    # not just the joined intersection.
-    exposure_track = [_eqtl_to_locus_variant(v) for v in exposure.variants]
+    # not just the joined intersection. The eQTL Catalogue and UKB-PPP
+    # RegionVariant shapes are field-compatible.
+    exposure_track = [_eqtl_to_locus_variant(v) for v in exposure_variants]
     outcome_track = [_gwas_to_locus_variant(v) for v in outcome.variants]
 
     exposure_short_label, outcome_short_label = _build_short_labels_from_spec(
-        spec, exposure.release,
+        spec,
+        exposure_release=exposure_eqtl_release,
+        pqtl_release=pqtl.release if spec.exposure_kind == EXPOSURE_KIND_UKB_PPP else None,
     )
 
     # Gene track. Three sources, in priority order:
@@ -440,6 +636,19 @@ def _render_for_spec(
         notes.append("no gene track source supplied")
         extra_caveats.append("gene track unavailable (no source supplied)")
 
+    if spec.exposure_kind == EXPOSURE_KIND_UKB_PPP:
+        exposure_label_long = (
+            f"UKB-PPP pQTL ({exposure_source_release}); "
+            f"protein {exposure_protein_label}; "
+            f"ancestry {exposure_ancestry_label} ({exposure_ancestry_code})"
+            f"{spec.exposure_id_extra}"
+        )
+    else:
+        exposure_label_long = (
+            f"eQTL Catalogue {exposure_source_release}; "
+            f"study {exposure_study_id}{spec.exposure_id_extra}"
+        )
+
     inp = RegionalLocusCompareInput(
         pairs=pairs,
         lead_variant_id=lead_variant_id,
@@ -451,10 +660,7 @@ def _render_for_spec(
             else "no LD reference (plot rendered without LD coloring)"
         ),
         window_label=f"+/-{window_bp // 1000} kb of lead {lead_variant_id}{pip_label}",
-        exposure_label=(
-            f"eQTL Catalogue {exposure.release.dataset_release or 'v7+'}; "
-            f"study {eqtl_dataset_id}{spec.exposure_id_extra}"
-        ),
+        exposure_label=exposure_label_long,
         outcome_label=(
             f"GWAS Catalog harmonised; study {gwas_accession}{spec.outcome_id_extra}"
         ),
@@ -469,17 +675,24 @@ def _render_for_spec(
     )
     render_full_locuscompare(inp, out_path)
 
-    # 6. Manifest block.
+    # 6. Manifest block. v1.3 adds three optional fields for pQTL renders
+    # (exposure_protein_label, exposure_ancestry, exposure_ancestry_label)
+    # so the caption builder + downstream tooling can distinguish a
+    # `(plasma sortilin, EUR)` render from a `(GTEx liver, EUR)` render
+    # purely from the manifest, without re-resolving the study ID.
     block = build_regional_locuscompare_block(
         ot_release=spec.release_tag,
-        exposure_source="eqtl_catalogue",
-        exposure_source_release=exposure.release.dataset_release or "v7+",
-        exposure_study_id=eqtl_dataset_id,
-        exposure_harmonisation_version="",  # eQTL Catalogue does not surface this
+        exposure_source=exposure_source,
+        exposure_source_release=exposure_source_release,
+        exposure_study_id=exposure_study_id,
+        exposure_protein_label=exposure_protein_label,
+        exposure_ancestry=exposure_ancestry_code,
+        exposure_ancestry_label=exposure_ancestry_label,
+        exposure_harmonisation_version="",  # neither source surfaces this
         outcome_source="gwas_catalog_harmonised",
         outcome_source_release=outcome.release.fetched_at_utc.split("T")[0],
         outcome_study_id=gwas_accession,
-        outcome_harmonisation_version="",  # GWAS Catalog harmoniser version not surfaced via tabix
+        outcome_harmonisation_version="",
         ld_panel=panel_id,
         ld_panel_super_pop=super_pop.value,
         ld_panel_version=panel_version,
@@ -506,14 +719,20 @@ def _render_for_spec(
 
 def _build_short_labels_from_spec(
     spec: LocusCompareSpec,
-    exposure_release,
+    *,
+    exposure_release=None,
+    pqtl_release=None,
 ) -> tuple[str, str]:
     """Construct front-and-center one-line panel titles for the manhattans.
 
-    Generic (spec-based). Mirrors the legacy `_build_short_labels` but reads
-    label inputs from a `LocusCompareSpec` instead of a `StudyIdMapping`.
+    Branches by `spec.exposure_kind`:
+    - eqtl_catalogue: reads study_label / sample_group / quant_method from
+      the eQTL Catalogue release dataclass (existing behavior).
+    - ukb_ppp: reads protein_label / ancestry_label from the UKB-PPP
+      release dataclass; surfaces the protein + ancestry + sample size
+      for the pQTL render's panel title.
     """
-    # Outcome side.
+    # Outcome side (shared).
     if spec.outcome_trait_label:
         outcome_short = (
             f"Outcome (GWAS): {spec.outcome_trait_label} "
@@ -523,7 +742,34 @@ def _build_short_labels_from_spec(
         outcome_short = f"Outcome (GWAS): {spec.gwas_accession}"
 
     # Exposure side.
-    bits: list[str] = []
+    if spec.exposure_kind == EXPOSURE_KIND_UKB_PPP and pqtl_release is not None:
+        bits: list[str] = []
+        if pqtl_release.protein_hgnc:
+            bits.append(pqtl_release.protein_hgnc)
+        bits.append("UKB-PPP")
+        if pqtl_release.olink_panel:
+            bits.append(f"Olink {pqtl_release.olink_panel}")
+        if pqtl_release.ancestry_label:
+            n_label = (
+                f"; N = {pqtl_release.n_samples:,}"
+                if pqtl_release.n_samples else ""
+            )
+            bits.append(f"{pqtl_release.ancestry_label}{n_label}")
+        descriptor = " | ".join(bits) if bits else pqtl_release.protein_label
+        exposure_short = (
+            f"Exposure (pQTL): {descriptor} "
+            f"({pqtl_release.olink_reagent_id})"
+        )
+        return exposure_short, outcome_short
+
+    # eQTL Catalogue path (default).
+    if exposure_release is None:
+        # Should not happen for a well-formed spec; fall back to dataset_id.
+        return (
+            f"Exposure (eQTL): {spec.eqtl_dataset_id}",
+            outcome_short,
+        )
+    bits = []
     if spec.exposure_gene_symbol:
         bits.append(spec.exposure_gene_symbol)
     if exposure_release.study_label:
@@ -545,8 +791,9 @@ def _build_short_labels_from_spec(
 def load_study_id_mappings(yaml_path: Path) -> dict[tuple[str, str], StudyIdMapping]:
     """Read the manual lookup table (YAML).
 
-    Schema:
+    Schema (v1.3, polymorphic by exposure kind):
       mappings:
+        # eQTL / sQTL / sceQTL row (eQTL Catalogue backend):
         - ot_left_study_id: quach_2016_ge_monocyte_iav_ensg00000115808
           eqtl_catalogue_dataset_id: QTD000110
           ot_right_study_id: FINNGEN_R12_I9_HEARTFAIL
@@ -555,6 +802,24 @@ def load_study_id_mappings(yaml_path: Path) -> dict[tuple[str, str], StudyIdMapp
           ancestry_right: EUR (Finnish)
           notes:
             - "Quach 2016 IAV-stimulated monocyte; verified live 2026-05-04"
+
+        # pQTL row (UKB-PPP backend):
+        - ot_left_study_id: UKB_PPP_EUR_SORT1
+          ukb_ppp_protein_label: SORT1
+          ukb_ppp_ancestry: EUR
+          ot_right_study_id: GCST90269602
+          gwas_catalog_accession: GCST90269602
+          ancestry_left: EUR
+          ancestry_right: EUR
+          exposure_gene_symbol: SORT1
+          outcome_trait_label: cholesterol VLDL
+          notes:
+            - "Sun 2023 UKB-PPP plasma cis-pQTL; verified live 2026-05-15"
+
+    Exactly one of `eqtl_catalogue_dataset_id` or
+    (`ukb_ppp_protein_label`, `ukb_ppp_ancestry`) must be populated per row;
+    the orchestrator dispatches by the OT studyId prefix and reads the
+    matching fields.
 
     Returns a dict keyed by (ot_left_study_id, ot_right_study_id) for fast
     per-row lookup.
@@ -567,9 +832,11 @@ def load_study_id_mappings(yaml_path: Path) -> dict[tuple[str, str], StudyIdMapp
     for entry in data.get("mappings", []):
         m = StudyIdMapping(
             ot_left_study_id=entry["ot_left_study_id"],
-            eqtl_catalogue_dataset_id=entry["eqtl_catalogue_dataset_id"],
             ot_right_study_id=entry["ot_right_study_id"],
             gwas_catalog_accession=entry["gwas_catalog_accession"],
+            eqtl_catalogue_dataset_id=entry.get("eqtl_catalogue_dataset_id", ""),
+            ukb_ppp_protein_label=entry.get("ukb_ppp_protein_label", ""),
+            ukb_ppp_ancestry=entry.get("ukb_ppp_ancestry", ""),
             ancestry_left=entry.get("ancestry_left", "EUR"),
             ancestry_right=entry.get("ancestry_right", "EUR"),
             outcome_trait_label=entry.get("outcome_trait_label", ""),
@@ -581,9 +848,10 @@ def load_study_id_mappings(yaml_path: Path) -> dict[tuple[str, str], StudyIdMapp
 
 
 def _eqtl_to_locus_variant(v) -> LocusVariant:
-    """Map skills.execution.eqtl_catalogue RegionVariant to wald_ratio
-    LocusVariant. The renderer's per-side manhattan reads the LocusVariant
-    fields it shares with the wald_ratio harmoniser.
+    """Map an exposure-side RegionVariant (eQTL Catalogue or UKB-PPP; both
+    expose the same field set) to a wald_ratio LocusVariant. The renderer's
+    per-side manhattan reads the LocusVariant fields it shares with the
+    wald_ratio harmoniser.
     """
     return LocusVariant(
         variant_id=v.variant_id,
@@ -636,10 +904,14 @@ def _extract_ensg_from_ot_study_id(ot_study_id: str) -> str | None:
 
 
 __all__ = [
+    "EXPOSURE_KIND_EQTL_CATALOGUE",
+    "EXPOSURE_KIND_UKB_PPP",
     "LocusCompareSpec",
     "StudyIdMapping",
     "Tier2NotAvailable",
     "Tier2Result",
+    "dispatch_exposure_kind",
+    "is_pqtl_study_id",
     "load_study_id_mappings",
     "render_locuscompare_for_lead",
     "render_tier2_for_lead",

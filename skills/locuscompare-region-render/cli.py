@@ -168,6 +168,8 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
     """
     # Lazy imports (kept lazy so `--help` doesn't pull in heavy deps).
     from locuscompare_region_render import (
+        EXPOSURE_KIND_EQTL_CATALOGUE,
+        EXPOSURE_KIND_UKB_PPP,
         LocusCompareSpec,
         Tier2NotAvailable,
         render_locuscompare_for_lead,
@@ -180,6 +182,7 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
         Plink2LDClient,
         SuperPop,
     )
+    from ukb_ppp_region_fetch import UKBPPPClient
 
     # ----- Required blocks
     if "lead" not in config:
@@ -207,8 +210,8 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
     # TSV path instead of calling the fetcher).
     if "fetch" not in exposure:
         print(
-            "exposure.fetch block required (this build supports the bundled "
-            "eqtl_catalogue fetcher only; pre-fetched TSV input lands in a "
+            "exposure.fetch block required (this build supports bundled "
+            "eqtl_catalogue + ukb_ppp fetchers; pre-fetched TSV input lands in a "
             "follow-up).",
             file=sys.stderr,
         )
@@ -221,9 +224,11 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
             file=sys.stderr,
         )
         return 2
-    if exposure["fetch"]["source"] != "eqtl_catalogue":
+    exposure_source = exposure["fetch"]["source"]
+    if exposure_source not in ("eqtl_catalogue", "ukb_ppp"):
         print(
-            f"unsupported exposure.fetch.source: {exposure['fetch']['source']}",
+            f"unsupported exposure.fetch.source: {exposure_source} "
+            f"(expected one of: eqtl_catalogue, ukb_ppp)",
             file=sys.stderr,
         )
         return 2
@@ -234,8 +239,28 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
         )
         return 2
 
-    eqtl_dataset_id = exposure["fetch"]["dataset_id"]
+    # eQTL-side fields (used for the eqtl_catalogue path; left as harmless
+    # defaults for the ukb_ppp path).
+    eqtl_dataset_id = exposure["fetch"].get("dataset_id", "")
     molecular_trait_id = exposure["fetch"].get("molecular_trait_id")
+
+    # pQTL-side fields (used for the ukb_ppp path).
+    pqtl_protein_label = exposure["fetch"].get("protein_label", "")
+    pqtl_ancestry = exposure["fetch"].get("ancestry", "EUR")
+
+    if exposure_source == "ukb_ppp" and not pqtl_protein_label:
+        print(
+            "exposure.fetch.protein_label required when source=ukb_ppp",
+            file=sys.stderr,
+        )
+        return 2
+    if exposure_source == "eqtl_catalogue" and not eqtl_dataset_id:
+        print(
+            "exposure.fetch.dataset_id required when source=eqtl_catalogue",
+            file=sys.stderr,
+        )
+        return 2
+
     gwas_accession = outcome["fetch"]["accession"]
 
     # ----- LD client (optional; gracefully degrades if unset / unavailable)
@@ -335,7 +360,12 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
             )
             prefetched_gene_track = None
 
-    # ----- Build the spec
+    # ----- Build the spec (exposure-kind dispatch)
+    if exposure_source == "ukb_ppp":
+        exposure_kind = EXPOSURE_KIND_UKB_PPP
+    else:
+        exposure_kind = EXPOSURE_KIND_EQTL_CATALOGUE
+
     spec = LocusCompareSpec(
         lead_variant_id=lead_variant_id,
         chromosome=chromosome,
@@ -344,7 +374,10 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
         eqtl_dataset_id=eqtl_dataset_id,
         molecular_trait_id=molecular_trait_id,
         gwas_accession=gwas_accession,
-        exposure_gene_symbol=exposure.get("gene_symbol", ""),
+        exposure_kind=exposure_kind,
+        pqtl_protein_label=pqtl_protein_label,
+        pqtl_ancestry=pqtl_ancestry,
+        exposure_gene_symbol=exposure.get("gene_symbol", "") or pqtl_protein_label,
         outcome_trait_label=outcome_label,
         exposure_id_extra="",
         outcome_id_extra="",
@@ -360,6 +393,7 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
     # ----- Build clients
     eqtl_client = EQTLCatalogueClient()
     gwas_client = GWASCatalogClient()
+    ukb_ppp_client = UKBPPPClient() if exposure_kind == EXPOSURE_KIND_UKB_PPP else None
 
     # ----- Render
     plot_path = output / f"{lead_variant_id}_full_locuscompare.png"
@@ -370,6 +404,7 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
             gwas_client=gwas_client,
             ld_client=ld_client,
             out_path=plot_path,
+            ukb_ppp_client=ukb_ppp_client,
         )
     except Tier2NotAvailable as e:
         print(f"render failed: {e!s}", file=sys.stderr)
