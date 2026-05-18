@@ -276,7 +276,7 @@ Output directory layout:
 
 4. **Lead variant must be present in BOTH the eQTL and GWAS slices.** If the lead is missing from one side (commonly: low-MAF variant dropped by one harmoniser), the renderer falls back to a proxy variant in LD (r² > 0.8); the manifest records the substitution. If no proxy exists, the skill refuses to render and the orchestrator falls back to a credible-set-only view.
 
-5. **Effect-allele harmonisation across the four inputs is the renderer's input contract, not its job.** The two sumstats slices and the LD panel must arrive in the canonical (chr, pos, ref, alt) GRCh38 ALT-effect form - this is what the bundled fetchers (`eqtl-catalogue-region-fetch`, `gwas-catalogue-region-fetch`) emit. User-supplied TSVs not in this form should be normalised upstream (`bcftools norm` for indels). The renderer's harmonisation step is for cross-trait flip / palindromic handling, not for single-trait normalisation.
+5. **Effect-allele harmonisation across the four inputs is the renderer's input contract, not its job.** The two sumstats slices and the LD panel must arrive in the canonical (chr, pos, ref, alt) GRCh38 ALT-effect form - this is what the bundled fetchers (`eqtl-catalogue-region-fetch`, `gwas-catalog-region-fetch`) emit. User-supplied TSVs not in this form should be normalised upstream (`bcftools norm` for indels). The renderer's harmonisation step is for cross-trait flip / palindromic handling, not for single-trait normalisation.
 
 6. **Render time is bounded by tabix fetches and plink2 LD compute.** Cold-cache (first render of a region): typically 10-50 s. Warm-cache (region already fetched and LD computed): sub-second. Surface the timing to the user when relevant (multi-render comparisons, demo loops).
 

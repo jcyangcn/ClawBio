@@ -40,7 +40,7 @@ from pathlib import Path
 import yaml
 
 # Resolve sibling-skill imports for the fork's flat layout. This skill
-# orchestrates eqtl-catalogue-region-fetch, gwas-catalogue-region-fetch,
+# orchestrates eqtl-catalogue-region-fetch, gwas-catalog-region-fetch,
 # and ld-1000g-region-compute, which live as sibling skill directories
 # under skills/ in the same checkout. Inject each sibling-skill dir
 # onto sys.path so the modules import cleanly.
@@ -49,7 +49,7 @@ _SKILLS_ROOT = _SKILL_DIR.parent
 for _p in (
     _SKILL_DIR,
     _SKILLS_ROOT / "eqtl-catalogue-region-fetch",
-    _SKILLS_ROOT / "gwas-catalogue-region-fetch",
+    _SKILLS_ROOT / "gwas-catalog-region-fetch",
     _SKILLS_ROOT / "ld-1000g-region-compute",
     _SKILLS_ROOT / "ukb-ppp-region-fetch",
 ):

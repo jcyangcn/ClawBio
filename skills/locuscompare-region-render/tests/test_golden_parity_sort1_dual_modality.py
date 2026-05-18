@@ -50,7 +50,7 @@ _SKILLS_ROOT = _SKILL_DIR.parent
 for _p in (
     _SKILL_DIR,
     _SKILLS_ROOT / "eqtl-catalogue-region-fetch",
-    _SKILLS_ROOT / "gwas-catalogue-region-fetch",
+    _SKILLS_ROOT / "gwas-catalog-region-fetch",
     _SKILLS_ROOT / "ld-1000g-region-compute",
     _SKILLS_ROOT / "ukb-ppp-region-fetch",
 ):
@@ -98,7 +98,7 @@ try:
 except ModuleNotFoundError as _e:
     pytest.skip(
         f"golden-parity replay requires the 4 sibling skills "
-        f"(eqtl-catalogue-region-fetch, gwas-catalogue-region-fetch, "
+        f"(eqtl-catalogue-region-fetch, gwas-catalog-region-fetch, "
         f"ld-1000g-region-compute, ukb-ppp-region-fetch) checked out "
         f"alongside this one: {_e}",
         allow_module_level=True,

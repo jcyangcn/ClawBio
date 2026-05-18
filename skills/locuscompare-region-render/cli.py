@@ -25,7 +25,7 @@ _SKILLS_ROOT = _SKILL_DIR.parent
 for _p in (
     _SKILL_DIR,
     _SKILLS_ROOT / "eqtl-catalogue-region-fetch",
-    _SKILLS_ROOT / "gwas-catalogue-region-fetch",
+    _SKILLS_ROOT / "gwas-catalog-region-fetch",
     _SKILLS_ROOT / "ld-1000g-region-compute",
 ):
     if _p.exists() and str(_p) not in sys.path:
