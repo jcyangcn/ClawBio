@@ -23,13 +23,8 @@ ot_release: "26.03"
 gwas_catalog_capture_date: "2026-05-15"
 eqtl_catalogue_release: v7+
 
+# Provenance is the originating project's commit (opaque to ClawBio
+# readers; kept as audit trail for the fixture capture).
 git_sha_at_capture: b8e138520cc9d9cac633ab5c90db662bd8b6af9e
 captured_at_utc: "2026-05-15T18:07:03Z"
 captured_by: build-session
-related_decisions:
-  - "Decision #14: testing pyramid + golden parity"
-  - "Decision #15: skills/contrib/ publication carve-out"
-related_lessons: []
-related_handoffs:
-  - "docs/handoff_build_to_build_v1_3_step5_golden_parity.md"
-  - "docs/handoff_peer_review_to_research_3_open_questions.md"

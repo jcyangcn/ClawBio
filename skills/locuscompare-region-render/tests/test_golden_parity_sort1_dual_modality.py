@@ -1,4 +1,4 @@
-"""Decision #14 golden-parity test: SORT1 dual-modality (eQTL + pQTL) render.
+"""Golden-parity test: SORT1 dual-modality (eQTL + pQTL) render.
 
 This single fixture exercises the cross-backend dispatch + shared-outcome
 harmonisation that the v1.3 release added. Two render passes run side by
@@ -28,7 +28,8 @@ Fields explicitly NOT locked (see expected.yaml comments):
 
 Refresh policy: a failing assertion means the orchestrator changed
 behaviour. Inspect the diff. Do NOT refresh expected.yaml without
-explicit rationale (Decision #14 §5).
+explicit rationale; the fixture is the source of truth for cross-
+backend dispatch.
 """
 
 from __future__ import annotations
@@ -398,12 +399,11 @@ def test_eqtl_render_omits_credible_set_caveat_for_full_nominal_pass(
     )
 
 
-# ----------------------- v1.4 fetcher-notes propagation -----------------------
+# ----------------------- fetcher-notes propagation -----------------------
 #
 # Each fetcher's `RegionResult.notes` (schema-drift complaints, pagination
 # warnings, etc.) propagates into the manifest's `data_source_warnings`
-# field, prefixed with the originating fetcher name. See
-# docs/handoff_research_to_build_v1_4_fetcher_notes.md for the design.
+# field, prefixed with the originating fetcher name.
 
 
 def test_eqtl_fetcher_notes_propagate_to_data_source_warnings(tmp_path):

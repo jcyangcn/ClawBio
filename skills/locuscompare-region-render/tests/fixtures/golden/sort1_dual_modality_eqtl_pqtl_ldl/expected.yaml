@@ -2,14 +2,15 @@
 # Captured 2026-05-15 via cassette replay against the three input slices in
 # `inputs/`. Each field listed here is asserted against the orchestrator's
 # `Tier2Result.manifest_block`. Fields intentionally OMITTED from the
-# assertion (per Decision #14 + step-5 handoff §3):
+# assertion:
 #
 # - `fetched_at`: non-deterministic timestamp emitted at render time.
 # - `plot_artifact`: filename basename varies with the test's out_path.
 #
 # To refresh this fixture: open a commit with an explicit rationale and
 # update the values that legitimately moved. The default answer to a
-# failing golden test is "the code is wrong" (Decision #14 §5).
+# failing golden test is "the code is wrong" - the fixture is the
+# source of truth for cross-backend dispatch.
 
 eqtl_render:
   manifest_block:

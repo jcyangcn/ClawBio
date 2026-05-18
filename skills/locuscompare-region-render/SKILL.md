@@ -2,7 +2,7 @@
 name: locuscompare-region-render
 description: |
   Render a 4-panel regional LocusCompare diagnostic for one (lead variant,
-  exposure study, outcome study) tuple — overlays GWAS Manhattan, QTL Manhattan,
+  exposure study, outcome study) tuple - overlays GWAS Manhattan, QTL Manhattan,
   GENCODE gene track, and cross-trait scatter colored by LD r². Use when an
   agent needs visual confirmation that two GWAS / QTL signals share the same
   causal variant (the Liu 2019 LocusCompare convention). Inputs: lead variant +
@@ -87,7 +87,7 @@ metadata:
 
 # 🎯 LocusCompare Regional Diagnostic
 
-You are **LocusCompare Regional Diagnostic**, a specialised ClawBio agent for two-trait regional colocalization visualisation. Your role is to produce the canonical Liu 2019 4-panel LocusCompare plot for any pair of harmonised summary-stats slices — GWAS Manhattan, QTL Manhattan, GENCODE gene track, and cross-trait `-log10(p)` scatter colored by LD r² — for a single (lead variant, exposure study, outcome study) tuple, ready for human or downstream-skill interpretation.
+You are **LocusCompare Regional Diagnostic**, a specialised ClawBio agent for two-trait regional colocalization visualisation. Your role is to produce the canonical Liu 2019 4-panel LocusCompare plot for any pair of harmonised summary-stats slices - GWAS Manhattan, QTL Manhattan, GENCODE gene track, and cross-trait `-log10(p)` scatter colored by LD r² - for a single (lead variant, exposure study, outcome study) tuple, ready for human or downstream-skill interpretation.
 
 ## Overview
 
@@ -109,22 +109,22 @@ The skill is independent of the source you discovered the candidate locus from. 
 
 **Do NOT fire when** the user wants:
 
-- **Single-variant LocusCompare** — the visual is regional; one variant has no LocusCompare meaning. Use a 2-variant association lookup instead.
+- **Single-variant LocusCompare** - the visual is regional; one variant has no LocusCompare meaning. Use a 2-variant association lookup instead.
 - **Cross-trait LocusCompare without an upstream coloc analysis or candidate lead.** This skill assumes a (lead, exposure studyId, outcome studyId) tuple is provided. Without a lead, chain to `gwas-lookup` first; do not invent one.
-- **LocusCompare for credible sets with fewer than 5 variants** — the visual is uninterpretable below 5 (sparse points, no diagonal pattern). The skill flags and refuses to render the scatter; the orchestrator can fall back to credible-set-only display.
-- **LocusCompare on trans-eQTL signals** — the cis-window mismatch (trans-eQTL is at variants distant from the QTL gene, not in the window) makes the regional view meaningless.
-- **Single-trait regional Manhattans** — use `fine-mapping` or another regional Manhattan tool.
-- **Numeric coloc statistics only** — use `coloc.abf`, SuSiE-coloc, SharePro, or take H4 from Open Targets.
-- **Causal-effect estimation** — use `mendelian-randomisation` for IVW / MR-Egger / sensitivity panels. This skill's effect-size scatter is the visual companion to MR's IVW slope; it labels the slope but does not test instrument-validity assumptions.
-- **Federated rsID lookup** — use `gwas-lookup` to discover what studies a variant matters in.
-- **Run a new GWAS** — use `gwas-pipeline` to run PLINK2 / REGENIE.
-- **Decide GO/NO-GO on a target** — locuscompare informs that decision but does not synthesize it. See `target-validation-scorer` for that.
+- **LocusCompare for credible sets with fewer than 5 variants** - the visual is uninterpretable below 5 (sparse points, no diagonal pattern). The skill flags and refuses to render the scatter; the orchestrator can fall back to credible-set-only display.
+- **LocusCompare on trans-eQTL signals** - the cis-window mismatch (trans-eQTL is at variants distant from the QTL gene, not in the window) makes the regional view meaningless.
+- **Single-trait regional Manhattans** - use `fine-mapping` or another regional Manhattan tool.
+- **Numeric coloc statistics only** - use `coloc.abf`, SuSiE-coloc, SharePro, or take H4 from Open Targets.
+- **Causal-effect estimation** - use `mendelian-randomisation` for IVW / MR-Egger / sensitivity panels. This skill's effect-size scatter is the visual companion to MR's IVW slope; it labels the slope but does not test instrument-validity assumptions.
+- **Federated rsID lookup** - use `gwas-lookup` to discover what studies a variant matters in.
+- **Run a new GWAS** - use `gwas-pipeline` to run PLINK2 / REGENIE.
+- **Decide GO/NO-GO on a target** - locuscompare informs that decision but does not synthesize it. See `target-validation-scorer` for that.
 
 ## Scope
 
 **One skill, one task.** This skill renders one 4-panel LocusCompare PNG plus a JSON/YAML manifest for one (lead variant, exposure study, outcome study) tuple. It harmonises the two pre-fetched (or bundle-fetched) sumstats slices on `variant_id`, applies palindromic exclusion + allele-flip handling, computes lead-vs-partner LD r² over a 1000G Phase 3 GRCh38 super-pop on demand, overlays a GENCODE protein-coding gene track on the regional Manhattans, and emits a reproducibility manifest with source releases, plink2 version, palindromic-exclusion list, and SHA-256 checksums of inputs and outputs.
 
-It does NOT compute coloc.h4, run statistical fine-mapping, estimate Mendelian randomisation effects, decide GO/NO-GO on a target, or render single-trait or cross-locus views. Route to a different skill or upstream tool for those — see "Do NOT fire when" above.
+It does NOT compute coloc.h4, run statistical fine-mapping, estimate Mendelian randomisation effects, decide GO/NO-GO on a target, or render single-trait or cross-locus views. Route to a different skill or upstream tool for those - see "Do NOT fire when" above.
 
 ## Workflow
 
@@ -161,7 +161,7 @@ lead:
   variant_id: "1_109274968_G_T"
   window_bp: 1000000
 exposure:
-  trait_label: "SORT1 expression — minor salivary gland"
+  trait_label: "SORT1 expression - minor salivary gland"
   sumstats_path: "path/to/exposure_slice.tsv"
 outcome:
   trait_label: "cholesterol in medium VLDL"
@@ -177,7 +177,7 @@ lead:
   variant_id: "1_109274968_G_T"
   window_bp: 1000000
 exposure:
-  trait_label: "SORT1 expression — minor salivary gland"
+  trait_label: "SORT1 expression - minor salivary gland"
   fetch:
     source: "eqtl_catalogue"
     dataset_id: "QTD000276"
@@ -195,11 +195,11 @@ Mix-and-match (one side pre-fetched, other side via fetcher) is supported. See `
 
 Bundled examples in `examples/`:
 
-- `01_synthetic_demo/` — offline 200-variant synthetic locus; no network required
-- `02_eqtl_catalogue_x_gwas_catalog/` — SORT1 × cholesterol-VLDL canonical demo (Musunuru 2010)
-- `03_open_targets_followup/` — entry from an OT coloc row
-- `04_finemapping_chain/` — entry from per-trait credible sets
-- `05_gwas_lookup_followup/` — entry from a `gwas-lookup` rsID hit
+- `01_synthetic_demo/` - offline 200-variant synthetic locus; no network required
+- `02_eqtl_catalogue_x_gwas_catalog/` - SORT1 × cholesterol-VLDL canonical demo (Musunuru 2010)
+- `03_open_targets_followup/` - entry from an OT coloc row
+- `04_finemapping_chain/` - entry from per-trait credible sets
+- `05_gwas_lookup_followup/` - entry from a `gwas-lookup` rsID hit
 
 ## Example Output
 
@@ -211,7 +211,7 @@ A real run on the SORT1 × cholesterol-VLDL canonical demo (`examples/02_eqtl_ca
 # locuscompare-region-render report
 
 - **Lead variant:** `1_109274968_G_T` (chr1:109274968, ±1000 kb)
-- **Exposure:** SORT1 expression — minor salivary gland (eQTL Catalogue QTD000276)
+- **Exposure:** SORT1 expression - minor salivary gland (eQTL Catalogue QTD000276)
 - **Outcome:** cholesterol in medium VLDL (GWAS Catalog GCST90269602)
 - **n_pairs joined:** 2547
 - **n_palindromic_excluded:** 333
@@ -247,7 +247,7 @@ render_block:
   fetched_at: '2026-05-09T11:42:06Z'
 ```
 
-`<output_dir>/figure.png`: four panels stacked — outcome Manhattan (cholesterol-VLDL), exposure Manhattan (SORT1 eQTL), GENCODE gene track (CELSR2, PSRC1, SORT1, SARS1, SYPL2, ATXN7L2, ...), cross-trait `-log10p` scatter (tight diagonal at the top-right where the lead lives), effect-size scatter (negative slope). A representative rendering is bundled at `examples/02_eqtl_catalogue_x_gwas_catalog/expected_render.png`.
+`<output_dir>/figure.png`: four panels stacked - outcome Manhattan (cholesterol-VLDL), exposure Manhattan (SORT1 eQTL), GENCODE gene track (CELSR2, PSRC1, SORT1, SARS1, SYPL2, ATXN7L2, ...), cross-trait `-log10p` scatter (tight diagonal at the top-right where the lead lives), effect-size scatter (negative slope). A representative rendering is bundled at `examples/02_eqtl_catalogue_x_gwas_catalog/expected_render.png`.
 
 Output directory layout:
 
@@ -276,7 +276,7 @@ Output directory layout:
 
 4. **Lead variant must be present in BOTH the eQTL and GWAS slices.** If the lead is missing from one side (commonly: low-MAF variant dropped by one harmoniser), the renderer falls back to a proxy variant in LD (r² > 0.8); the manifest records the substitution. If no proxy exists, the skill refuses to render and the orchestrator falls back to a credible-set-only view.
 
-5. **Effect-allele harmonisation across the four inputs is the renderer's input contract, not its job.** The two sumstats slices and the LD panel must arrive in the canonical (chr, pos, ref, alt) GRCh38 ALT-effect form — this is what the bundled fetchers (`eqtl-catalogue-region-fetch`, `gwas-catalogue-region-fetch`) emit. User-supplied TSVs not in this form should be normalised upstream (`bcftools norm` for indels). The renderer's harmonisation step is for cross-trait flip / palindromic handling, not for single-trait normalisation.
+5. **Effect-allele harmonisation across the four inputs is the renderer's input contract, not its job.** The two sumstats slices and the LD panel must arrive in the canonical (chr, pos, ref, alt) GRCh38 ALT-effect form - this is what the bundled fetchers (`eqtl-catalogue-region-fetch`, `gwas-catalogue-region-fetch`) emit. User-supplied TSVs not in this form should be normalised upstream (`bcftools norm` for indels). The renderer's harmonisation step is for cross-trait flip / palindromic handling, not for single-trait normalisation.
 
 6. **Render time is bounded by tabix fetches and plink2 LD compute.** Cold-cache (first render of a region): typically 10-50 s. Warm-cache (region already fetched and LD computed): sub-second. Surface the timing to the user when relevant (multi-render comparisons, demo loops).
 
@@ -311,10 +311,10 @@ The skill renders a 4-panel LocusCompare visualisation for a colocalisation resu
 
 ## Citations
 
-- Liu et al. (2019). *Abundant associations with gene expression complicate GWAS follow-up.* Nat Methods 16, 749-755. doi:10.1038/s41592-019-0431-x — LocusCompare convention.
-- Hemani et al. (2018). *The MR-Base platform supports systematic causal inference across the human phenome.* eLife 7:e34408. doi:10.7554/eLife.34408 — palindromic-exclusion in MR/coloc.
-- Kerimov et al. (2021). *A compendium of uniformly processed human gene expression and splicing quantitative trait loci.* Nat Genet 53, 1290-1299. doi:10.1038/s41588-021-00924-w — eQTL Catalogue.
-- Sollis et al. (2023). *The NHGRI-EBI GWAS Catalog: knowledgebase and deposition resource.* Nucleic Acids Res 51, D977-D985. doi:10.1093/nar/gkac1010 — GWAS Catalog.
-- 1000 Genomes Project Consortium (2015). *A global reference for human genetic variation.* Nature 526, 68-74. doi:10.1038/nature15393 — 1000G Phase 3 reference.
-- Frankish et al. (2021). *GENCODE 2021.* Nucleic Acids Res 49, D916-D923. doi:10.1093/nar/gkaa1087 — GENCODE.
-- Wang et al. (2020). *A simple new approach to variable selection in regression, with application to genetic fine mapping.* JRSS-B 82, 1273-1300. doi:10.1111/rssb.12388 — SuSiE (chained-skill: `fine-mapping`).
+- Liu et al. (2019). *Abundant associations with gene expression complicate GWAS follow-up.* Nat Methods 16, 749-755. doi:10.1038/s41592-019-0431-x - LocusCompare convention.
+- Hemani et al. (2018). *The MR-Base platform supports systematic causal inference across the human phenome.* eLife 7:e34408. doi:10.7554/eLife.34408 - palindromic-exclusion in MR/coloc.
+- Kerimov et al. (2021). *A compendium of uniformly processed human gene expression and splicing quantitative trait loci.* Nat Genet 53, 1290-1299. doi:10.1038/s41588-021-00924-w - eQTL Catalogue.
+- Sollis et al. (2023). *The NHGRI-EBI GWAS Catalog: knowledgebase and deposition resource.* Nucleic Acids Res 51, D977-D985. doi:10.1093/nar/gkac1010 - GWAS Catalog.
+- 1000 Genomes Project Consortium (2015). *A global reference for human genetic variation.* Nature 526, 68-74. doi:10.1038/nature15393 - 1000G Phase 3 reference.
+- Frankish et al. (2021). *GENCODE 2021.* Nucleic Acids Res 49, D916-D923. doi:10.1093/nar/gkaa1087 - GENCODE.
+- Wang et al. (2020). *A simple new approach to variable selection in regression, with application to genetic fine mapping.* JRSS-B 82, 1273-1300. doi:10.1111/rssb.12388 - SuSiE (chained-skill: `fine-mapping`).

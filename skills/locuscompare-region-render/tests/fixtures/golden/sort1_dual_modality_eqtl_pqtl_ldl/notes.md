@@ -15,9 +15,9 @@ Both paths share the canonical SORT1 lead variant `1_109274968_G_T`
 
 ## Class of bug this catches
 
-Per Decision #14, a golden-parity fixture earns its keep when it exercises
-cross-source / cross-skill behaviour that toy unit fixtures normalise away.
-This fixture covers:
+A golden-parity fixture earns its keep when it exercises cross-source /
+cross-skill behaviour that toy unit fixtures normalise away. This fixture
+covers:
 
 - Cross-backend exposure dispatch: a regression in `dispatch_exposure_kind`
   or the `_render_for_spec` branch on `spec.exposure_kind` flips the
@@ -45,11 +45,7 @@ scatter_downsample state, ancestry caveats, ld_panel state
 
 ## Refresh
 
-Closes peer-review Q3 (per
-`docs/handoff_peer_review_to_research_3_open_questions.md` § Q3):
-the SORT1 dual-modality fixture is the canonical seed against which
-the remaining 5 golden-parity CRITICALs can be evaluated.
-
 A failing assertion on this fixture is by default a code regression,
-not a fixture-staleness signal. Refresh requires explicit commit with
-rationale per Decision #14 §5.
+not a fixture-staleness signal. Refresh requires an explicit commit
+with rationale; the fixture is the source of truth for cross-backend
+dispatch.
