@@ -34,6 +34,7 @@ backend dispatch.
 
 from __future__ import annotations
 
+import gzip
 import json
 import sys
 from pathlib import Path
@@ -114,9 +115,11 @@ EXPECTED_PATH = FIXTURE_DIR / "expected.yaml"
 
 
 def _load_eqtl_cassette() -> EQTLRegionResult:
-    data = json.loads(
-        (INPUTS_DIR / "eqtl_exposure_QTD000276_chr1_109_274_968_window.json").read_text()
-    )
+    with gzip.open(
+        INPUTS_DIR / "eqtl_exposure_QTD000276_chr1_109_274_968_window.json.gz",
+        mode="rt",
+    ) as f:
+        data = json.load(f)
     variants = [
         EQTLRegionVariant(**{k: v for k, v in row.items() if k != "raw"} | {"raw": row.get("raw", {})})
         for row in data["variants"]
@@ -135,9 +138,11 @@ def _load_eqtl_cassette() -> EQTLRegionResult:
 
 
 def _load_gwas_cassette() -> GWASRegionResult:
-    data = json.loads(
-        (INPUTS_DIR / "gwas_outcome_GCST90269602_chr1_109_274_968_window.json").read_text()
-    )
+    with gzip.open(
+        INPUTS_DIR / "gwas_outcome_GCST90269602_chr1_109_274_968_window.json.gz",
+        mode="rt",
+    ) as f:
+        data = json.load(f)
     variants = [
         GWASRegionVariant(**{k: v for k, v in row.items() if k != "raw"} | {"raw": row.get("raw", {})})
         for row in data["variants"]
@@ -156,7 +161,11 @@ def _load_gwas_cassette() -> GWASRegionResult:
 
 
 def _load_pqtl_cassette() -> UKBPPPRegionResult:
-    data = json.loads((INPUTS_DIR / "pqtl_exposure_SORT1_EUR.json").read_text())
+    with gzip.open(
+        INPUTS_DIR / "pqtl_exposure_SORT1_EUR.json.gz",
+        mode="rt",
+    ) as f:
+        data = json.load(f)
     variants = [
         UKBPPPRegionVariant(**{k: v for k, v in row.items() if k != "raw"} | {"raw": row.get("raw", {})})
         for row in data["variants"]
