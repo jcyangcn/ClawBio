@@ -1,4 +1,4 @@
-"""Live smoke test for gwas-catalogue-region-fetch.
+"""Live smoke test for gwas-catalog-region-fetch.
 
 Hits the real EBI GWAS Catalog harmonised tabix-on-FTP for a small
 SORT1 cis-window slice (GCST90269602, cholesterol-VLDL at the Musunuru 2010
@@ -6,7 +6,7 @@ SORT1 cis-window slice (GCST90269602, cholesterol-VLDL at the Musunuru 2010
 so the offline suite stays network-free.
 
 Run locally with:
-    RUN_LIVE_TESTS=1 pytest skills/gwas-catalogue-region-fetch/tests/test_live_gwas_catalog_region_fetch.py
+    RUN_LIVE_TESTS=1 pytest skills/gwas-catalog-region-fetch/tests/test_live_gwas_catalog_region_fetch.py
 """
 from __future__ import annotations
 

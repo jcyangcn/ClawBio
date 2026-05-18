@@ -928,7 +928,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/gwas-catalogue-region-fetch/gwas_catalog_region_fetch.py --demo",
+      "demo_command": "python skills/gwas-catalog-region-fetch/gwas_catalog_region_fetch.py --demo",
       "dependencies": [
         "python>=3.10",
         "pysam>=0.22",
