@@ -122,7 +122,7 @@ UKB-PPP (Sun et al. 2023 *Nature*) is the largest open-access plasma proteomic G
 
 - An **eQTL or sQTL** regional slice: use `eqtl-catalogue-region-fetch` instead (one fetcher handles all eQTL Catalogue quantification methods including ge/exon/tx/txrev/leafcutter, plus single-cell eQTL studies in v7+).
 - A **single-variant pQTL lookup**: UKB-PPP's full archive is large; a per-variant lookup against the Open Targets pQTL coloc table is cheaper for one-point queries.
-- The **deCODE pQTL** (Ferkingstad 2021): not currently in Open Targets colocalisation; deCODE's release terms are also Yellow-tier (per-case license review). Out of scope for v1.3.
+- The **deCODE pQTL** panel (Ferkingstad 2021): a different upstream cohort with separate access terms; this skill targets UKB-PPP only. Choose the upstream-source skill at the orchestrator level.
 - The **raw Olink abundance values** linked to phenotypes: those are gated behind a UK Biobank Application via Synapse `syn52364558` and are out of scope for the public locuscompare render path.
 - **trans-pQTL signals** at distant loci: UKB-PPP releases full-genome summary stats per protein, so trans signals are present in the data, but the `(chromosome, start_bp, end_bp)` window must be supplied explicitly; the skill does not auto-detect trans peaks.
 
