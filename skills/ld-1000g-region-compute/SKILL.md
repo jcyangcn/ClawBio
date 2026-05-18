@@ -86,7 +86,7 @@ You are **LD 1000G Region Compute**, a specialised ClawBio agent for computing p
 
 ## Overview
 
-LD coloring on a regional Manhattan, LD pruning around a candidate causal variant, ancestry-aware coloc input — all need pairwise r² between a lead and a candidate set. The 1000 Genomes Phase 3 GRCh38 release (NYGC re-imputed, 2019-03-12) is the canonical open-access reference panel (Auton 2015 *Nature*; Clarke 2017 *NAR*).
+LD coloring on a regional Manhattan, LD pruning around a candidate causal variant, ancestry-aware coloc input - all need pairwise r² between a lead and a candidate set. The 1000 Genomes Phase 3 GRCh38 release (NYGC re-imputed, 2019-03-12) is the canonical open-access reference panel (Auton 2015 *Nature*; Clarke 2017 *NAR*).
 
 This skill provides r² compute via `plink2 --r2-unphased` with two access modes:
 
@@ -107,22 +107,22 @@ Both modes implement the same `r2_with_lead(lead, partners, chromosome, window_b
 
 **Do NOT fire when** the user wants:
 
-- **r² between two specific variants only** — a 2-variant lookup is overkill via this skill; query plink2 directly with `--ld <var1> <var2>` for that case.
-- **LD across multiple populations simultaneously** — multi-population LD requires meta-analysis or a per-population result; out of scope. Call this skill once per super-population if needed.
-- **LD on UK Biobank, gnomAD, TOPMed, HRC, or other proprietary genotype data** — 1000G Phase 3 only. Other panels require different licensing and ingest paths.
-- **Pre-computed full-genome LD matrices** — this is on-demand region compute. Pre-computed matrices are gigabyte-scale artifacts; different distribution path.
-- **Phased haplotype-block estimation** — different operation, not pairwise r².
-- **Trans-population LD comparisons** — use a dedicated tool (LDLink, LDpair).
+- **r² between two specific variants only** - a 2-variant lookup is overkill via this skill; query plink2 directly with `--ld <var1> <var2>` for that case.
+- **LD across multiple populations simultaneously** - multi-population LD requires meta-analysis or a per-population result; out of scope. Call this skill once per super-population if needed.
+- **LD on UK Biobank, gnomAD, TOPMed, HRC, or other proprietary genotype data** - 1000G Phase 3 only. Other panels require different licensing and ingest paths.
+- **Pre-computed full-genome LD matrices** - this is on-demand region compute. Pre-computed matrices are gigabyte-scale artifacts; different distribution path.
+- **Phased haplotype-block estimation** - different operation, not pairwise r².
+- **Trans-population LD comparisons** - use a dedicated tool (LDLink, LDpair).
 
 ## Scope
 
-**One skill, one task.** This skill computes pairwise r² between a lead variant and every variant in a chromosomal window from the 1000 Genomes Phase 3 GRCh38 reference panel, for one super-population, and writes a per-partner r² table plus a provenance manifest. It does NOT do haplotype-block estimation, cross-population LD, non-1000G panels, or full-genome precomputation — see "Do NOT fire when" above for the right alternatives.
+**One skill, one task.** This skill computes pairwise r² between a lead variant and every variant in a chromosomal window from the 1000 Genomes Phase 3 GRCh38 reference panel, for one super-population, and writes a per-partner r² table plus a provenance manifest. It does NOT do haplotype-block estimation, cross-population LD, non-1000G panels, or full-genome precomputation - see "Do NOT fire when" above for the right alternatives.
 
 ## Workflow
 
 When an agent asks for r² between a lead and partners in a region:
 
-1. **Resolve `lead` + `partners` + `chromosome` + `window_bp` + `super_pop`**: lead in `chr_pos_ref_alt` GRCh38 form; partners as a list (or `null` to compute against all variants in the window); super-population from `{EUR, AFR, AMR, EAS, SAS}` (default EUR; choose to match the upstream cohort's ancestry — see Gotcha #1).
+1. **Resolve `lead` + `partners` + `chromosome` + `window_bp` + `super_pop`**: lead in `chr_pos_ref_alt` GRCh38 form; partners as a list (or `null` to compute against all variants in the window); super-population from `{EUR, AFR, AMR, EAS, SAS}` (default EUR; choose to match the upstream cohort's ancestry - see Gotcha #1).
 2. **Region VCF fetch** (on-demand mode): the skill performs a tabix-on-FTP byte-range request against `https://ftp.1000genomes.ebi.ac.uk/` for the requested chromosome × window. Cache hit at `~/.clawbio/locuscompare_cache/1000g/<chr>_<start>_<end>.vcf.gz` skips the fetch.
 3. **Super-pop filter**: subset the VCF to the chosen super-population's samples via the canonical Phase 3 panel TSV (`integrated_call_samples_v3.20130502.ALL.panel`); `plink2 --keep` with FID=0 convention (Gotcha #4).
 4. **r² compute**: `plink2 --r2-unphased lower-tri` against the lead variant. Variant ids are rewritten to `chr_pos_ref_alt` form via `plink2 --set-all-var-ids '@:#:$r:$a'` (Gotcha #3).
@@ -232,7 +232,7 @@ partner_variant_id     r2
 
 3. **Variant-id format collision in 1000G VCFs.** The 1000G GRCh38 VCFs use rsids in the ID column, NOT `chr:pos:ref:alt`. The on-demand client passes `plink2 --set-all-var-ids '@:#:$r:$a'` to rewrite IDs into the canonical form before LD compute. Tri-allelic loci that have been split into multiple lines may produce duplicate IDs; the client passes `--new-id-max-allele-len 100 missing` to mitigate, but very unusual loci may still complain (deduplicate the source VCF or `bcftools norm -m -any`).
 
-4. **plink2 `--keep` FID convention.** plink2 sets FID=0 for all samples loaded from a VCF. The on-demand client's `--keep` file uses `0\t<sample>` rows (NOT `<sample>\t<sample>` — that variant is silently ignored, and the super-pop filter will return zero samples).
+4. **plink2 `--keep` FID convention.** plink2 sets FID=0 for all samples loaded from a VCF. The on-demand client's `--keep` file uses `0\t<sample>` rows (NOT `<sample>\t<sample>` - that variant is silently ignored, and the super-pop filter will return zero samples).
 
 5. **Rare variants (MAF < 0.01) have unstable r².** With ~500 EUR samples and MAF=0.005, only ~5 individuals carry the rare allele; r² estimates have huge sampling variance. The skill filters MAF < 0.01 by default and emits the count in `rare_variant_drops`. Do NOT manually re-include rare variants by lowering this threshold; for rare-variant fine-mapping, use a higher-density reference (TOPMed, HRC) which is out of scope.
 
