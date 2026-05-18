@@ -797,7 +797,7 @@ def _now_utc() -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """ClawBio-shape CLI per Decision #16: `--input <config> --output <dir> --demo`.
+    """ClawBio-shape CLI: `--input <config> --output <dir> --demo`.
 
     Config schema (JSON or YAML):
         protein_label: SORT1            # HGNC symbol or UniProt accession
