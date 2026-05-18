@@ -691,6 +691,14 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "ukb-ppp-region": {
+        "script": SKILLS_DIR / "ukb-ppp-region-fetch" / "ukb_ppp_region_fetch.py",
+        "demo_args": ["--demo"],
+        "description": "UKB-PPP region fetch: per-variant plasma cis-pQTL summary stats per genomic window (Sun 2023, Synapse-backed)",
+        "allowed_extra_flags": {"--list-demos", "--no-cache"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
     "affprot": {
         "script": SKILLS_DIR / "affinity-proteomics" / "affinity_proteomics.py",
         "demo_args": ["--demo", "--platform", "olink"],

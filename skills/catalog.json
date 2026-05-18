@@ -2095,6 +2095,39 @@
       ]
     },
     {
+      "name": "ukb-ppp-region-fetch",
+      "cli_alias": null,
+      "description": "Fetch a region of plasma cis-pQTL summary statistics from UKB-PPP\n(Sun 2023 Nature) via Synapse. Use when an agent needs pQTL beta / SE /\np-value for every variant in a window around a protein's TSS for one\n(protein, ancestry) Olink-Explore-3072 measurement. Bundled-slice path\nrequires no auth for the canonical demo cohort; arbitrary queries fall\nthrough to a live Synapse fetch that requires a free PAT. Input: protein,\nancestry, chromosome, start, end. Output: harmonised TSV slice.\n",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/ukb-ppp-region-fetch/ukb_ppp_region_fetch.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "synapseclient>=3.0",
+        "requests>=2.28"
+      ],
+      "tags": [
+        "pqtl",
+        "ukb-ppp",
+        "region-fetch",
+        "regenie",
+        "summary-statistics",
+        "proteomics",
+        "olink"
+      ],
+      "trigger_keywords": [
+        "ukb-ppp pqtl region fetch",
+        "pqtl regional summary stats",
+        "sun 2023 ukbppp",
+        "protein qtl summary stats",
+        "plasma pqtl regional fetch"
+      ],
+      "chaining_partners": []
+    },
+    {
       "name": "variant-annotation",
       "cli_alias": null,
       "description": "Annotate VCF variants with Ensembl VEP REST, ClinVar significance, gnomAD/population frequency context, and prioritized variant ranking.",
