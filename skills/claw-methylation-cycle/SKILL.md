@@ -350,8 +350,7 @@ python skills/claw-methylation-cycle/methylation_cycle.py \
 - Slow S et al. (2004). Plasma betaine and homocysteine. *Clin Chim Acta*, 340(1-2):57-67.
 - Esteller M. (2014). Introduccion a la epigenetica. *SEBBM*, 179:4-6.
 - Spuch C, Agis-Balboa RC. (2014). Epigenetica en neurociencias. *SEBBM*, 179:18-21.
-- Green RC et al. (2013). ACMG recommendations for reporting of incidental findings in clinical exome and genome sequencing. *Genet Med*, 15(7):565-74. [ACMG MTHFR caveat]
-- Carmona Aguirre S. (2014/UNESCO 2016). *Holomedicina*. UNIMED Consulting. [Author attribution]
+- Green RC et al. (2013). ACMG recommendations for reporting of incidental findings in clinical exome and genome sequencing. *Genet Med*, 15(7):565-74.
 - ClawBio (2026). https://github.com/ClawBio/ClawBio
 
 ---
