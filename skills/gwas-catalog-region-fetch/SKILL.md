@@ -90,16 +90,16 @@ The NHGRI-EBI GWAS Catalog (Sollis 2023 *NAR*) maintains harmonised summary stat
 
 **Do NOT fire when** the user wants:
 
-- A **point lookup of one variant in one GWAS** — `database-lookup` or `gwas-lookup` is the right skill for single-variant queries.
-- **Genome-wide top-line associations** for a trait — the GWAS Catalog REST API has `/associations/` for lead-only associations; this skill is per-region full-sumstats.
-- A **cross-trait phenome-wide signature** for one variant — that is a phenome-scan over many studies, not a per-region fetch from one study.
-- **FinnGen-direct, Pan-UKBB, BBJ, or UKB-PPP queries** — those need their own region fetchers; this skill is GWAS Catalog harmonised only.
-- **Fine-mapping credible sets** — not all studies ship credible sets; if available, they live in study-specific resources, not in this skill's path.
-- **Per-trait genetic correlation** (LDSC, mvLMM) — different upstream tooling.
+- A **point lookup of one variant in one GWAS** - `database-lookup` or `gwas-lookup` is the right skill for single-variant queries.
+- **Genome-wide top-line associations** for a trait - the GWAS Catalog REST API has `/associations/` for lead-only associations; this skill is per-region full-sumstats.
+- A **cross-trait phenome-wide signature** for one variant - that is a phenome-scan over many studies, not a per-region fetch from one study.
+- **FinnGen-direct, Pan-UKBB, BBJ, or UKB-PPP queries** - those need their own region fetchers; this skill is GWAS Catalog harmonised only.
+- **Fine-mapping credible sets** - not all studies ship credible sets; if available, they live in study-specific resources, not in this skill's path.
+- **Per-trait genetic correlation** (LDSC, mvLMM) - different upstream tooling.
 
 ## Scope
 
-**One skill, one task.** This skill fetches one GCST study's regional summary statistics from the GWAS Catalog harmonised collection and writes them as a harmonised TSV plus a provenance manifest. It does NOT do single-variant lookups, cross-study comparisons, raw-upload fetches, FinnGen-direct fetches, or fine-mapping — see "Do NOT fire when" above for the right skills for those tasks.
+**One skill, one task.** This skill fetches one GCST study's regional summary statistics from the GWAS Catalog harmonised collection and writes them as a harmonised TSV plus a provenance manifest. It does NOT do single-variant lookups, cross-study comparisons, raw-upload fetches, FinnGen-direct fetches, or fine-mapping - see "Do NOT fire when" above for the right skills for those tasks.
 
 ## Workflow
 
@@ -140,9 +140,9 @@ Config schema (JSON or YAML):
 
 Bundled biology demos in `examples/`:
 
-- `sort1_cholesterol_vldl.json` — Musunuru 2010 1p13.3 LDL/CHD locus; pairs with the SORT1 ge-eQTL on the exposure side.
-- `il6r_crp.yaml` — IL6R × CRP at chr1:154425508; canonical IVW MR demo.
-- `tcf7l2_hba1c.json` — TCF7L2 × HbA1c; type-2 diabetes locus.
+- `sort1_cholesterol_vldl.json` - Musunuru 2010 1p13.3 LDL/CHD locus; pairs with the SORT1 ge-eQTL on the exposure side.
+- `il6r_crp.yaml` - IL6R × CRP at chr1:154425508; canonical IVW MR demo.
+- `tcf7l2_hba1c.json` - TCF7L2 × HbA1c; type-2 diabetes locus.
 
 ## Example Output
 
@@ -205,7 +205,7 @@ variant_id              chromosome  position_bp  allele_a  allele_b  beta       
 
 3. **Per-study release lag.** GWAS Catalog mirrors a study some time after the upstream release: typically 2-6 months for FinnGen R12 phenotypes; longer for studies that go through deposit-and-curate. If the user references a phenotype that should be in OT, verify presence via the GWAS Catalog API metadata before assuming an arbitrary GCST is fetchable.
 
-4. **Some studies do not have summary statistics deposited at all.** Older or smaller GWAS may have only top-line lead associations but no full sumstats. The GWAS Catalog API exposes `hasSummaryStats` per study; check it before invoking. The fetcher raises `GWASCatalogFetchError` when the harmonised TSV or its `.tbi` is missing on FTP; caller decides whether to fall back (e.g. download the whole file + tabix-index locally — see `references/harmonised_pipeline.md`).
+4. **Some studies do not have summary statistics deposited at all.** Older or smaller GWAS may have only top-line lead associations but no full sumstats. The GWAS Catalog API exposes `hasSummaryStats` per study; check it before invoking. The fetcher raises `GWASCatalogFetchError` when the harmonised TSV or its `.tbi` is missing on FTP; caller decides whether to fall back (e.g. download the whole file + tabix-index locally - see `references/harmonised_pipeline.md`).
 
 5. **Palindromic SNPs at MAF near 0.5 are dropped by the harmoniser.** A/T and G/C variants with EAF in [0.45, 0.55] cannot be reliably oriented across studies, so the harmoniser excludes them. Expect some variants present in OT credible sets to be missing from the harmonised file. Surface the count to the user when it materially affects the analysis.
 
