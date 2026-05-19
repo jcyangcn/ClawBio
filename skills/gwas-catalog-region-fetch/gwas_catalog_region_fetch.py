@@ -31,6 +31,7 @@ import csv
 import gzip
 import io
 import json
+import re
 import sys
 import time
 from dataclasses import dataclass, field, asdict
@@ -98,13 +99,18 @@ class GWASCatalogFetchError(Exception):
     """Raised when the harmonised file cannot be fetched or parsed."""
 
 
+_GCST_RE = re.compile(r"^GCST\d+$")
+
+
 def gcst_url_base(accession: str, ftp_base: str = DEFAULT_FTP_BASE) -> str:
     """Compute the harmonised dir URL.
 
     GWAS Catalog organises by GCST prefix bucket of 1000:
     GCST90475990 → GCST90475001-GCST90476000/GCST90475990/harmonised/
     """
-    digits = "".join(c for c in accession if c.isdigit())
+    if not _GCST_RE.fullmatch(accession):
+        raise ValueError(f"invalid GCST accession (expected ^GCST\\d+$): {accession}")
+    digits = accession[4:]
     if not digits:
         raise ValueError(f"unparseable GCST accession: {accession}")
     n = int(digits)

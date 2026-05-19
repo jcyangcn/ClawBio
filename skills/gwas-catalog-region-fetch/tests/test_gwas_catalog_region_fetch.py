@@ -34,6 +34,20 @@ def test_gcst_url_base_low_accession():
     assert "GCST000001-GCST001000" in base
 
 
+@pytest.mark.parametrize("bad", [
+    "../etc/passwd",
+    "GCST90475990; rm -rf /",
+    "GCST",
+    "90475990",
+    "gcst90475990",
+    "GCST 90475990",
+])
+def test_gcst_url_base_rejects_malformed_accession(bad):
+    """Reject anything that doesn't match ^GCST\\d+$ before URL formatting."""
+    with pytest.raises(ValueError):
+        gcst_url_base(bad)
+
+
 def test_harmonised_file_url_appends_h_tsv_gz():
     url = harmonised_file_url("GCST90475990")
     assert url.endswith("GCST90475990.h.tsv.gz")
@@ -72,11 +86,7 @@ def test_fetch_region_parses_harmonised_rows(monkeypatch):
                    "-0.04", "NA", "0.31", "0.008", "5.4e-9"]),
     ]
     tbx = _mock_tabix(rows, HARMONISED_HEADER)
-    monkeypatch.setattr(
-        "skills.execution.gwas_catalog.region_summary_stats.region_summary_stats.TabixFile"
-        if False else "pysam.TabixFile",
-        lambda url: tbx,
-    )
+    monkeypatch.setattr("pysam.TabixFile", lambda url: tbx)
 
     client = GWASCatalogClient()
     result = client.fetch_region(
