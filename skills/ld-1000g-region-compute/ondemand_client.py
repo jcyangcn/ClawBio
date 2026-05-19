@@ -87,8 +87,11 @@ def _detect_plink2_version(plink2_bin: str) -> str:
     if shutil.which(plink2_bin) is None:
         raise OnDemandLDError(
             f"plink2 binary not found at `{plink2_bin}`. "
-            "Install via `brew install plink2` (macOS) or `apt-get install plink2` (Linux), "
-            "then either ensure it's on PATH or set PLINK2_BIN to its absolute path."
+            "Install via `brew install --HEAD brewsci/bio/plink2` (macOS, brewsci tap) "
+            "or `apt-get install plink2` (Linux); if neither package is available, "
+            "download the macOS / Linux binary directly from "
+            "https://www.cog-genomics.org/plink/2.0/. "
+            "Then either ensure it's on PATH or set PLINK2_BIN to its absolute path."
         )
     proc = subprocess.run(
         [plink2_bin, "--version"], capture_output=True, text=True, check=False, timeout=10,

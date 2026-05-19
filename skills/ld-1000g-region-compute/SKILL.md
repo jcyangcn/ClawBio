@@ -70,7 +70,10 @@ metadata:
     os: [darwin, linux]
     install: |
       pip install pysam pandas requests
-      # plus a system plink2 binary (brew install plink2 on macOS, apt-get install plink2 on Linux)
+      # plus a system plink2 binary:
+      #   macOS (brewsci tap): brew install --HEAD brewsci/bio/plink2
+      #   Linux:               apt-get install plink2
+      #   direct binary:       https://www.cog-genomics.org/plink/2.0/  (then set PLINK2_BIN)
     trigger_keywords:
       - ld around lead
       - ld region 1000g

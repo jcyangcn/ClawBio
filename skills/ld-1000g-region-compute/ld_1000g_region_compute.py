@@ -38,9 +38,11 @@ from typing import Iterable
 DEFAULT_PLINK2_BIN = os.environ.get("PLINK2_BIN", "plink2")
 
 PLINK2_NOT_FOUND_HINT = (
-    "plink2 binary not found. Install via `brew install plink2` (macOS) or "
-    "`apt-get install plink2` (Linux), then either ensure it is on PATH or set "
-    "PLINK2_BIN to its absolute path."
+    "plink2 binary not found. Install via `brew install --HEAD brewsci/bio/plink2` "
+    "(macOS, brewsci tap) or `apt-get install plink2` (Linux); if neither package "
+    "is available, download the macOS / Linux binary directly from "
+    "https://www.cog-genomics.org/plink/2.0/. Then either ensure it is on PATH or "
+    "set PLINK2_BIN to its absolute path."
 )
 
 
