@@ -938,20 +938,18 @@ def build_regional_locuscompare_block(
     exposure_ancestry: str = "",
     exposure_ancestry_label: str = "",
 ) -> dict[str, Any]:
-    """Construct one `regional_locuscompare` manifest block per
-    docs/research/regional_locuscompare_data_sources.md §5.1.
+    """Construct one `regional_locuscompare` manifest block.
 
     The orchestrator builds this dict per Tier-2 render and passes a list to
     `write_manifest(..., tier2_renders=[...])`.
 
-    v1.3 adds three optional pQTL caption fields (exposure_protein_label,
-    exposure_ancestry, exposure_ancestry_label) per the §5.5 disclosure
-    extension. These remain empty strings for eQTL / sQTL / sceQTL renders
-    where the existing tissue / quant fields carry equivalent context;
+    pQTL caption fields (exposure_protein_label, exposure_ancestry,
+    exposure_ancestry_label) remain empty strings for eQTL / sQTL / sceQTL
+    renders where the existing tissue / quant fields carry equivalent context;
     they're populated for UKB-PPP renders where plasma is implicit but
     protein identity isn't.
 
-    v1.4 adds `data_source_warnings`: an additive sibling to `ancestry_caveats`
+    `data_source_warnings` is an additive sibling to `ancestry_caveats`
     that carries fetcher-emitted warnings (schema drift, pagination notes,
     etc.) prefixed with the originating fetcher name. Kept separate from
     `ancestry_caveats` so the curated bucket stays clean and the noisy
