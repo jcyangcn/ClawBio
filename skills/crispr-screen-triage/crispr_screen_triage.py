@@ -47,7 +47,7 @@ def _median(values: list[float]) -> float:
     return (ordered[middle - 1] + ordered[middle]) / 2.0
 
 
-def prioritize_genes(rows: list[dict[str, str | float]]) -> dict:
+def triage_genes(rows: list[dict[str, str | float]]) -> dict:
     guides = []
     grouped: dict[str, list[dict[str, str | float | bool]]] = {}
 
@@ -83,7 +83,7 @@ def prioritize_genes(rows: list[dict[str, str | float]]) -> dict:
     genes.sort(key=lambda item: (-float(item["priority_score"]), str(item["gene"])))
     top_hits = [gene for gene in genes if gene["priority"] in {"high", "medium"}]
     return {
-        "skill": "crispr-screen-prioritizer",
+        "skill": "crispr-screen-triage",
         "summary": {"gene_count": len(genes), "guide_count": len(guides), "top_hit_count": len(top_hits)},
         "guides": guides,
         "genes": genes,
@@ -108,7 +108,7 @@ def write_outputs(result: dict, input_path: Path, output_dir: Path, command: lis
     (output_dir / "tables").mkdir(exist_ok=True)
     (output_dir / "reproducibility").mkdir(exist_ok=True)
     _write_csv(
-        output_dir / "tables" / "prioritized_genes.csv",
+        output_dir / "tables" / "triaged_genes.csv",
         result["genes"],
         [
             "gene",
@@ -137,7 +137,7 @@ def write_outputs(result: dict, input_path: Path, output_dir: Path, command: lis
     )
     (output_dir / "result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     rows = [
-        "# CRISPR Screen Prioritizer Report",
+        "# CRISPR Screen Triage Report",
         "",
         f"**Input**: `{input_path}`",
         f"**Mode**: {'Synthetic demo data' if demo else 'User-provided local data'}",
@@ -157,7 +157,7 @@ def write_outputs(result: dict, input_path: Path, output_dir: Path, command: lis
             "",
             "## Interpretation",
             "",
-            "Top hits show replicated guide-level depletion plus deterministic synthetic essentiality/druggability weights.",
+            "Top hits show replicated guide-level depletion plus user-supplied essentiality and druggability annotations.",
             "",
             DISCLAIMER,
             "",
@@ -171,21 +171,21 @@ def write_outputs(result: dict, input_path: Path, output_dir: Path, command: lis
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="CRISPR Screen Prioritizer")
+    parser = argparse.ArgumentParser(description="CRISPR Screen Triage")
     parser.add_argument("--input", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("crispr_screen_prioritizer_out"))
+    parser.add_argument("--output", type=Path, default=Path("crispr_screen_triage_out"))
     parser.add_argument("--demo", action="store_true")
     args = parser.parse_args(argv)
     input_path = SKILL_DIR / "demo_screen_counts.csv" if args.demo else args.input
     if input_path is None:
         parser.error("--input is required unless --demo is used")
     try:
-        result = prioritize_genes(load_counts(input_path))
+        result = triage_genes(load_counts(input_path))
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     write_outputs(result, input_path, args.output, [sys.executable, __file__, *sys.argv[1:]], args.demo)
-    print(f"CRISPR Screen Prioritizer wrote {args.output / 'report.md'}")
+    print(f"CRISPR Screen Triage wrote {args.output / 'report.md'}")
     return 0
 
 

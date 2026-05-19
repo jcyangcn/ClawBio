@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
-MODULE_PATH = SKILL_DIR / "crispr_screen_prioritizer.py"
+MODULE_PATH = SKILL_DIR / "crispr_screen_triage.py"
 DISCLAIMER = (
     "ClawBio is a research and educational tool. It is not a medical device "
     "and does not provide clinical diagnoses. Consult a healthcare professional "
@@ -15,7 +15,7 @@ DISCLAIMER = (
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location("crispr_screen_prioritizer", MODULE_PATH)
+    spec = importlib.util.spec_from_file_location("crispr_screen_triage", MODULE_PATH)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -62,10 +62,10 @@ def test_cli_rejects_malformed_input_without_traceback(tmp_path):
     assert "Traceback" not in completed.stderr
 
 
-def test_prioritization_ranks_depleted_druggable_genes():
+def test_triage_ranks_depleted_druggable_genes():
     module = load_module()
     rows = module.load_counts(SKILL_DIR / "demo_screen_counts.csv")
-    result = module.prioritize_genes(rows)
+    result = module.triage_genes(rows)
     assert result["summary"]["gene_count"] == 6
     assert result["summary"]["guide_count"] == 12
     assert result["top_hits"][0]["gene"] == "BRCA1"
@@ -83,15 +83,15 @@ def test_demo_cli_writes_expected_outputs(tmp_path):
         capture_output=True,
         check=True,
     )
-    assert "CRISPR Screen Prioritizer" in completed.stdout
+    assert "CRISPR Screen Triage" in completed.stdout
     report = (out / "report.md").read_text(encoding="utf-8")
     assert DISCLAIMER in report
     assert "BRCA1" in report
     assert "Synthetic demo data" in report
     result = json.loads((out / "result.json").read_text(encoding="utf-8"))
-    assert result["skill"] == "crispr-screen-prioritizer"
+    assert result["skill"] == "crispr-screen-triage"
     assert result["top_hits"][0]["gene"] == "BRCA1"
     assert result["summary"]["guide_count"] == 12
-    assert (out / "tables" / "prioritized_genes.csv").exists()
+    assert (out / "tables" / "triaged_genes.csv").exists()
     assert (out / "tables" / "guide_metrics.csv").exists()
     assert (out / "reproducibility" / "commands.sh").exists()

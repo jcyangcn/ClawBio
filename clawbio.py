@@ -717,10 +717,10 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
-    "crispr-prioritize": {
-        "script": SKILLS_DIR / "crispr-screen-prioritizer" / "crispr_screen_prioritizer.py",
+    "crispr-triage": {
+        "script": SKILLS_DIR / "crispr-screen-triage" / "crispr_screen_triage.py",
         "demo_args": ["--demo"],
-        "description": "CRISPR screen prioritizer (deterministic guide-level hit ranking)",
+        "description": "CRISPR screen triage (deterministic guide-level hit ranking)",
         "allowed_extra_flags": set(),
         "accepts_genotypes": False,
     },
