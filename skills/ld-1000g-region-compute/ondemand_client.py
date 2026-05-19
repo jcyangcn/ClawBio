@@ -1,26 +1,28 @@
-"""On-demand 1000G LD region fetch + plink2 r² compute.
+"""On-demand 1000G LD region fetch + plink 1.9 r² compute.
 
-Replaces the multi-GB pre-baked PLINK2 panel dependency with a per-region
-tabix fetch from EBI's 1000G FTP, super-pop-filtered, run through plink2 to
-get r² between the lead and every variant in the window. Caches both the
-region VCF and the LD output to `~/.clawbio/locuscompare_cache/1000g/`.
+Per-region tabix fetch from EBI's 1000G FTP, super-pop-filtered, run through
+plink 1.9 to get r² between the lead and every variant in the window.
+Caches both the region VCF and the LD output to
+`~/.clawbio/locuscompare_cache/1000g/`.
 
-This means a fresh ClawBio install can render LD-colored plots without
-asking the user to download a 3 GB PLINK2 panel first — the EBI fetch is a
-~5-50 MB byte-range request per locus.
+This means a fresh ClawBio install can render LD-coloured plots without
+asking the user to download a 3 GB PLINK panel first: the EBI fetch is a
+~5-50 MB byte-range request per locus, and plink 1.9 is sub-second on the
+resulting region VCF despite being single-threaded.
 
 Constructor arg `super_pop` selects which 1000G samples to keep
 (EUR/AFR/AMR/EAS/SAS). The sample-to-super-pop mapping is fetched once
 (small TSV) and cached.
 
 License: 1000G data are open-access with attribution (Auton 2015, Clarke
-2017). plink2 binary is GPL-3 (subprocess invocation only; no GPL
+2017). plink 1.9 binary is GPL-3 (subprocess invocation only; no GPL
 contamination of MIT-licensed locuscompare code).
 """
 from __future__ import annotations
 
 import csv
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -50,10 +52,30 @@ DEFAULT_CACHE_DIR = Path(
     )
 ) / "1000g"
 
-DEFAULT_PLINK2_BIN = os.environ.get("PLINK2_BIN", "plink2")
+# plink 1.9 is the primary supported binary (ubiquitous via brew / apt /
+# conda; ships --ld-snp + --r2 + --ld-window-r2 natively). Users with an
+# older `PLINK2_BIN` export are honoured via the legacy fallback below.
+DEFAULT_PLINK_BIN = (
+    os.environ.get("PLINK_BIN")
+    or os.environ.get("PLINK2_BIN")
+    or "plink"
+)
+
+PLINK_NOT_FOUND_HINT = (
+    "plink binary not found. Install via `brew install brewsci/bio/plink` "
+    "(macOS), `apt-get install plink1.9` (Ubuntu/Debian), or "
+    "`conda install -c bioconda plink` (any platform); direct binary "
+    "downloads are available at https://www.cog-genomics.org/plink/1.9/. "
+    "Then either ensure it is on PATH or set PLINK_BIN to its absolute path."
+)
 
 PANEL_ID_DEFAULT = "1000g_phase3_v5b_grch38_basic"
 PANEL_VERSION_DEFAULT = "5b_remote_2019_03_12"
+
+# plink 1.9 prints e.g. `PLINK v1.90b6.27 64-bit (2023-05-09)`; plink2 prints
+# `PLINK v2.0.0-a.7.1 ...`. We accept both prefixes so a user with plink2
+# installed (with the right flag set) is not blocked.
+_PLINK_VERSION_RE = re.compile(r"^PLINK v(?:1\.9|2\.[\d.])")
 
 
 @dataclass
@@ -68,7 +90,7 @@ class OnDemandLDResult:
     panel_id: str
     panel_version: str
     super_pop: str
-    plink2_version: str
+    plink2_version: str  # historical name; holds the detected plink binary version
     chromosome: str
     lead_variant_id: str
     window_bp: int
@@ -83,25 +105,28 @@ class OnDemandLDError(Exception):
     """Raised when on-demand LD compute cannot proceed."""
 
 
-def _detect_plink2_version(plink2_bin: str) -> str:
-    if shutil.which(plink2_bin) is None:
-        raise OnDemandLDError(
-            f"plink2 binary not found at `{plink2_bin}`. "
-            "Install via `brew install --HEAD brewsci/bio/plink2` (macOS, brewsci tap) "
-            "or `apt-get install plink2` (Linux); if neither package is available, "
-            "download the macOS / Linux binary directly from "
-            "https://www.cog-genomics.org/plink/2.0/. "
-            "Then either ensure it's on PATH or set PLINK2_BIN to its absolute path."
+def _detect_plink_version(plink_bin: str) -> str:
+    """Return the plink `--version` string for the manifest.
+
+    Accepts both plink 1.9 (`PLINK v1.90...`) and plink2 (`PLINK v2....`)
+    prefixes. Unknown prefixes are surfaced verbatim so the manifest at
+    least records what was actually invoked.
+    """
+    if shutil.which(plink_bin) is None:
+        raise OnDemandLDError(f"{PLINK_NOT_FOUND_HINT} (looked for: {plink_bin})")
+    try:
+        proc = subprocess.run(
+            [plink_bin, "--version"],
+            capture_output=True, text=True, check=False, timeout=10,
         )
-    proc = subprocess.run(
-        [plink2_bin, "--version"], capture_output=True, text=True, check=False, timeout=10,
-    )
+    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        raise OnDemandLDError(f"could not run `{plink_bin} --version`: {e!s}") from e
     line = (proc.stdout or proc.stderr).strip().splitlines()
     return line[0] if line else "unknown"
 
 
 def _resolve_super_pop_samples(super_pop: str, cache_dir: Path) -> list[str]:
-    """Fetch (or read from cache) the 1000G sample → super_pop mapping;
+    """Fetch (or read from cache) the 1000G sample to super_pop mapping;
     return the list of sample IDs in the requested super-pop.
     """
     panel_path = cache_dir / "integrated_call_samples_v3.20130502.ALL.panel"
@@ -137,15 +162,15 @@ def _fetch_region_vcf(
     if region_vcf.is_file() and region_vcf.stat().st_size > 0:
         return region_vcf
 
-    import pysam  # lazy import; pysam is optional for non-LD-coloring runs
+    import pysam  # lazy import; pysam is optional for non-LD-colouring runs
 
     url = ONEKG_VCF_URL_TEMPLATE.format(chrom=chrom_bare)
     tmp_vcf = region_vcf.with_suffix(".tmp.vcf")
     try:
-        # pysam.VariantFile supports remote tabix-indexed VCFs; the .tbi at the
-        # source URL is loaded transparently.
+        # pysam.VariantFile supports remote tabix-indexed VCFs; the .tbi at
+        # the source URL is loaded transparently.
         with pysam.VariantFile(url) as src:
-            # Use src's contig naming; 1000G files use `1`, `2`, ... (no `chr`).
+            # 1000G files use bare contig names (`1`, `2`, ...), no `chr`.
             chrom_used = chrom_bare
             with tmp_vcf.open("w") as out:
                 out.write(str(src.header))
@@ -158,10 +183,6 @@ def _fetch_region_vcf(
             f"tabix-fetch from {url} for {chrom_bare}:{start_bp}-{end_bp} failed: {e!s}"
         ) from e
 
-    # bgzip + tabix-index the cached region VCF for downstream tools, but
-    # plink2 reads either form, so we don't strictly need to. Keep as plain
-    # .vcf for simplicity; plink2 handles gzip too if we name it .vcf.gz.
-    # Use Python's gzip to compress instead of relying on bgzip availability.
     import gzip
     with tmp_vcf.open("rb") as f_in, gzip.open(region_vcf, "wb") as f_out:
         shutil.copyfileobj(f_in, f_out)
@@ -172,25 +193,35 @@ def _fetch_region_vcf(
 class OnDemand1000GLDClient:
     """LD client that fetches per-region 1000G VCFs on demand from EBI FTP.
 
-    Drop-in alternative to skills.execution.ld_reference.Plink2LDClient — same
-    `r2_with_lead(...)` interface, no pre-baked panel required.
+    Shells out to plink 1.9 for r² compute. Construction validates the
+    plink binary is reachable; per-call work performs the tabix region
+    fetch, super-pop sample filter, and r² compute.
     """
 
     def __init__(
         self,
         super_pop: str = "EUR",
-        plink2_bin: str = DEFAULT_PLINK2_BIN,
+        plink_bin: str = DEFAULT_PLINK_BIN,
         cache_dir: Path | None = None,
         panel_id: str = PANEL_ID_DEFAULT,
         panel_version: str = PANEL_VERSION_DEFAULT,
+        plink2_bin: str | None = None,
     ) -> None:
+        # `plink2_bin` is a legacy alias retained so callers built against the
+        # plink2-era kwarg keep working without churn.
+        bin_path = plink2_bin if plink2_bin is not None else plink_bin
         self.super_pop = super_pop
-        self.plink2_bin = plink2_bin
+        self.plink_bin = bin_path
         self.cache_dir = (cache_dir or DEFAULT_CACHE_DIR).expanduser()
         self.panel_id = panel_id
         self.panel_version = panel_version
-        self.plink2_version = _detect_plink2_version(plink2_bin)
+        self.plink2_version = _detect_plink_version(bin_path)
         self._super_pop_samples: list[str] | None = None
+
+    # Back-compat attribute alias for code that still reads `plink2_bin`.
+    @property
+    def plink2_bin(self) -> str:
+        return self.plink_bin
 
     def _samples(self) -> list[str]:
         if self._super_pop_samples is None:
@@ -240,16 +271,18 @@ class OnDemand1000GLDClient:
             td_path = Path(td)
             keep_path = td_path / "keep.txt"
             with keep_path.open("w") as f:
-                # plink2 --vcf sets FID=0 for every sample by default.
-                # --keep expects "FID\tIID" pairs.
+                # plink 1.9 `--vcf` assigns FID=IID=sample-id (per
+                # https://www.cog-genomics.org/plink/1.9/data#vcf). `--keep`
+                # expects "FID\tIID" pairs, so write the sample id twice.
                 for s in samples:
-                    f.write(f"0\t{s}\n")
+                    f.write(f"{s}\t{s}\n")
             out_prefix = td_path / "ld_out"
-            # plink2's variant ID for VCF input is the VCF ID column (3rd col).
-            # The 1000G GRCh38 VCFs use rsids there, NOT chr:pos:ref:alt — so
-            # we can't --ld-snp by chr_pos_ref_alt directly. Workaround: use
-            # --set-all-var-ids '@:#:$r:$a' to rewrite IDs into chr:pos:ref:alt,
-            # then ld-snp matches our partner ids (after _-to-: conversion).
+            # 1000G GRCh38 VCFs hold rsids in the ID column, not chr:pos:ref:alt.
+            # plink 1.9 `--set-missing-var-ids '@:#:$1:$2'` rewrites IDs into
+            # the canonical chr:pos:ref:alt form (@=chr, #=bp, $1/$2=alleles).
+            # `--set-all-var-ids` (plink2's spelling) is NOT available in 1.9;
+            # `--set-missing-var-ids` covers the case because every VCF row's
+            # ID field is `.` in this distribution, which 1.9 treats as missing.
             sep = ":"
             lead_panel = lead.replace("_", sep, 3)
             partner_panel = [p.replace("_", sep, 3) for p in partner_list]
@@ -261,39 +294,40 @@ class OnDemand1000GLDClient:
                     f.write(p + "\n")
 
             cmd = [
-                self.plink2_bin,
+                self.plink_bin,
                 "--vcf", str(region_vcf),
                 "--keep", str(keep_path),
-                "--set-all-var-ids", "@:#:$r:$a",
-                "--new-id-max-allele-len", "100", "missing",
+                "--set-missing-var-ids", "@:#:$1:$2",
                 "--extract", str(extract_path),
-                "--r2-unphased",
+                "--r2",
                 "--ld-snp", lead_panel,
+                "--ld-window-kb", str(max(window_bp // 1000, 1)),
+                "--ld-window", "99999",
                 "--ld-window-r2", "0",
                 "--out", str(out_prefix),
             ]
             try:
                 proc = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=300)
             except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-                raise OnDemandLDError(f"plink2 invocation failed: {e!s}") from e
+                raise OnDemandLDError(f"plink invocation failed: {e!s}") from e
             if proc.returncode != 0:
                 raise OnDemandLDError(
-                    f"plink2 exited with code {proc.returncode}. "
+                    f"plink exited with code {proc.returncode}. "
                     f"stderr (truncated): {(proc.stderr or '')[:1000]}"
                 )
 
-            vcor_path: Path | None = None
-            for suffix in (".vcor", ".vcor2"):
+            ld_path: Path | None = None
+            for suffix in (".ld", ".vcor", ".vcor2"):
                 cand = Path(f"{out_prefix}{suffix}")
                 if cand.exists():
-                    vcor_path = cand
+                    ld_path = cand
                     break
-            if vcor_path is None:
+            if ld_path is None:
                 raise OnDemandLDError(
-                    f"plink2 produced no .vcor / .vcor2 at {out_prefix}; "
+                    f"plink produced no .ld output at {out_prefix}; "
                     f"stdout (truncated): {(proc.stdout or '')[:1000]}"
                 )
-            pairs = _parse_vcor(vcor_path, lead_panel, notes)
+            pairs = _parse_ld(ld_path, lead_panel, notes)
             for p in pairs:
                 p.partner_variant_id = p.partner_variant_id.replace(":", "_", 3)
 
@@ -308,24 +342,34 @@ class OnDemand1000GLDClient:
         )
 
 
-def _parse_vcor(path: Path, lead: str, notes: list[str]) -> list[OnDemandLDPair]:
+def _parse_ld(path: Path, lead: str, notes: list[str]) -> list[OnDemandLDPair]:
+    """Parse a plink 1.9 `--r2`-emitted `.ld` file.
+
+    Columns: `CHR_A BP_A SNP_A CHR_B BP_B SNP_B R2`. Whitespace-separated
+    (multiple spaces between fields), so we tokenise with `str.split()`
+    rather than csv. Tolerates legacy plink2 `.vcor` output (tab-separated,
+    different column names) for callers that still point at plink2 binaries.
+    """
     out: list[OnDemandLDPair] = []
     with path.open() as f:
-        reader = csv.reader(f, delimiter="\t")
-        header: list[str] | None = None
-        for row in reader:
-            if not row:
+        header_tokens: list[str] | None = None
+        for raw_line in f:
+            line = raw_line.strip()
+            if not line:
                 continue
-            if header is None:
-                header = [c.lstrip("#") for c in row]
+            # plink2 .vcor uses tab-separated header starting with `#CHROM_A`;
+            # plink 1.9 .ld uses whitespace-separated `CHR_A`.
+            tokens = line.split("\t") if "\t" in line else line.split()
+            if header_tokens is None:
+                header_tokens = [t.lstrip("#") for t in tokens]
                 continue
-            r = dict(zip(header, row))
-            id_a = r.get("ID_A") or ""
-            id_b = r.get("ID_B") or ""
+            row = dict(zip(header_tokens, tokens))
+            id_a = row.get("SNP_A") or row.get("ID_A") or ""
+            id_b = row.get("SNP_B") or row.get("ID_B") or ""
             partner = id_b if id_a == lead else (id_a if id_b == lead else None)
             if partner is None:
                 continue
-            r2_str = r.get("UNPHASED_R2") or r.get("R2") or ""
+            r2_str = row.get("R2") or row.get("UNPHASED_R2") or ""
             if not r2_str or r2_str == "NA":
                 notes.append(f"missing r² for partner {partner}")
                 continue
@@ -335,3 +379,13 @@ def _parse_vcor(path: Path, lead: str, notes: list[str]) -> list[OnDemandLDPair]
                 continue
             out.append(OnDemandLDPair(partner_variant_id=partner, r2=r2))
     return out
+
+
+__all__ = [
+    "DEFAULT_PLINK_BIN",
+    "OnDemand1000GLDClient",
+    "OnDemandLDError",
+    "OnDemandLDPair",
+    "OnDemandLDResult",
+    "PLINK_NOT_FOUND_HINT",
+]

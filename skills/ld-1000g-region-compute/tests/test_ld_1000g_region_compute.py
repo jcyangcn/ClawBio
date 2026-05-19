@@ -1,22 +1,24 @@
-"""Unit tests for the plink2 LD wrapper.
+"""Unit tests for the on-demand 1000G LD client (plink 1.9 subprocess).
 
-We mock subprocess + filesystem so tests are offline and don't require plink2
-to be installed. Live smoke (real plink2 + 1000G EUR panel) goes in test_live_ld_1000g_region_compute.py.
+We mock the region fetch (requests / pysam) and the plink subprocess so
+these tests are offline and don't require plink, pysam, or network. Live
+smoke (real plink 1.9 against a tiny 1000G window) lives in
+test_live_ld_1000g_region_compute.py.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from ld_1000g_region_compute import (
-    LDComputeError,
-    Plink2LDClient,
-    SuperPop,
+from ondemand_client import (
+    OnDemand1000GLDClient,
+    OnDemandLDError,
+    _parse_ld,
 )
-import ld_1000g_region_compute as ld_module
+import ondemand_client as oc_module
 
 
 # -----------------------------------------------------------------
@@ -24,37 +26,46 @@ import ld_1000g_region_compute as ld_module
 # -----------------------------------------------------------------
 
 
-def _make_panel(tmp_path: Path) -> Path:
-    """Create the three PLINK2 sibling files so _validate_panel passes."""
-    base = tmp_path / "panel_eur"
-    for suf in (".pgen", ".pvar", ".psam"):
-        (tmp_path / f"panel_eur{suf}").write_bytes(b"")
-    return base
+def _patch_plink_version(monkeypatch, version: str = "PLINK v1.90b6.27 64-bit (2023-05-09)") -> None:
+    monkeypatch.setattr(oc_module, "_detect_plink_version", lambda _bin: version)
 
 
-def _patch_plink2_version(monkeypatch, version: str = "PLINK v2.00a5LM"):
-    """Make _detect_plink2_version return a fixed string without invoking shutil/subprocess."""
+def _patch_samples(monkeypatch, samples: list[str] | None = None) -> None:
+    samples = samples or ["NA12878", "NA12879", "NA12891"]
     monkeypatch.setattr(
-        ld_module, "_detect_plink2_version", lambda _bin: version
+        oc_module, "_resolve_super_pop_samples",
+        lambda _super_pop, _cache_dir: list(samples),
     )
 
 
-def _write_vcor2(out_prefix: Path, lead: str, partner_pairs: list[tuple[str, float]],
-                 sep: str = ":"):
-    """Emit a plink2 .vcor2 file at out_prefix.vcor2.
+def _patch_region_fetch(monkeypatch, tmp_path: Path) -> Path:
+    """Replace the tabix fetch with a no-op that returns an empty .vcf.gz path."""
+    fake_vcf = tmp_path / "fake_region.vcf.gz"
+    fake_vcf.write_bytes(b"")
+    monkeypatch.setattr(
+        oc_module, "_fetch_region_vcf",
+        lambda chrom, start, end, cache_dir: fake_vcf,
+    )
+    return fake_vcf
 
-    `sep` is the variant-id separator the panel uses. Real plink2 against the
-    1000G GRCh38 distribution writes ids with colons.
+
+def _write_ld(out_prefix: Path, lead: str, partner_pairs: list[tuple[str, float]]) -> None:
+    """Emit a plink 1.9 .ld file at <out_prefix>.ld.
+
+    plink 1.9 emits whitespace-separated columns:
+    `CHR_A BP_A SNP_A CHR_B BP_B SNP_B R2`.
     """
+
     def _to_panel(ot_id: str) -> str:
-        return ot_id.replace("_", sep, 3) if sep != "_" else ot_id
-    rows = ["#CHROM_A\tPOS_A\tID_A\tREF_A\tALT_A\tCHROM_B\tPOS_B\tID_B\tREF_B\tALT_B\tUNPHASED_R2\tDP"]
+        return ot_id.replace("_", ":", 3)
+
+    rows = [" CHR_A         BP_A        SNP_A  CHR_B         BP_B        SNP_B           R2"]
     for partner, r2 in partner_pairs:
         rows.append(
-            f"2\t36910110\t{_to_panel(lead)}\tC\tT\t"
-            f"2\t36932656\t{_to_panel(partner)}\tA\tG\t{r2:.6f}\t0.95"
+            f"   2     36910110  {_to_panel(lead)}    "
+            f"   2     36932656  {_to_panel(partner)}    {r2:.6f}"
         )
-    Path(f"{out_prefix}.vcor2").write_text("\n".join(rows) + "\n")
+    Path(f"{out_prefix}.ld").write_text("\n".join(rows) + "\n")
 
 
 # -----------------------------------------------------------------
@@ -62,40 +73,29 @@ def _write_vcor2(out_prefix: Path, lead: str, partner_pairs: list[tuple[str, flo
 # -----------------------------------------------------------------
 
 
-def test_client_validates_plink2_present(monkeypatch, tmp_path):
-    panel = _make_panel(tmp_path)
-    _patch_plink2_version(monkeypatch)
-    c = Plink2LDClient(
-        panel_path=panel, super_pop=SuperPop.EUR,
-        panel_id="1000g_phase3_v5b_grch38_basic", panel_version="5b",
-    )
-    assert c.plink2_version == "PLINK v2.00a5LM"
-    assert c.super_pop == SuperPop.EUR
+def test_client_validates_plink_present(monkeypatch, tmp_path):
+    _patch_plink_version(monkeypatch)
+    c = OnDemand1000GLDClient(super_pop="EUR", plink_bin="plink", cache_dir=tmp_path)
+    assert c.plink2_version.startswith("PLINK v1.90")
+    assert c.super_pop == "EUR"
+    # Back-compat alias holds.
+    assert c.plink2_bin == c.plink_bin
 
 
-def test_client_raises_when_plink2_missing(monkeypatch, tmp_path):
-    panel = _make_panel(tmp_path)
-    monkeypatch.setattr(
-        ld_module, "_detect_plink2_version",
-        lambda _bin: (_ for _ in ()).throw(LDComputeError("plink2 not found"))
-    )
-    with pytest.raises(LDComputeError, match="plink2 not found"):
-        Plink2LDClient(
-            panel_path=panel, super_pop=SuperPop.EUR,
-            panel_id="1000g_phase3_v5b_grch38_basic", panel_version="5b",
-        )
+def test_client_raises_when_plink_missing(monkeypatch, tmp_path):
+    def boom(_bin):
+        raise OnDemandLDError("plink not found")
+    monkeypatch.setattr(oc_module, "_detect_plink_version", boom)
+    with pytest.raises(OnDemandLDError, match="plink not found"):
+        OnDemand1000GLDClient(super_pop="EUR", plink_bin="plink", cache_dir=tmp_path)
 
 
-def test_client_raises_on_missing_panel_siblings(monkeypatch, tmp_path):
-    _patch_plink2_version(monkeypatch)
-    # Only create .pgen, missing .pvar and .psam.
-    panel = tmp_path / "incomplete"
-    (tmp_path / "incomplete.pgen").write_bytes(b"")
-    with pytest.raises(LDComputeError, match="missing"):
-        Plink2LDClient(
-            panel_path=panel, super_pop=SuperPop.EUR,
-            panel_id="1000g_phase3_v5b_grch38_basic", panel_version="5b",
-        )
+def test_client_accepts_legacy_plink2_bin_kwarg(monkeypatch, tmp_path):
+    """Callers built against the plink2-era kwarg keep working without churn."""
+    _patch_plink_version(monkeypatch, version="PLINK v2.00a5LM")
+    c = OnDemand1000GLDClient(super_pop="EUR", plink2_bin="plink2", cache_dir=tmp_path)
+    assert c.plink_bin == "plink2"
+    assert c.plink2_bin == "plink2"
 
 
 # -----------------------------------------------------------------
@@ -103,17 +103,17 @@ def test_client_raises_on_missing_panel_siblings(monkeypatch, tmp_path):
 # -----------------------------------------------------------------
 
 
-def test_r2_with_lead_parses_vcor2(monkeypatch, tmp_path):
-    panel = _make_panel(tmp_path)
-    _patch_plink2_version(monkeypatch)
+def test_r2_with_lead_parses_ld_output(monkeypatch, tmp_path):
+    _patch_plink_version(monkeypatch)
+    _patch_samples(monkeypatch)
+    _patch_region_fetch(monkeypatch, tmp_path)
 
-    captured_cmd = {}
+    captured_cmd: dict = {}
 
     def fake_run(cmd, capture_output, text, check, timeout):
         captured_cmd["cmd"] = cmd
-        # cmd[-1] is the --out prefix.
         out_prefix = Path(cmd[cmd.index("--out") + 1])
-        _write_vcor2(out_prefix, lead="2_36910110_C_T", partner_pairs=[
+        _write_ld(out_prefix, lead="2_36910110_C_T", partner_pairs=[
             ("2_36932656_A_G", 0.94),
             ("2_36905984_C_T", 0.81),
             ("2_36897612_T_C", 0.40),
@@ -121,10 +121,7 @@ def test_r2_with_lead_parses_vcor2(monkeypatch, tmp_path):
         return MagicMock(returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr("subprocess.run", fake_run)
-    client = Plink2LDClient(
-        panel_path=panel, super_pop=SuperPop.EUR,
-        panel_id="1000g_phase3_v5b_grch38_basic", panel_version="5b",
-    )
+    client = OnDemand1000GLDClient(super_pop="EUR", plink_bin="plink", cache_dir=tmp_path)
     result = client.r2_with_lead(
         lead="2_36910110_C_T",
         partners=["2_36932656_A_G", "2_36905984_C_T", "2_36897612_T_C"],
@@ -133,86 +130,101 @@ def test_r2_with_lead_parses_vcor2(monkeypatch, tmp_path):
     )
 
     assert result.lead_variant_id == "2_36910110_C_T"
-    assert result.super_pop == SuperPop.EUR
-    assert result.panel_version == "5b"
-    assert result.plink2_version == "PLINK v2.00a5LM"
+    assert result.super_pop == "EUR"
     assert result.n_partners_requested == 3
     assert result.n_partners_returned == 3
     r2_by_id = {p.partner_variant_id: p.r2 for p in result.pairs}
     assert r2_by_id["2_36932656_A_G"] == pytest.approx(0.94)
     assert r2_by_id["2_36905984_C_T"] == pytest.approx(0.81)
     assert r2_by_id["2_36897612_T_C"] == pytest.approx(0.40)
-    # Verify cmd shape (audit-friendly).
-    assert "--r2-unphased" in captured_cmd["cmd"]
-    assert "--ld-snp" in captured_cmd["cmd"]
+
+    # Verify cmd shape uses plink 1.9 flags.
+    cmd = captured_cmd["cmd"]
+    assert "--r2" in cmd
+    assert "--ld-snp" in cmd
+    assert "--ld-window-r2" in cmd
+    assert "--ld-window-kb" in cmd
+    assert "--set-missing-var-ids" in cmd
+    # plink 1.9 should NOT see plink2's matrix-only flag.
+    assert "--r2-unphased" not in cmd
 
 
 def test_r2_with_lead_handles_empty_partners(monkeypatch, tmp_path):
-    panel = _make_panel(tmp_path)
-    _patch_plink2_version(monkeypatch)
-    client = Plink2LDClient(
-        panel_path=panel, super_pop=SuperPop.EUR,
-        panel_id="1000g_phase3_v5b_grch38_basic", panel_version="5b",
+    _patch_plink_version(monkeypatch)
+    client = OnDemand1000GLDClient(super_pop="EUR", plink_bin="plink", cache_dir=tmp_path)
+    result = client.r2_with_lead(
+        lead="2_1_C_T", partners=[], chromosome="2", window_bp=1_000,
     )
-    result = client.r2_with_lead(lead="2_1_C_T", partners=[])
     assert result.n_partners_requested == 0
     assert result.pairs == []
     assert any("no partners requested" in n for n in result.notes)
 
 
-def test_r2_with_lead_raises_on_plink2_nonzero_exit(monkeypatch, tmp_path):
-    panel = _make_panel(tmp_path)
-    _patch_plink2_version(monkeypatch)
+def test_r2_with_lead_raises_on_plink_nonzero_exit(monkeypatch, tmp_path):
+    _patch_plink_version(monkeypatch)
+    _patch_samples(monkeypatch)
+    _patch_region_fetch(monkeypatch, tmp_path)
 
     def boom(cmd, capture_output, text, check, timeout):
         return MagicMock(returncode=1, stdout="", stderr="missing variant id")
     monkeypatch.setattr("subprocess.run", boom)
 
-    client = Plink2LDClient(
-        panel_path=panel, super_pop=SuperPop.EUR,
-        panel_id="1000g_phase3_v5b_grch38_basic", panel_version="5b",
-    )
-    with pytest.raises(LDComputeError, match="exited with code 1"):
-        client.r2_with_lead(lead="2_1_C_T", partners=["2_2_A_G"])
+    client = OnDemand1000GLDClient(super_pop="EUR", plink_bin="plink", cache_dir=tmp_path)
+    with pytest.raises(OnDemandLDError, match="exited with code 1"):
+        client.r2_with_lead(
+            lead="2_1_C_T", partners=["2_2_A_G"], chromosome="2", window_bp=1_000,
+        )
 
 
-def test_r2_with_lead_raises_when_vcor2_absent(monkeypatch, tmp_path):
-    panel = _make_panel(tmp_path)
-    _patch_plink2_version(monkeypatch)
+def test_r2_with_lead_raises_when_ld_absent(monkeypatch, tmp_path):
+    _patch_plink_version(monkeypatch)
+    _patch_samples(monkeypatch)
+    _patch_region_fetch(monkeypatch, tmp_path)
 
     def succeeds_but_writes_nothing(cmd, capture_output, text, check, timeout):
         return MagicMock(returncode=0, stdout="ok", stderr="")
     monkeypatch.setattr("subprocess.run", succeeds_but_writes_nothing)
 
-    client = Plink2LDClient(
-        panel_path=panel, super_pop=SuperPop.EUR,
-        panel_id="1000g_phase3_v5b_grch38_basic", panel_version="5b",
-    )
-    with pytest.raises(LDComputeError, match=r"no \.vcor"):
-        client.r2_with_lead(lead="2_1_C_T", partners=["2_2_A_G"])
+    client = OnDemand1000GLDClient(super_pop="EUR", plink_bin="plink", cache_dir=tmp_path)
+    with pytest.raises(OnDemandLDError, match=r"no \.ld output"):
+        client.r2_with_lead(
+            lead="2_1_C_T", partners=["2_2_A_G"], chromosome="2", window_bp=1_000,
+        )
 
 
-def test_vcor2_parser_skips_rows_without_lead_match(monkeypatch, tmp_path):
-    """A .vcor2 row whose ID_A and ID_B are both unrelated to the lead should be ignored."""
-    panel = _make_panel(tmp_path)
-    _patch_plink2_version(monkeypatch)
+# -----------------------------------------------------------------
+# Parser-only tests
+# -----------------------------------------------------------------
 
-    def fake_run(cmd, capture_output, text, check, timeout):
-        out_prefix = Path(cmd[cmd.index("--out") + 1])
-        rows = [
-            "#CHROM_A\tPOS_A\tID_A\tREF_A\tALT_A\tCHROM_B\tPOS_B\tID_B\tREF_B\tALT_B\tUNPHASED_R2\tDP",
-            "2\t1\t2_x_C_T\tC\tT\t2\t2\t2_y_A_G\tA\tG\t0.5\t0.6",   # neither id matches lead
-            "2\t1\tlead\tC\tT\t2\t2\t2_z_A_G\tA\tG\t0.7\t0.9",       # matches
-        ]
-        Path(f"{out_prefix}.vcor2").write_text("\n".join(rows) + "\n")
-        return MagicMock(returncode=0)
 
-    monkeypatch.setattr("subprocess.run", fake_run)
-    client = Plink2LDClient(
-        panel_path=panel, super_pop=SuperPop.EUR,
-        panel_id="1000g_phase3_v5b_grch38_basic", panel_version="5b",
-    )
-    result = client.r2_with_lead(lead="lead", partners=["2_z_A_G"])
-    assert result.n_partners_returned == 1
-    assert result.pairs[0].partner_variant_id == "2_z_A_G"
-    assert result.pairs[0].r2 == pytest.approx(0.7)
+def test_parse_ld_skips_rows_without_lead_match(tmp_path):
+    """An .ld row whose SNP_A and SNP_B are both unrelated to the lead is ignored."""
+    path = tmp_path / "ld_out.ld"
+    rows = [
+        " CHR_A         BP_A        SNP_A  CHR_B         BP_B        SNP_B           R2",
+        "   2            1   2:x:C:T      2            2   2:y:A:G        0.500000",
+        "   2            1         lead    2            2   2:z:A:G        0.700000",
+    ]
+    path.write_text("\n".join(rows) + "\n")
+
+    notes: list[str] = []
+    pairs = _parse_ld(path, "lead", notes)
+    assert len(pairs) == 1
+    assert pairs[0].partner_variant_id == "2:z:A:G"
+    assert pairs[0].r2 == pytest.approx(0.7)
+
+
+def test_parse_ld_tolerates_legacy_plink2_vcor(tmp_path):
+    """Back-compat: a tab-separated .vcor file from plink2 still parses."""
+    path = tmp_path / "ld_out.vcor"
+    rows = [
+        "#CHROM_A\tPOS_A\tID_A\tREF_A\tALT_A\tCHROM_B\tPOS_B\tID_B\tREF_B\tALT_B\tUNPHASED_R2",
+        "2\t1\tlead\tC\tT\t2\t2\t2:z:A:G\tA\tG\t0.65",
+    ]
+    path.write_text("\n".join(rows) + "\n")
+
+    notes: list[str] = []
+    pairs = _parse_ld(path, "lead", notes)
+    assert len(pairs) == 1
+    assert pairs[0].partner_variant_id == "2:z:A:G"
+    assert pairs[0].r2 == pytest.approx(0.65)

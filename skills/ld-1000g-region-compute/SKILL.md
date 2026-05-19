@@ -4,9 +4,8 @@ description: |
   Compute pairwise r² between a lead variant and every variant in a window
   using the 1000 Genomes Phase 3 GRCh38 reference panel, ancestry-stratified.
   Use when an agent needs LD coloring for a regional plot or LD pruning
-  around a candidate causal variant. Two modes: pre-baked PLINK2 panel (fast,
-  power-user) or on-demand region fetch from EBI 1000G FTP (no multi-GB
-  cold-start; default for new installs).
+  around a candidate causal variant. Single client (on-demand region fetch
+  from EBI 1000G FTP); no multi-GB cold-start.
 license: MIT
 metadata:
   skill-author: Aviv Madar
@@ -16,7 +15,7 @@ metadata:
     - ld
     - 1000-genomes
     - reference-panel
-    - plink2
+    - plink
     - ancestry-stratified
     - on-demand
   inputs:
@@ -46,7 +45,7 @@ metadata:
       description: Per-partner LDPair (partner_variant_id, r2, optional dprime).
     - name: panel_meta
       type: object
-      description: Panel id, version, plink2 version, n_partners_returned, fetched_at_utc.
+      description: Panel id, version, plink version, n_partners_returned, fetched_at_utc.
   dependencies:
     - python>=3.10
     - pysam>=0.22
@@ -60,7 +59,7 @@ metadata:
     requires:
       bins:
         - python3
-        - plink2
+        - plink
         - tabix
       env: []
       config: []
@@ -70,10 +69,11 @@ metadata:
     os: [darwin, linux]
     install: |
       pip install pysam pandas requests
-      # plus a system plink2 binary:
-      #   macOS (brewsci tap): brew install --HEAD brewsci/bio/plink2
-      #   Linux:               apt-get install plink2
-      #   direct binary:       https://www.cog-genomics.org/plink/2.0/  (then set PLINK2_BIN)
+      # plus the plink 1.9 binary (cog-genomics.org/plink/1.9):
+      #   macOS (brewsci tap): brew install brewsci/bio/plink
+      #   Ubuntu / Debian:     apt-get install plink1.9
+      #   any platform:        conda install -c bioconda plink
+      #   direct binary:       https://www.cog-genomics.org/plink/1.9/  (then set PLINK_BIN)
     trigger_keywords:
       - ld around lead
       - ld region 1000g
@@ -89,14 +89,11 @@ You are **LD 1000G Region Compute**, a specialised ClawBio agent for computing p
 
 ## Overview
 
-LD coloring on a regional Manhattan, LD pruning around a candidate causal variant, ancestry-aware coloc input - all need pairwise r² between a lead and a candidate set. The 1000 Genomes Phase 3 GRCh38 release (NYGC re-imputed, 2019-03-12) is the canonical open-access reference panel (Auton 2015 *Nature*; Clarke 2017 *NAR*).
+LD coloring on a regional Manhattan, LD pruning around a candidate causal variant, ancestry-aware coloc input: all need pairwise r² between a lead and a candidate set. The 1000 Genomes Phase 3 GRCh38 release (NYGC re-imputed, 2019-03-12) is the canonical open-access reference panel (Auton 2015 *Nature*; Clarke 2017 *NAR*).
 
-This skill provides r² compute via `plink2 --r2-unphased` with two access modes:
+This skill ships one client, `OnDemand1000GLDClient`: tabix-fetch the region VCF from EBI 1000G FTP (~5-50 MB per request), super-pop-filter via the canonical Phase 3 panel TSV, run `plink --r2` locally. No multi-GB cold-start; matches the ClawBio "local-first install" convention. Cache stored at `~/.clawbio/locuscompare_cache/1000g/`.
 
-1. **Pre-baked PLINK2 panel** (`Plink2LDClient`): point at a local `<prefix>.{pgen,pvar,psam}` triplet that the user has already installed (typically a 2-3 GB super-pop subset per chromosome). Fastest; no network. Power-user mode.
-2. **On-demand region fetch** (`OnDemand1000GLDClient`): tabix-fetch the region VCF from EBI 1000G FTP (~5-50 MB per request), super-pop-filter via the canonical Phase 3 panel TSV, run `plink2 --vcf` locally. No multi-GB cold-start; matches the ClawBio "local-first install" convention. Cache stored at `~/.clawbio/locuscompare_cache/1000g/`.
-
-Both modes implement the same `r2_with_lead(lead, partners, chromosome, window_bp)` interface; consumers swap clients without code changes.
+The skill targets **plink 1.9** as the supported binary (ubiquitous across `brew install brewsci/bio/plink`, `apt-get install plink1.9`, `conda install -c bioconda plink`). plink 1.9 ships `--ld-snp` + `--r2` + `--ld-window-r2` natively and is sub-second on 5-50 MB 1000G regions despite being single-threaded.
 
 ## Trigger
 
@@ -110,26 +107,26 @@ Both modes implement the same `r2_with_lead(lead, partners, chromosome, window_b
 
 **Do NOT fire when** the user wants:
 
-- **r² between two specific variants only** - a 2-variant lookup is overkill via this skill; query plink2 directly with `--ld <var1> <var2>` for that case.
-- **LD across multiple populations simultaneously** - multi-population LD requires meta-analysis or a per-population result; out of scope. Call this skill once per super-population if needed.
-- **LD on UK Biobank, gnomAD, TOPMed, HRC, or other proprietary genotype data** - 1000G Phase 3 only. Other panels require different licensing and ingest paths.
-- **Pre-computed full-genome LD matrices** - this is on-demand region compute. Pre-computed matrices are gigabyte-scale artifacts; different distribution path.
-- **Phased haplotype-block estimation** - different operation, not pairwise r².
-- **Trans-population LD comparisons** - use a dedicated tool (LDLink, LDpair).
+- **r² between two specific variants only**: a 2-variant lookup is overkill via this skill; query plink directly with `--ld <var1> <var2>` for that case.
+- **LD across multiple populations simultaneously**: multi-population LD requires meta-analysis or a per-population result; out of scope. Call this skill once per super-population if needed.
+- **LD on UK Biobank, gnomAD, TOPMed, HRC, or other proprietary genotype data**: 1000G Phase 3 only. Other panels require different licensing and ingest paths.
+- **Pre-computed full-genome LD matrices**: this is on-demand region compute. Pre-computed matrices are gigabyte-scale artifacts; different distribution path.
+- **Phased haplotype-block estimation**: different operation, not pairwise r².
+- **Trans-population LD comparisons**: use a dedicated tool (LDLink, LDpair).
 
 ## Scope
 
-**One skill, one task.** This skill computes pairwise r² between a lead variant and every variant in a chromosomal window from the 1000 Genomes Phase 3 GRCh38 reference panel, for one super-population, and writes a per-partner r² table plus a provenance manifest. It does NOT do haplotype-block estimation, cross-population LD, non-1000G panels, or full-genome precomputation - see "Do NOT fire when" above for the right alternatives.
+**One skill, one task.** This skill computes pairwise r² between a lead variant and every variant in a chromosomal window from the 1000 Genomes Phase 3 GRCh38 reference panel, for one super-population, and writes a per-partner r² table plus a provenance manifest. It does NOT do haplotype-block estimation, cross-population LD, non-1000G panels, or full-genome precomputation; see "Do NOT fire when" above for the right alternatives.
 
 ## Workflow
 
 When an agent asks for r² between a lead and partners in a region:
 
-1. **Resolve `lead` + `partners` + `chromosome` + `window_bp` + `super_pop`**: lead in `chr_pos_ref_alt` GRCh38 form; partners as a list (or `null` to compute against all variants in the window); super-population from `{EUR, AFR, AMR, EAS, SAS}` (default EUR; choose to match the upstream cohort's ancestry - see Gotcha #1).
-2. **Region VCF fetch** (on-demand mode): the skill performs a tabix-on-FTP byte-range request against `https://ftp.1000genomes.ebi.ac.uk/` for the requested chromosome × window. Cache hit at `~/.clawbio/locuscompare_cache/1000g/<chr>_<start>_<end>.vcf.gz` skips the fetch.
-3. **Super-pop filter**: subset the VCF to the chosen super-population's samples via the canonical Phase 3 panel TSV (`integrated_call_samples_v3.20130502.ALL.panel`); `plink2 --keep` with FID=0 convention (Gotcha #4).
-4. **r² compute**: `plink2 --r2-unphased lower-tri` against the lead variant. Variant ids are rewritten to `chr_pos_ref_alt` form via `plink2 --set-all-var-ids '@:#:$r:$a'` (Gotcha #3).
-5. **Write outputs** to `--output <dir>/`: a flat `pairs.tsv` (partner_variant_id, r2, optional dprime), a `manifest.yaml` with provenance (panel id, panel version, super_pop, plink2 version, n_partners_requested, n_partners_returned, fetched_at_utc, cache hit/miss), and a `report.md` human-readable summary.
+1. **Resolve `lead` + `partners` + `chromosome` + `window_bp` + `super_pop`**: lead in `chr_pos_ref_alt` GRCh38 form; partners as a list (or `null` to compute against all variants in the window); super-population from `{EUR, AFR, AMR, EAS, SAS}` (default EUR; choose to match the upstream cohort's ancestry; see Gotcha #1).
+2. **Region VCF fetch**: the skill performs a tabix-on-FTP byte-range request against `https://ftp.1000genomes.ebi.ac.uk/` for the requested chromosome × window. Cache hit at `~/.clawbio/locuscompare_cache/1000g/<chr>_<start>_<end>.vcf.gz` skips the fetch.
+3. **Super-pop filter**: subset the VCF to the chosen super-population's samples via the canonical Phase 3 panel TSV (`integrated_call_samples_v3.20130502.ALL.panel`); `plink --keep` with FID=0 convention (Gotcha #4).
+4. **r² compute**: `plink --r2 --ld-snp <lead>` against the lead variant. Variant ids are rewritten to `chr:pos:ref:alt` form via `plink --set-missing-var-ids '@:#:$1:$2'` (Gotcha #3).
+5. **Write outputs** to `--output <dir>/`: a flat `ld_pairs.tsv` (partner_variant_id, r2, optional dprime), a `manifest.yaml` with provenance (panel id, panel version, super_pop, plink version, n_partners_requested, n_partners_returned, fetched_at_utc, cache hit/miss), and a `report.md` human-readable summary.
 
 ## CLI Reference
 
@@ -173,9 +170,9 @@ Running `--demo` (SORT1 locus, EUR, 5 partner variants):
 
 ```
 info: using bundled demo sort1_locus_eur.json
-ld-1000g-region-compute: 5 partners -> /tmp/sort1_ld_demo/pairs.tsv
+ld-1000g-region-compute: 5 partners -> /tmp/sort1_ld_demo/ld_pairs.tsv
   panel: 1000g_phase3_v5b_grch38_basic (EUR)
-  plink2: PLINK v2.0.0-a.7.1 M1 (4 May 2026)
+  plink: PLINK v1.90b6.27 64-bit (2023-05-09)
   cache: hit (~/.clawbio/locuscompare_cache/1000g/chr1_108774968_109774968.vcf.gz)
 ```
 
@@ -193,17 +190,17 @@ panel:
   panel_version: 5b_remote_2019_03_12
   super_pop: EUR
   super_pop_label: European (EUR; n=503; 1000G Phase 3)
-  plink2_version: PLINK v2.0.0-a.7.1 M1 (4 May 2026)
+  plink2_version: PLINK v1.90b6.27 64-bit (2023-05-09)
 n_partners_requested: 5
 n_partners_returned: 5
 cache_hit: true
 fetched_at_utc: '2026-05-09T11:44:21Z'
 outputs:
-  pairs_tsv: pairs.tsv
+  ld_pairs_tsv: ld_pairs.tsv
 notes: []
 ```
 
-`<output_dir>/pairs.tsv`:
+`<output_dir>/ld_pairs.tsv`:
 
 ```
 partner_variant_id     r2
@@ -221,10 +218,10 @@ partner_variant_id     r2
 
 - **Lead:** `1_109274968_G_T` (rs646776)
 - **Panel:** 1000G Phase 3 GRCh38 v5b (EUR; n=503 samples)
-- **plink2:** PLINK v2.0.0-a.7.1 M1
+- **plink:** PLINK v1.90b6.27 64-bit (2023-05-09)
 - **Window:** chr1, ±500 kb
 - **Partners returned:** 5 of 5 requested
-- **Output TSV:** pairs.tsv
+- **Output TSV:** ld_pairs.tsv
 ```
 
 ## Gotchas
@@ -233,9 +230,9 @@ partner_variant_id     r2
 
 2. **Lead variant absent from 1000G.** Rare or array-only variants may not be in the 1000G panel; in that case every partner returns r²=0 because the lead has no neighbours in the reference. The skill notes `LD r² unavailable for lead` in the manifest. Workaround: pick a different (more common) lead in the locus that IS in 1000G via `--lead <variant_id>`, or accept grey points in the regional plot.
 
-3. **Variant-id format collision in 1000G VCFs.** The 1000G GRCh38 VCFs use rsids in the ID column, NOT `chr:pos:ref:alt`. The on-demand client passes `plink2 --set-all-var-ids '@:#:$r:$a'` to rewrite IDs into the canonical form before LD compute. Tri-allelic loci that have been split into multiple lines may produce duplicate IDs; the client passes `--new-id-max-allele-len 100 missing` to mitigate, but very unusual loci may still complain (deduplicate the source VCF or `bcftools norm -m -any`).
+3. **Variant-id format collision in 1000G VCFs.** The 1000G GRCh38 VCFs use `.` (missing) in the ID column rather than `chr:pos:ref:alt`. The on-demand client passes `plink --set-missing-var-ids '@:#:$1:$2'` to rewrite IDs into the canonical form before LD compute (`@` = chromosome, `#` = bp, `$1` / `$2` = ref / alt). Tri-allelic loci that have been split into multiple lines may still produce duplicate IDs; deduplicate the source VCF or `bcftools norm -m -any` upstream if you hit that case.
 
-4. **plink2 `--keep` FID convention.** plink2 sets FID=0 for all samples loaded from a VCF. The on-demand client's `--keep` file uses `0\t<sample>` rows (NOT `<sample>\t<sample>` - that variant is silently ignored, and the super-pop filter will return zero samples).
+4. **plink 1.9 `--keep` FID convention.** plink 1.9 + `--vcf` assigns `FID = IID = sample-id` (per [the plink 1.9 input docs](https://www.cog-genomics.org/plink/1.9/data#vcf)); the on-demand client's `--keep` file therefore writes `<sample>\t<sample>` rows (NOT `0\t<sample>`; that variant errors out with "No people remaining after --keep" because no loaded sample has FID=0). plink2 flips this default to FID=0, so do not copy a plink2-era keep file verbatim if you swap binaries.
 
 5. **Rare variants (MAF < 0.01) have unstable r².** With ~500 EUR samples and MAF=0.005, only ~5 individuals carry the rare allele; r² estimates have huge sampling variance. The skill filters MAF < 0.01 by default and emits the count in `rare_variant_drops`. Do NOT manually re-include rare variants by lowering this threshold; for rare-variant fine-mapping, use a higher-density reference (TOPMed, HRC) which is out of scope.
 
@@ -258,7 +255,7 @@ The skill computes pairwise r² between a lead variant and partner variants in a
 - **NOT claim "in LD" without an explicit r² threshold.** The standard publication thresholds are r² > 0.6 (high LD), r² > 0.2 (any LD); the agent must cite the threshold when making a claim.
 - **NOT use 1000G-derived LD for ancestry-mismatched studies without flagging the mismatch.** When the GWAS / eQTL ancestry does not match the chosen super-pop, the agent must surface this as a caveat in the user-facing reply.
 - **NOT compute LD on rare variants (MAF < 0.01).** The skill drops them; the agent must NOT manually re-include them by lowering the threshold.
-- **Cite the panel version and plink2 version** in any output. The manifest carries both; the agent quotes them as part of the methods statement.
+- **Cite the panel version and plink version** in any output. The manifest carries both; the agent quotes them as part of the methods statement.
 
 ## Citations
 

@@ -15,7 +15,7 @@ if str(SKILL_DIR) not in sys.path:
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
-        "live: integration test that runs plink2 against a local 1000G panel",
+        "live: integration test that runs plink against a 1000G region fetched from EBI",
     )
 
 
@@ -24,7 +24,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     run_live = os.environ.get("RUN_LIVE_TESTS") == "1" or "live" in (config.getoption("-m") or "")
     if run_live:
         return
-    skip_live = pytest.mark.skip(reason="live test (set RUN_LIVE_TESTS=1 or pytest -m live; needs plink2 + 1000G panel)")
+    skip_live = pytest.mark.skip(reason="live test (set RUN_LIVE_TESTS=1 or pytest -m live; needs plink 1.9 + network)")
     for item in items:
         if "live" in item.keywords:
             item.add_marker(skip_live)
