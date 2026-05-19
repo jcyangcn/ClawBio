@@ -14,6 +14,7 @@ import json
 import os
 import time
 from collections import defaultdict
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
@@ -29,6 +30,28 @@ DEFAULT_CACHE_DIR = Path(
 DEFAULT_RELEASE_LABEL = "Ensembl REST (GRCh38)"
 
 
+# Self-contained Gene + Exon dataclasses (no upstream skill required for the
+# locuscompare orchestrator to render a gene track from Ensembl REST).
+@dataclass
+class Exon:
+    start: int
+    end: int
+    exon_number: int | None = None
+    transcript_id: str | None = None
+
+
+@dataclass
+class Gene:
+    gene_id: str
+    gene_symbol: str
+    biotype: str
+    chromosome: str
+    start: int
+    end: int
+    strand: str
+    exons: list[Exon] = field(default_factory=list)
+
+
 def fetch_region_genes_remote(
     chromosome: str,
     start_bp: int,
@@ -41,16 +64,10 @@ def fetch_region_genes_remote(
     """Fetch genes + exons overlapping a window from Ensembl REST.
 
     Returns a tuple `(genes, release_meta, notes)` where `genes` is a list of
-    objects compatible with `skills.execution.gencode_gtf.region_genes.Gene`
-    (duck-typed: gene_id, gene_symbol, biotype, chromosome, start, end,
-    strand, exons[(start, end)]).
-
-    The function lazy-imports the local Gene/Exon types so this module stays
-    independent of the in-repo GENCODE skill (helpful for the upstream PR
-    inlining in task #18).
+    `Gene` objects (with attached `Exon` lists) defined at module top. Both
+    dataclasses are self-contained here so this module needs no other
+    in-repo dependency.
     """
-    from skills.execution.gencode_gtf.region_genes import Gene, Exon
-
     chrom_bare = chromosome.removeprefix("chr") if chromosome.startswith("chr") else chromosome
     cache_dir = (cache_dir or DEFAULT_CACHE_DIR).expanduser()
     cache_dir.mkdir(parents=True, exist_ok=True)

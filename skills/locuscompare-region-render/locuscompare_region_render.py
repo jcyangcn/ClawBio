@@ -422,6 +422,11 @@ def _render_for_spec(
 
     notes: list[str] = []
     extra_caveats = list(spec.extra_caveats)
+    # v1.4 fetcher notes: each fetcher's RegionResult.notes propagates into a
+    # separate manifest field, prefixed with the originating fetcher name.
+    # Kept distinct from `extra_caveats` (curated, user-facing) so the noisy
+    # data-source channel can be triaged independently.
+    data_source_warnings: list[str] = []
 
     eqtl_dataset_id = spec.eqtl_dataset_id
     gwas_accession = spec.gwas_accession
@@ -469,6 +474,7 @@ def _render_for_spec(
         # eQTL Catalogue path leaves these unset; mark for the
         # _build_short_labels switch.
         exposure_eqtl_release = None
+        data_source_warnings.extend(f"ukb_ppp: {n}" for n in pqtl.notes)
     else:
         try:
             # Filter on the `gene_id` column, not `molecular_trait_id`.
@@ -502,6 +508,7 @@ def _render_for_spec(
         exposure_ancestry_code = ""
         exposure_ancestry_label = ""
         exposure_eqtl_release = exposure.release
+        data_source_warnings.extend(f"eqtl_catalogue: {n}" for n in exposure.notes)
         # Surface the file-class disclosure for non-ge / non-microarray
         # exposures. The fetcher uses .cc.tsv.gz (credible-set-filtered
         # sumstats) for splicing / exon / transcript quant methods because
@@ -535,6 +542,7 @@ def _render_for_spec(
             f"GWAS Catalog returned zero variants for "
             f"{gwas_accession} at {chromosome}:{start_bp}-{end_bp}"
         )
+    data_source_warnings.extend(f"gwas_catalog: {n}" for n in outcome.notes)
 
     # 3. LD r² (optional; gracefully degrade when plink not installed).
     r2_by_variant: dict[str, float] = {lead_variant_id: 1.0}
@@ -697,6 +705,7 @@ def _render_for_spec(
         scatter_downsampled=len(pairs) > 5000,
         scatter_downsample_target=5000,
         ancestry_caveats=extra_caveats + spec.notes,
+        data_source_warnings=data_source_warnings,
         plot_artifact=str(out_path.name),
         fetched_at=fetched_at,
     )
