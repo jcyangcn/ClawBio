@@ -60,7 +60,6 @@ import argparse
 import csv
 import gzip
 import io
-import gzip
 import json
 import os
 import re
