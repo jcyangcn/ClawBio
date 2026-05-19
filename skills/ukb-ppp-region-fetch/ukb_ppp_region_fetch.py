@@ -19,7 +19,7 @@ entry; attribution string emitted in every manifest).
 Two-path access design (v1.3):
 
 1. **Bundled slices** (default for canonical demos; no auth required).
-   `bundled_slices/<PROTEIN>_<ANCESTRY>_chr<C>_<start>_<end>.json` files
+   `bundled_slices/<PROTEIN>_<ANCESTRY>_chr<C>_<start>_<end>.json.gz` files
    shipped inside the skill repo contain pre-computed regional slices
    for the canonical demo cohort. v0.1.0 ships the SORT1 / EUR /
    OID20213 slice (chr1:108,774,968-109,774,968); the slice convention
@@ -60,6 +60,7 @@ import argparse
 import csv
 import gzip
 import io
+import gzip
 import json
 import os
 import re
@@ -411,18 +412,23 @@ def _bundled_slice_key(
     protein_label: str, ancestry: str, chromosome: str,
     start_bp: int, end_bp: int,
 ) -> str:
-    """Deterministic filename key for a (protein, ancestry, region) slice."""
+    """Deterministic filename key for a (protein, ancestry, region) slice.
+
+    Slices ship as gzipped JSON (`<key>.json.gz`); per-variant pQTL rows
+    compress ~8.5x, shaving the bulk of the PR size.
+    """
     return (
         f"{protein_label.strip().upper()}__"
         f"{ancestry.strip().upper()}__"
         f"chr{str(chromosome).lstrip('chr')}__"
-        f"{int(start_bp)}_{int(end_bp)}.json"
+        f"{int(start_bp)}_{int(end_bp)}.json.gz"
     )
 
 
 def _load_bundled_slice(path: Path) -> RegionResult:
-    """Reconstruct a RegionResult from a bundled-slice JSON file."""
-    d = json.loads(path.read_text())
+    """Reconstruct a RegionResult from a gzipped bundled-slice JSON file."""
+    with gzip.open(path, mode="rt", encoding="utf-8") as f:
+        d = json.load(f)
     rel = d.get("release") or {}
     release = UKBPPPRelease(
         release_label=rel.get("release_label", ""),
@@ -473,7 +479,7 @@ class UKBPPPClient:
     Two-path fetch (v1.3):
 
     1. **Bundled slice** (default; no auth). On `fetch_region(...)`, the
-       client first checks `bundled_slices/<key>.json` inside this skill
+       client first checks `bundled_slices/<key>.json.gz` inside this skill
        directory; if it exists, the pre-computed harmonised slice is
        returned directly. Demo cohort coverage means most canonical
        renders never hit the network.
@@ -539,7 +545,7 @@ class UKBPPPClient:
         (e.g. "Q99523"). `ancestry` is one of EUR/AFR/EAS/SAS/CSA/MID/AMR/ALL.
 
         Resolution order:
-        1. Bundled slice (no auth) at `bundled_slices/<key>.json`.
+        1. Bundled slice (no auth) at `bundled_slices/<key>.json.gz`.
         2. Live Synapse fetch (requires SYNAPSE_AUTH_TOKEN).
 
         Returns harmonised variants in OT `chr_pos_ref_alt` ALT-effect
@@ -1063,7 +1069,8 @@ def save_region_result_as_bundled_slice(
         result.release.protein_hgnc, result.ancestry,
         result.chromosome, result.region_start_bp, result.region_end_bp,
     )
-    path.write_text(json.dumps(result.to_dict(), default=str, indent=2))
+    with gzip.open(path, mode="wt", encoding="utf-8", compresslevel=9) as f:
+        json.dump(result.to_dict(), f, default=str, indent=2)
     return path
 
 

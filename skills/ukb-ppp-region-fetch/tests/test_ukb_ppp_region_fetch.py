@@ -477,7 +477,7 @@ def test_bundled_slice_key_is_deterministic():
     across case + whitespace + `chr` prefix variants."""
     a = _bundled_slice_key("SORT1", "EUR", "1", 108_774_968, 109_774_968)
     b = _bundled_slice_key(" sort1 ", "eur", "chr1", 108_774_968, 109_774_968)
-    assert a == b == "SORT1__EUR__chr1__108774968_109774968.json"
+    assert a == b == "SORT1__EUR__chr1__108774968_109774968.json.gz"
 
 
 def test_save_and_load_round_trip(tmp_path):

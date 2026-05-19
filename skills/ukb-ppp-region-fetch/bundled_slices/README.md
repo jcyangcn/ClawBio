@@ -5,15 +5,15 @@ Pre-computed, harmonised regional pQTL summary statistics for the canonical demo
 ## Slice file convention
 
 ```
-<PROTEIN>__<ANCESTRY>__chr<C>__<start>_<end>.json
+<PROTEIN>__<ANCESTRY>__chr<C>__<start>_<end>.json.gz
 ```
 
 Examples:
 
-- `SORT1__EUR__chr1__108774968_109774968.json`
-- `IL6R__EUR__chr1__154404000_155404000.json`
+- `SORT1__EUR__chr1__108774968_109774968.json.gz`
+- `IL6R__EUR__chr1__154404000_155404000.json.gz`
 
-Each file is the JSON serialisation of a `RegionResult` (see `ukb_ppp_region_fetch.RegionResult.to_dict`), containing:
+Each file is a gzipped JSON serialisation of a `RegionResult` (see `ukb_ppp_region_fetch.RegionResult.to_dict`); per-variant pQTL rows compress ~8.5x, so a 5,000-variant slice goes from ~3.5 MB on disk to ~430 KB in the PR. The file contains:
 
 - `protein_label_short`, `ancestry`, `chromosome`, `region_start_bp`, `region_end_bp`, `n_variants`
 - `variants`: list of harmonised `RegionVariant` rows (`variant_id`, `chromosome`, `position`, `ref`, `alt`, `beta`, `se`, `p_value`, `maf`, `effect_allele_frequency`, raw REGENIE fields)
@@ -38,7 +38,7 @@ result = client.fetch_region(
     chromosome="1", start_bp=108_774_968, end_bp=109_774_968,
 )
 save_region_result_as_bundled_slice(result)
-# -> bundled_slices/SORT1__EUR__chr1__108774968_109774968.json
+# -> bundled_slices/SORT1__EUR__chr1__108774968_109774968.json.gz
 ```
 
 ## License + attribution
