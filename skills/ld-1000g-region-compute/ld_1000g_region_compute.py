@@ -64,7 +64,7 @@ class LDResult:
     panel_id: str  # e.g. "1000g_phase3_v5b_grch38_basic"
     panel_version: str  # e.g. "5b_remote_2019_03_12"
     super_pop: SuperPop
-    plink2_version: str  # historical name; holds the detected plink binary version
+    plink_version: str  # binary version string returned by `plink --version`
     chromosome: str
     lead_variant_id: str
     window_bp: int
@@ -166,7 +166,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     super_pop_str = cfg.get("super_pop", "EUR")
-    plink_bin = cfg.get("plink_bin") or cfg.get("plink2_bin") or DEFAULT_PLINK_BIN
+    plink_bin = cfg.get("plink_bin") or DEFAULT_PLINK_BIN
     lead = cfg["lead"]
     partners = [p for p in cfg["partners"] if p != lead]
     chromosome = str(cfg["chromosome"])
@@ -203,7 +203,7 @@ def main(argv: list[str] | None = None) -> int:
         "super_pop": getattr(result.super_pop, "value", str(result.super_pop)),
         "panel_id": result.panel_id,
         "panel_version": result.panel_version,
-        "plink2_version": result.plink2_version,
+        "plink_version": result.plink_version,
         "n_partners_requested": result.n_partners_requested,
         "n_partners_returned": result.n_partners_returned,
         "fetched_at_utc": result.fetched_at_utc,
@@ -216,7 +216,7 @@ def main(argv: list[str] | None = None) -> int:
         cache_path.write_text(json.dumps(payload, default=str))
     _write_ld_outputs(payload, args.output)
     print(f"ld-1000g-region-compute: {result.n_partners_returned} pairs -> {args.output / 'ld_pairs.tsv'}")
-    print(f"  panel: {result.panel_id} ({payload['super_pop']}) | plink {result.plink2_version}")
+    print(f"  panel: {result.panel_id} ({payload['super_pop']}) | plink {result.plink_version}")
     return 0
 
 
@@ -284,7 +284,7 @@ def _write_ld_outputs(payload: dict, output: Path) -> None:
         f.write("# ld-1000g-region-compute v0.1.0\n")
         f.write(f"# panel: {payload['panel_id']}\n")
         f.write(f"# super_pop: {payload['super_pop']}\n")
-        f.write(f"# plink: {payload['plink2_version']}\n")
+        f.write(f"# plink: {payload['plink_version']}\n")
         f.write("\t".join(cols) + "\n")
         for p in payload["pairs"]:
             row = [
@@ -306,7 +306,7 @@ def _write_ld_outputs(payload: dict, output: Path) -> None:
         "super_pop": payload["super_pop"],
         "panel_id": payload["panel_id"],
         "panel_version": payload["panel_version"],
-        "plink2_version": payload["plink2_version"],
+        "plink_version": payload["plink_version"],
         "n_partners_requested": payload["n_partners_requested"],
         "n_partners_returned": payload["n_partners_returned"],
         "fetched_at_utc": payload["fetched_at_utc"],
@@ -325,7 +325,7 @@ def _write_ld_outputs(payload: dict, output: Path) -> None:
         f"- **Lead:** `{payload['lead']}`",
         f"- **Region:** chr{payload['chromosome']} ±{payload['window_bp']//2//1000} kb",
         f"- **Reference panel:** {payload['panel_id']} ({payload['super_pop']})",
-        f"- **plink:** {payload['plink2_version']}",
+        f"- **plink:** {payload['plink_version']}",
         f"- **Partners requested / returned:** {payload['n_partners_requested']} / {payload['n_partners_returned']}",
         f"- **Output TSV:** ld_pairs.tsv",
     ]

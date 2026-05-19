@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Example invocation: r² between SORT1 lead and three nearby variants.
 # Network required on first call (~5-50 MB region VCF fetch from EBI 1000G FTP).
-# Requires plink2 on PATH (or PLINK2_BIN env var pointing to it).
+# Requires plink (1.9) on PATH (or PLINK_BIN env var pointing to it).
 
 set -euo pipefail
 
@@ -27,7 +27,7 @@ result = client.r2_with_lead(
     window_bp=cfg['window_bp'],
 )
 print(f'panel: {result.panel_id} ({result.super_pop})')
-print(f'plink2: {result.plink2_version}')
+print(f'plink: {result.plink_version}')
 print(f'pairs:')
 for p in result.pairs:
     print(f'  {p.partner_variant_id}\\tr² = {p.r2:.3f}')

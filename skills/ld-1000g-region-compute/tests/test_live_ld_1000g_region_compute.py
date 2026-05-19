@@ -34,10 +34,10 @@ pytestmark = pytest.mark.live
 
 
 def _plink_bin() -> str | None:
-    explicit = os.getenv("PLINK_BIN") or os.getenv("PLINK2_BIN")
+    explicit = os.getenv("PLINK_BIN")
     if explicit and os.path.isfile(explicit):
         return explicit
-    return shutil.which("plink") or shutil.which("plink2")
+    return shutil.which("plink")
 
 
 @pytest.mark.skipif(

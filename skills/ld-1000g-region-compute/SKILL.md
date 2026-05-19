@@ -190,7 +190,7 @@ panel:
   panel_version: 5b_remote_2019_03_12
   super_pop: EUR
   super_pop_label: European (EUR; n=503; 1000G Phase 3)
-  plink2_version: PLINK v1.90b6.27 64-bit (2023-05-09)
+  plink_version: PLINK v1.90b6.27 64-bit (2023-05-09)
 n_partners_requested: 5
 n_partners_returned: 5
 cache_hit: true

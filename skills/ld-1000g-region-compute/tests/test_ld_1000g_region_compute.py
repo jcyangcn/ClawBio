@@ -76,10 +76,8 @@ def _write_ld(out_prefix: Path, lead: str, partner_pairs: list[tuple[str, float]
 def test_client_validates_plink_present(monkeypatch, tmp_path):
     _patch_plink_version(monkeypatch)
     c = OnDemand1000GLDClient(super_pop="EUR", plink_bin="plink", cache_dir=tmp_path)
-    assert c.plink2_version.startswith("PLINK v1.90")
+    assert c.plink_version.startswith("PLINK v1.90")
     assert c.super_pop == "EUR"
-    # Back-compat alias holds.
-    assert c.plink2_bin == c.plink_bin
 
 
 def test_client_raises_when_plink_missing(monkeypatch, tmp_path):
@@ -88,14 +86,6 @@ def test_client_raises_when_plink_missing(monkeypatch, tmp_path):
     monkeypatch.setattr(oc_module, "_detect_plink_version", boom)
     with pytest.raises(OnDemandLDError, match="plink not found"):
         OnDemand1000GLDClient(super_pop="EUR", plink_bin="plink", cache_dir=tmp_path)
-
-
-def test_client_accepts_legacy_plink2_bin_kwarg(monkeypatch, tmp_path):
-    """Callers built against the plink2-era kwarg keep working without churn."""
-    _patch_plink_version(monkeypatch, version="PLINK v2.00a5LM")
-    c = OnDemand1000GLDClient(super_pop="EUR", plink2_bin="plink2", cache_dir=tmp_path)
-    assert c.plink_bin == "plink2"
-    assert c.plink2_bin == "plink2"
 
 
 # -----------------------------------------------------------------
@@ -213,18 +203,3 @@ def test_parse_ld_skips_rows_without_lead_match(tmp_path):
     assert pairs[0].partner_variant_id == "2:z:A:G"
     assert pairs[0].r2 == pytest.approx(0.7)
 
-
-def test_parse_ld_tolerates_legacy_plink2_vcor(tmp_path):
-    """Back-compat: a tab-separated .vcor file from plink2 still parses."""
-    path = tmp_path / "ld_out.vcor"
-    rows = [
-        "#CHROM_A\tPOS_A\tID_A\tREF_A\tALT_A\tCHROM_B\tPOS_B\tID_B\tREF_B\tALT_B\tUNPHASED_R2",
-        "2\t1\tlead\tC\tT\t2\t2\t2:z:A:G\tA\tG\t0.65",
-    ]
-    path.write_text("\n".join(rows) + "\n")
-
-    notes: list[str] = []
-    pairs = _parse_ld(path, "lead", notes)
-    assert len(pairs) == 1
-    assert pairs[0].partner_variant_id == "2:z:A:G"
-    assert pairs[0].r2 == pytest.approx(0.65)

@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import csv
 import os
-import re
 import shutil
 import subprocess
 import tempfile
@@ -52,14 +51,9 @@ DEFAULT_CACHE_DIR = Path(
     )
 ) / "1000g"
 
-# plink 1.9 is the primary supported binary (ubiquitous via brew / apt /
-# conda; ships --ld-snp + --r2 + --ld-window-r2 natively). Users with an
-# older `PLINK2_BIN` export are honoured via the legacy fallback below.
-DEFAULT_PLINK_BIN = (
-    os.environ.get("PLINK_BIN")
-    or os.environ.get("PLINK2_BIN")
-    or "plink"
-)
+# plink 1.9 is the supported binary (ubiquitous via brew / apt / conda;
+# ships --ld-snp + --r2 + --ld-window-r2 natively).
+DEFAULT_PLINK_BIN = os.environ.get("PLINK_BIN", "plink")
 
 PLINK_NOT_FOUND_HINT = (
     "plink binary not found. Install via `brew install brewsci/bio/plink` "
@@ -71,11 +65,6 @@ PLINK_NOT_FOUND_HINT = (
 
 PANEL_ID_DEFAULT = "1000g_phase3_v5b_grch38_basic"
 PANEL_VERSION_DEFAULT = "5b_remote_2019_03_12"
-
-# plink 1.9 prints e.g. `PLINK v1.90b6.27 64-bit (2023-05-09)`; plink2 prints
-# `PLINK v2.0.0-a.7.1 ...`. We accept both prefixes so a user with plink2
-# installed (with the right flag set) is not blocked.
-_PLINK_VERSION_RE = re.compile(r"^PLINK v(?:1\.9|2\.[\d.])")
 
 
 @dataclass
@@ -90,7 +79,7 @@ class OnDemandLDResult:
     panel_id: str
     panel_version: str
     super_pop: str
-    plink2_version: str  # historical name; holds the detected plink binary version
+    plink_version: str  # binary version string returned by `plink --version`
     chromosome: str
     lead_variant_id: str
     window_bp: int
@@ -106,12 +95,7 @@ class OnDemandLDError(Exception):
 
 
 def _detect_plink_version(plink_bin: str) -> str:
-    """Return the plink `--version` string for the manifest.
-
-    Accepts both plink 1.9 (`PLINK v1.90...`) and plink2 (`PLINK v2....`)
-    prefixes. Unknown prefixes are surfaced verbatim so the manifest at
-    least records what was actually invoked.
-    """
+    """Return the plink `--version` string for the manifest."""
     if shutil.which(plink_bin) is None:
         raise OnDemandLDError(f"{PLINK_NOT_FOUND_HINT} (looked for: {plink_bin})")
     try:
@@ -205,23 +189,14 @@ class OnDemand1000GLDClient:
         cache_dir: Path | None = None,
         panel_id: str = PANEL_ID_DEFAULT,
         panel_version: str = PANEL_VERSION_DEFAULT,
-        plink2_bin: str | None = None,
     ) -> None:
-        # `plink2_bin` is a legacy alias retained so callers built against the
-        # plink2-era kwarg keep working without churn.
-        bin_path = plink2_bin if plink2_bin is not None else plink_bin
         self.super_pop = super_pop
-        self.plink_bin = bin_path
+        self.plink_bin = plink_bin
         self.cache_dir = (cache_dir or DEFAULT_CACHE_DIR).expanduser()
         self.panel_id = panel_id
         self.panel_version = panel_version
-        self.plink2_version = _detect_plink_version(bin_path)
+        self.plink_version = _detect_plink_version(plink_bin)
         self._super_pop_samples: list[str] | None = None
-
-    # Back-compat attribute alias for code that still reads `plink2_bin`.
-    @property
-    def plink2_bin(self) -> str:
-        return self.plink_bin
 
     def _samples(self) -> list[str]:
         if self._super_pop_samples is None:
@@ -246,7 +221,7 @@ class OnDemand1000GLDClient:
         if not partner_list:
             return OnDemandLDResult(
                 panel_id=self.panel_id, panel_version=self.panel_version,
-                super_pop=self.super_pop, plink2_version=self.plink2_version,
+                super_pop=self.super_pop, plink_version=self.plink_version,
                 chromosome=chromosome, lead_variant_id=lead, window_bp=window_bp,
                 n_partners_requested=0, n_partners_returned=0, pairs=[],
                 fetched_at_utc=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -316,13 +291,8 @@ class OnDemand1000GLDClient:
                     f"stderr (truncated): {(proc.stderr or '')[:1000]}"
                 )
 
-            ld_path: Path | None = None
-            for suffix in (".ld", ".vcor", ".vcor2"):
-                cand = Path(f"{out_prefix}{suffix}")
-                if cand.exists():
-                    ld_path = cand
-                    break
-            if ld_path is None:
+            ld_path = Path(f"{out_prefix}.ld")
+            if not ld_path.exists():
                 raise OnDemandLDError(
                     f"plink produced no .ld output at {out_prefix}; "
                     f"stdout (truncated): {(proc.stdout or '')[:1000]}"
@@ -333,7 +303,7 @@ class OnDemand1000GLDClient:
 
         return OnDemandLDResult(
             panel_id=self.panel_id, panel_version=self.panel_version,
-            super_pop=self.super_pop, plink2_version=self.plink2_version,
+            super_pop=self.super_pop, plink_version=self.plink_version,
             chromosome=chrom_bare, lead_variant_id=lead, window_bp=window_bp,
             n_partners_requested=len(partner_list), n_partners_returned=len(pairs),
             pairs=pairs,
@@ -347,8 +317,7 @@ def _parse_ld(path: Path, lead: str, notes: list[str]) -> list[OnDemandLDPair]:
 
     Columns: `CHR_A BP_A SNP_A CHR_B BP_B SNP_B R2`. Whitespace-separated
     (multiple spaces between fields), so we tokenise with `str.split()`
-    rather than csv. Tolerates legacy plink2 `.vcor` output (tab-separated,
-    different column names) for callers that still point at plink2 binaries.
+    rather than csv.
     """
     out: list[OnDemandLDPair] = []
     with path.open() as f:
@@ -357,19 +326,17 @@ def _parse_ld(path: Path, lead: str, notes: list[str]) -> list[OnDemandLDPair]:
             line = raw_line.strip()
             if not line:
                 continue
-            # plink2 .vcor uses tab-separated header starting with `#CHROM_A`;
-            # plink 1.9 .ld uses whitespace-separated `CHR_A`.
-            tokens = line.split("\t") if "\t" in line else line.split()
+            tokens = line.split()
             if header_tokens is None:
-                header_tokens = [t.lstrip("#") for t in tokens]
+                header_tokens = tokens
                 continue
             row = dict(zip(header_tokens, tokens))
-            id_a = row.get("SNP_A") or row.get("ID_A") or ""
-            id_b = row.get("SNP_B") or row.get("ID_B") or ""
+            id_a = row.get("SNP_A", "")
+            id_b = row.get("SNP_B", "")
             partner = id_b if id_a == lead else (id_a if id_b == lead else None)
             if partner is None:
                 continue
-            r2_str = row.get("R2") or row.get("UNPHASED_R2") or ""
+            r2_str = row.get("R2", "")
             if not r2_str or r2_str == "NA":
                 notes.append(f"missing r² for partner {partner}")
                 continue
