@@ -718,9 +718,9 @@ SKILLS = {
         "accepts_genotypes": False,
     },
     "spatial-map": {
-        "script": SKILLS_DIR / "spatial-transcriptomics-mapper" / "spatial_transcriptomics_mapper.py",
+        "script": SKILLS_DIR / "marker-dominance-mapper" / "marker_dominance_mapper.py",
         "demo_args": ["--demo"],
-        "description": "Spatial transcriptomics mapper (marker-based spot regions + SVG map)",
+        "description": "Marker dominance mapper (marker-based spot regions + SVG map)",
         "allowed_extra_flags": set(),
         "accepts_genotypes": False,
     },

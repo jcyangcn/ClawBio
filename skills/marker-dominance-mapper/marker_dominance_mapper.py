@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import statistics
 import sys
 from pathlib import Path
 
@@ -47,12 +46,11 @@ def _region_for(row: dict[str, str | float]) -> str:
 
 
 def map_spots(spots: list[dict[str, str | float]]) -> dict:
-    mki67_median = statistics.median(float(spot["MKI67"]) for spot in spots)
     mapped = []
     region_stats: dict[str, dict[str, float | int | str]] = {}
     for spot in spots:
         region = _region_for(spot)
-        hotspot = region == "tumor_core" or float(spot["MKI67"]) > mki67_median
+        hotspot = region in {"tumor_core", "proliferative_core"}
         mapped_spot = {**spot, "region": region, "hotspot": hotspot}
         mapped.append(mapped_spot)
         stats = region_stats.setdefault(region, {"region": region, "spot_count": 0, "mean_total_counts": 0.0})
@@ -63,7 +61,7 @@ def map_spots(spots: list[dict[str, str | float]]) -> dict:
     priority = {"tumor_core": 0, "immune_edge": 1, "stromal_zone": 2, "proliferative_core": 3}
     regions = sorted(region_stats.values(), key=lambda item: (-int(item["spot_count"]), priority.get(str(item["region"]), 99)))
     return {
-        "skill": "spatial-transcriptomics-mapper",
+        "skill": "marker-dominance-mapper",
         "summary": {"spot_count": len(mapped), "region_count": len(regions), "hotspot_count": sum(1 for spot in mapped if spot["hotspot"])},
         "spots": mapped,
         "regions": regions,
@@ -104,7 +102,7 @@ def _write_svg(path: Path, spots: list[dict]) -> None:
     elements = [
         '<svg xmlns="http://www.w3.org/2000/svg" width="420" height="320" viewBox="0 0 420 320">',
         '<rect width="420" height="320" fill="#ffffff"/>',
-        '<text x="16" y="24" font-family="Arial" font-size="16" font-weight="bold">Spatial marker map</text>',
+        '<text x="16" y="24" font-family="Arial" font-size="16" font-weight="bold">Marker dominance map</text>',
     ]
     for spot in spots:
         x = 40 + (float(spot["x"]) / max_x) * 300
@@ -131,10 +129,10 @@ def write_outputs(result: dict, input_path: Path, output_dir: Path, command: lis
     (output_dir / "reproducibility").mkdir(exist_ok=True)
     _write_csv(output_dir / "tables" / "mapped_spots.csv", result["spots"])
     _write_region_csv(output_dir / "tables" / "region_summary.csv", result["regions"])
-    _write_svg(output_dir / "figures" / "spatial_map.svg", result["spots"])
+    _write_svg(output_dir / "figures" / "marker_map.svg", result["spots"])
     (output_dir / "result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     rows = [
-        "# Spatial Transcriptomics Mapper Report",
+        "# Marker Dominance Mapper Report",
         "",
         f"**Input**: `{input_path}`",
         f"**Mode**: {'Synthetic demo data' if demo else 'User-provided local data'}",
@@ -146,18 +144,27 @@ def write_outputs(result: dict, input_path: Path, output_dir: Path, command: lis
     ]
     for spot in result["spots"]:
         rows.append(f"| {spot['spot_id']} | {spot['x']} | {spot['y']} | {spot['region']} | {spot['hotspot']} | {spot['EPCAM']} | {spot['PTPRC']} | {spot['COL1A1']} | {spot['MKI67']} |")
-    rows.extend(["", "## Interpretation", "", "Regions are assigned by dominant marker expression using deterministic local thresholds.", "", DISCLAIMER, ""])
+    rows.extend([
+        "",
+        "## Interpretation",
+        "",
+        "Regions are assigned by dominant marker expression. Coordinates are used for SVG placement only, not for region assignment.",
+        "Hotspots are tumor-core or MKI67-dominant proliferative-core spots.",
+        "",
+        DISCLAIMER,
+        "",
+    ])
     (output_dir / "report.md").write_text("\n".join(rows), encoding="utf-8")
     (output_dir / "reproducibility" / "commands.sh").write_text("#!/usr/bin/env bash\n" + " ".join(command) + "\n", encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Spatial Transcriptomics Mapper")
+    parser = argparse.ArgumentParser(description="Marker Dominance Mapper")
     parser.add_argument("--input", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("spatial_transcriptomics_mapper_out"))
+    parser.add_argument("--output", type=Path, default=Path("marker_dominance_mapper_out"))
     parser.add_argument("--demo", action="store_true")
     args = parser.parse_args(argv)
-    input_path = SKILL_DIR / "demo_spatial_counts.csv" if args.demo else args.input
+    input_path = SKILL_DIR / "demo_marker_counts.csv" if args.demo else args.input
     if input_path is None:
         parser.error("--input is required unless --demo is used")
     try:
@@ -166,7 +173,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     write_outputs(result, input_path, args.output, [sys.executable, __file__, *sys.argv[1:]], args.demo)
-    print(f"Spatial Transcriptomics Mapper wrote {args.output / 'report.md'}")
+    print(f"Marker Dominance Mapper wrote {args.output / 'report.md'}")
     return 0
 
 

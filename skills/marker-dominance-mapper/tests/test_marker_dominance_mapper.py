@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
-MODULE_PATH = SKILL_DIR / "spatial_transcriptomics_mapper.py"
+MODULE_PATH = SKILL_DIR / "marker_dominance_mapper.py"
 DISCLAIMER = (
     "ClawBio is a research and educational tool. It is not a medical device "
     "and does not provide clinical diagnoses. Consult a healthcare professional "
@@ -15,7 +15,7 @@ DISCLAIMER = (
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location("spatial_transcriptomics_mapper", MODULE_PATH)
+    spec = importlib.util.spec_from_file_location("marker_dominance_mapper", MODULE_PATH)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -61,10 +61,10 @@ def test_cli_rejects_malformed_input_without_traceback(tmp_path):
 
 def test_mapping_assigns_regions_and_hotspots():
     module = load_module()
-    spots = module.load_spots(SKILL_DIR / "demo_spatial_counts.csv")
+    spots = module.load_spots(SKILL_DIR / "demo_marker_counts.csv")
     result = module.map_spots(spots)
     assert result["summary"]["spot_count"] == 6
-    assert result["summary"]["hotspot_count"] == 3
+    assert result["summary"]["hotspot_count"] == 2
     regions = {spot["spot_id"]: spot["region"] for spot in result["spots"]}
     assert regions["SPOT_A1"] == "immune_edge"
     assert regions["SPOT_B2"] == "tumor_core"
@@ -73,22 +73,22 @@ def test_mapping_assigns_regions_and_hotspots():
 
 
 def test_demo_cli_writes_expected_outputs(tmp_path):
-    out = tmp_path / "spatial_out"
+    out = tmp_path / "marker_out"
     completed = subprocess.run(
         [sys.executable, str(MODULE_PATH), "--demo", "--output", str(out)],
         text=True,
         capture_output=True,
         check=True,
     )
-    assert "Spatial Transcriptomics Mapper" in completed.stdout
+    assert "Marker Dominance Mapper" in completed.stdout
     report = (out / "report.md").read_text(encoding="utf-8")
     assert DISCLAIMER in report
     assert "tumor_core" in report
     assert "Synthetic demo data" in report
     result = json.loads((out / "result.json").read_text(encoding="utf-8"))
-    assert result["skill"] == "spatial-transcriptomics-mapper"
-    assert result["summary"]["hotspot_count"] == 3
+    assert result["skill"] == "marker-dominance-mapper"
+    assert result["summary"]["hotspot_count"] == 2
     assert (out / "tables" / "mapped_spots.csv").exists()
     assert (out / "tables" / "region_summary.csv").exists()
-    assert (out / "figures" / "spatial_map.svg").exists()
+    assert (out / "figures" / "marker_map.svg").exists()
     assert (out / "reproducibility" / "commands.sh").exists()
