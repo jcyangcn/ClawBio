@@ -430,3 +430,33 @@ class TestWriteRoCrate:
         graph = json.loads((tmp_path / "ro-crate-metadata.json").read_text())["@graph"]
         action = next(e for e in graph if e.get("@type") == "CreateAction")
         assert action["endTime"] == ts
+
+
+# ---------------------------------------------------------------------------
+# TestBuildPortableCommandsSh
+# ---------------------------------------------------------------------------
+
+
+class TestBuildPortableCommandsSh:
+    def test_shell_var_reference_is_double_quoted(self):
+        """${SHELL_VAR} tokens must be wrapped in double quotes so bash word-splitting
+        doesn't break the command when the variable expands to a path with spaces."""
+        from clawbio.common.portable_commands import build_portable_commands_sh
+
+        content = build_portable_commands_sh(
+            skill_name="nfcore-rnaseq-wrapper",
+            script_name="nfcore_rnaseq_wrapper.py",
+            args={"--input": "${SCRIPT_DIR}/samplesheet.valid.csv"},
+        )
+        assert '"${SCRIPT_DIR}/samplesheet.valid.csv"' in content
+
+    def test_plain_path_with_spaces_is_single_quoted(self):
+        """A plain user path with spaces must be single-quoted by shlex.quote."""
+        from clawbio.common.portable_commands import build_portable_commands_sh
+
+        content = build_portable_commands_sh(
+            skill_name="nfcore-rnaseq-wrapper",
+            script_name="nfcore_rnaseq_wrapper.py",
+            args={"--output": "/tmp/my output dir"},
+        )
+        assert "'/tmp/my output dir'" in content

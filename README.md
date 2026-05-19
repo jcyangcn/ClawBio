@@ -106,7 +106,7 @@ python tests/benchmark/benchmark_scorer.py --genes "APP,BIN1,CLU,TREM2,GAPDH"
 python tests/benchmark/mock_api_server.py &
 ```
 
-**74 benchmark tests** at v0.5.0 baseline, all green. The public leaderboard now tracks **168 / 182 tests passing (92.3%)** across 10 audited skills, up from 80 / 140 (57.1%) at the original audit. See [benchmarks.html](https://clawbio.ai/benchmarks.html) for the live leaderboard and [CHANGELOG.md](CHANGELOG.md) for full details.
+**74 benchmark tests**, all green. See [CHANGELOG.md](CHANGELOG.md) for full details.
 
 ---
 
@@ -178,7 +178,7 @@ The exact contents can vary by skill, and some replays also require the original
 
 ---
 
-## Featured Skills
+## Skills
 
 A curated cross-section of ClawBio's 66 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
 
@@ -196,6 +196,7 @@ A curated cross-section of ClawBio's 66 skills. The full machine-readable catalo
 | [Variant Annotation](skills/variant-annotation/) | Clinical | Annotate VCF variants with Ensembl VEP REST, ClinVar significance, gnomAD frequencies |
 | [Clinical Variant Reporter](skills/clinical-variant-reporter/) | Clinical | ACMG-guided clinical variant classification from VCF with GiAB validation |
 | [nf-core scRNA Wrapper](skills/nfcore-scrnaseq-wrapper/) | Single-cell | Upstream FASTQ → h5ad preprocessing via nf-core/scrnaseq (simpleaf, STARsolo, kallisto, CellRanger) with strict preflight and reproducibility bundle |
+| [nf-core RNA-seq Wrapper](skills/nfcore-rnaseq-wrapper/) | Bulk RNA-seq | Upstream FASTQ/BAM → count matrices via nf-core/rnaseq with strict preflight and reproducibility bundle |
 | [scRNA Orchestrator](skills/scrna-orchestrator/) | Single-cell | Scanpy automation: QC, optional doublet detection, clustering, markers, annotation |
 | [Equity Scorer](skills/equity-scorer/) | Systemic | HEIM diversity metrics from VCF or ancestry CSV |
 | [DnaSP](skills/dnasp/) | Population *(community)* | Python reimplementation of DnaSP 6: 16 population-genetics analyses (Pi, Tajima's D, Fst, Ka/Ks, McDonald-Kreitman) |
@@ -204,7 +205,7 @@ For the complete list including pharmacogenomics extensions, single-cell tooling
 
 ### Contributing a Skill
 
-Wrap your bioinformatics pipeline as a skill and submit a PR. Several community-contributed skills are now in production (NutriGx Advisor, analyze-fasta, WGS-PRS, DnaSP, ClawPathy Autoresearch, and others). See [skills/catalog.json](skills/catalog.json) for the full list with status flags.
+Wrap your bioinformatics pipeline as a skill and submit a PR. One community-contributed skill (NutriGx Advisor) is already in production; eight more have specifications authored and are awaiting implementation.
 
 ```bash
 cp templates/SKILL-TEMPLATE.md skills/<your-skill-name>/SKILL.md
@@ -415,7 +416,7 @@ All skills are then available as agent-routable commands. Alternatively, clone t
 The repository also ships reusable slash commands in [`commands/`](commands/) for Claude Code and compatible agents:
 
 | Command | Purpose |
-|---------|-------|
+|---------|---------|
 | `/analyse` | Analyse a file or input with the appropriate ClawBio skill |
 | `/new-skill` | Scaffold a new skill from the official template |
 | `/list-skills` | List available skills from `skills/catalog.json` |
@@ -469,7 +470,7 @@ Core dependencies are declared in [`pyproject.toml`](pyproject.toml) and pinned 
 Some skills have additional requirements:
 
 | Skill | Extra dependency | Install |
-|-------|-----------------|-------|
+|-------|-----------------|---------|
 | Metagenomics | Kraken2, RGI, HUMAnN3 | Conda (see skill README) |
 | Methylation Clock | PyAging | `pip install pyaging` |
 | scRNA Embedding | scvi-tools | `pip install scvi-tools` |
@@ -601,7 +602,7 @@ See [docs/architecture.md](docs/architecture.md) for the full design.
 ClawBio is designed to be discovered and used by AI coding agents, not just humans.
 
 | Resource | Purpose |
-|----------|-------|
+|----------|---------|
 | [`llms.txt`](llms.txt) | Token-optimized project summary for any LLM ([llmstxt.org](https://llmstxt.org) standard) |
 | [`AGENTS.md`](AGENTS.md) | Universal guide for AI coding agents — setup, commands, style, structure, git workflow |
 | [`CLAUDE.md`](CLAUDE.md) | Claude-specific routing table, CLI reference, demo commands, safety rules |
@@ -616,7 +617,7 @@ Agents can also run `python clawbio.py list` to discover available skills progra
 Open skill requests (PRs welcome):
 
 | Skill | Domain |
-|-------|-------|
+|-------|--------|
 | **claw-gwas** | PLINK/REGENIE automation (statistical genetics) |
 | **claw-acmg** | Clinical variant classification (clinical genomics) |
 | **claw-pathway** | GO/KEGG enrichment (functional genomics) |

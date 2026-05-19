@@ -1288,6 +1288,46 @@
       "chaining_partners": []
     },
     {
+      "name": "nfcore-rnaseq-wrapper",
+      "cli_alias": "rnaseq-pipeline",
+      "description": "Wrapper skill for running nf-core/rnaseq bulk RNA-seq preprocessing (FASTQ or BAM reprocessing) with strict preflight, reproducibility outputs, and downstream handoff to ClawBio bulk RNA-seq DE skills.",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run rnaseq-pipeline --demo",
+      "dependencies": [
+        "python>=3.11"
+      ],
+      "tags": [
+        "rnaseq",
+        "bulk-rna-seq",
+        "nextflow",
+        "nf-core",
+        "fastq",
+        "preprocessing",
+        "counts"
+      ],
+      "trigger_keywords": [
+        "bulk RNA-seq preprocessing",
+        "nf-core rnaseq",
+        "run rnaseq from fastq",
+        "preprocess RNA-seq FASTQs",
+        "FASTQ to count matrix",
+        "STAR Salmon RNA-seq pipeline",
+        "RSEM RNA-seq pipeline",
+        "HISAT2 RNA-seq alignment",
+        "bowtie2 salmon prokaryotic rnaseq"
+      ],
+      "chaining_partners": [
+        "rnaseq-de",
+        "diff-visualizer",
+        "bio-orchestrator",
+        "multiqc-reporter"
+      ]
+    },
+    {
       "name": "nfcore-scrnaseq-wrapper",
       "cli_alias": "scrnaseq-pipeline",
       "description": "Wrapper skill for running nf-core/scrnaseq upstream single-cell RNA-seq preprocessing from FASTQ with strict preflight, reproducibility outputs, and downstream handoff to ClawBio scRNA skills.",
