@@ -103,7 +103,7 @@ def analyze_records(rows: list[dict[str, str | float]]) -> dict:
         )
     flagged = [sample for sample in samples if sample["status"] == "flagged"]
     return {
-        "skill": "sample-qc-forensics",
+        "skill": "sample-qc-triage",
         "summary": {
             "sample_count": len(samples),
             "flagged_count": len(flagged),
@@ -138,7 +138,7 @@ def write_outputs(result: dict, input_path: Path, output_dir: Path, command: lis
     _write_csv(output_dir / "tables" / "sample_flags.csv", result["samples"])
     (output_dir / "result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     rows = [
-        "# Sample QC Forensics Report",
+        "# Sample QC Triage Report",
         "",
         f"**Input**: `{input_path}`",
         f"**Mode**: {'Synthetic demo data' if demo else 'User-provided local data'}",
@@ -161,7 +161,7 @@ def write_outputs(result: dict, input_path: Path, output_dir: Path, command: lis
         "",
         "## Interpretation",
         "",
-        "Flagged samples are candidates for local review; identity and sex mismatch flags are operational QC signals, not forensic proof.",
+        "Flagged samples are candidates for local review. Identity and sex mismatch flags are operational QC signals, not forensic proof.",
         "",
         DISCLAIMER,
         "",
@@ -171,9 +171,9 @@ def write_outputs(result: dict, input_path: Path, output_dir: Path, command: lis
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Sample QC Forensics")
+    parser = argparse.ArgumentParser(description="Sample QC Triage")
     parser.add_argument("--input", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("sample_qc_forensics_out"))
+    parser.add_argument("--output", type=Path, default=Path("sample_qc_triage_out"))
     parser.add_argument("--demo", action="store_true")
     args = parser.parse_args(argv)
     input_path = SKILL_DIR / "demo_qc_metrics.csv" if args.demo else args.input
@@ -185,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     write_outputs(result, input_path, args.output, [sys.executable, __file__, *sys.argv[1:]], args.demo)
-    print(f"Sample QC Forensics wrote {args.output / 'report.md'}")
+    print(f"Sample QC Triage wrote {args.output / 'report.md'}")
     return 0
 
 

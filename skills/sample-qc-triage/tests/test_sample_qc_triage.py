@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
-MODULE_PATH = SKILL_DIR / "sample_qc_forensics.py"
+MODULE_PATH = SKILL_DIR / "sample_qc_triage.py"
 DISCLAIMER = (
     "ClawBio is a research and educational tool. It is not a medical device "
     "and does not provide clinical diagnoses. Consult a healthcare professional "
@@ -15,7 +15,7 @@ DISCLAIMER = (
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location("sample_qc_forensics", MODULE_PATH)
+    spec = importlib.util.spec_from_file_location("sample_qc_triage", MODULE_PATH)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -62,7 +62,7 @@ def test_cli_rejects_malformed_input_without_traceback(tmp_path):
     assert "Traceback" not in completed.stderr
 
 
-def test_demo_analysis_flags_forensic_outliers():
+def test_demo_analysis_flags_qc_outliers():
     module = load_module()
     records = module.load_metrics(SKILL_DIR / "demo_qc_metrics.csv")
     result = module.analyze_records(records)
@@ -83,14 +83,14 @@ def test_demo_cli_writes_report_json_tables_and_reproducibility(tmp_path):
         capture_output=True,
         check=True,
     )
-    assert "Sample QC Forensics" in completed.stdout
+    assert "Sample QC Triage" in completed.stdout
     report = (out / "report.md").read_text(encoding="utf-8")
     assert DISCLAIMER in report
     assert "CB_QC_003" in report
     assert "F->M" in report
     assert "Synthetic demo data" in report
     result = json.loads((out / "result.json").read_text(encoding="utf-8"))
-    assert result["skill"] == "sample-qc-forensics"
+    assert result["skill"] == "sample-qc-triage"
     assert result["summary"]["flagged_count"] == 3
     assert (out / "tables" / "sample_flags.csv").exists()
     assert (out / "reproducibility" / "commands.sh").exists()

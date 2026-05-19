@@ -718,9 +718,9 @@ SKILLS = {
         "accepts_genotypes": False,
     },
     "sample-qc": {
-        "script": SKILLS_DIR / "sample-qc-forensics" / "sample_qc_forensics.py",
+        "script": SKILLS_DIR / "sample-qc-triage" / "sample_qc_triage.py",
         "demo_args": ["--demo"],
-        "description": "Sample QC forensics (identity, sex, contamination, batch-shift outlier triage)",
+        "description": "Sample QC triage (identity, sex, contamination, batch-shift outlier triage)",
         "allowed_extra_flags": set(),
         "accepts_genotypes": False,
     },

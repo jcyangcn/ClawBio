@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 69,
+  "skill_count": 66,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -385,7 +385,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-trial-finder/clinical_trial_finder.py --demo",
+      "demo_command": "python skills/clinical-trial-finder/opentargets.py --demo",
       "dependencies": [
         "python>=3.11"
       ],
@@ -419,7 +419,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-variant-reporter/acmg_engine.py --demo",
+      "demo_command": "python skills/clinical-variant-reporter/clinical_variant_reporter.py --demo",
       "dependencies": [],
       "tags": [
         "acmg",
@@ -479,45 +479,10 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/data-extractor/data_extractor.py --demo",
+      "demo_command": "python skills/data-extractor/data_extractor_api.py --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [],
-      "chaining_partners": []
-    },
-    {
-      "name": "data-pooler",
-      "cli_alias": null,
-      "description": "Pool experimental data from multiple sources into one directory and generate a structured summary with metadata and human-readable report.",
-      "version": "0.1.0",
-      "status": "planned",
-      "has_script": true,
-      "has_tests": true,
-      "has_demo": true,
-      "demo_command": "python skills/data-pooler/data_pooler.py --demo",
-      "dependencies": [],
-      "tags": [
-        "data-management",
-        "pooling",
-        "lab-management",
-        "onedrive",
-        "labstep",
-        "ELN",
-        "reporting",
-        "aggregation"
-      ],
-      "trigger_keywords": [
-        "pool data",
-        "merge experiments",
-        "collect results",
-        "aggregate experimental data",
-        "combine experiment directories",
-        "lab data summary",
-        "consolidate results",
-        "onedrive data pool",
-        "labstep export",
-        "experimental summary"
-      ],
       "chaining_partners": []
     },
     {
@@ -736,21 +701,6 @@
       "chaining_partners": [
         "claw-semantic-sim"
       ]
-    },
-    {
-      "name": "experiment-pooler",
-      "cli_alias": null,
-      "description": "Given an SKXXX experiment number, discover all related files across Labstep and OneDrive, categorize them by data type, organize them into a standardized folder structure, generate Summary.docx and Metadata.xlsx, run data_pooler.py, and report any missing data to the user.",
-      "version": "0.1.0",
-      "status": "planned",
-      "has_script": false,
-      "has_tests": false,
-      "has_demo": false,
-      "demo_command": null,
-      "dependencies": [],
-      "tags": [],
-      "trigger_keywords": [],
-      "chaining_partners": []
     },
     {
       "name": "fastreer",
@@ -1085,7 +1035,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/illumina-bridge/illumina_bridge.py --demo",
+      "demo_command": "python skills/illumina-bridge/illumina_providers.py --demo",
       "dependencies": [],
       "tags": [
         "illumina",
@@ -1362,7 +1312,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/nutrigx-advisor/extract_genotypes.py --demo",
+      "demo_command": "python skills/nutrigx-advisor/parse_input.py --demo",
       "dependencies": [],
       "tags": [
         "nutrigenomics",
@@ -1615,7 +1565,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/pubmed-summariser/pubmed_api.py --demo",
+      "demo_command": "python skills/pubmed-summariser/pubmed_summariser.py --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [
@@ -1735,7 +1685,7 @@
       ]
     },
     {
-      "name": "sample-qc-forensics",
+      "name": "sample-qc-triage",
       "cli_alias": "sample-qc",
       "description": "Deterministic multi-sample QC triage for identity, sex, contamination, and batch-shift outliers",
       "version": "0.1.0",
@@ -1750,10 +1700,10 @@
       "tags": [
         "quality-control",
         "sequencing-qc",
-        "forensics"
+        "triage"
       ],
       "trigger_keywords": [
-        "sample QC forensics",
+        "sample QC triage",
         "sequencing QC outliers",
         "sex mismatch",
         "fingerprint concordance",

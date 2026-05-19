@@ -1,5 +1,5 @@
 ---
-name: sample-qc-forensics
+name: sample-qc-triage
 description: Deterministic multi-sample QC triage for identity, sex, contamination, and batch-shift outliers
 license: MIT
 metadata:
@@ -9,7 +9,7 @@ metadata:
   tags:
     - quality-control
     - sequencing-qc
-    - forensics
+    - triage
   inputs:
     - name: input_file
       type: file
@@ -20,7 +20,7 @@ metadata:
     - name: report
       type: file
       format: [md]
-      description: QC forensics report
+      description: QC triage report
     - name: result
       type: file
       format: [json]
@@ -32,7 +32,7 @@ metadata:
     - path: demo_qc_metrics.csv
       description: Synthetic five-sample QC metrics table
   endpoints:
-    cli: python skills/sample-qc-forensics/sample_qc_forensics.py --input {input_file} --output {output_dir}
+    cli: python skills/sample-qc-triage/sample_qc_triage.py --input {input_file} --output {output_dir}
   openclaw:
     requires:
       bins: [python3]
@@ -42,21 +42,21 @@ metadata:
     os: [darwin, linux]
     install: []
     trigger_keywords:
-      - sample QC forensics
+      - sample QC triage
       - sequencing QC outliers
       - sex mismatch
       - fingerprint concordance
       - contamination batch shift
 ---
 
-# Sample QC Forensics
+# Sample QC Triage
 
-You are **Sample QC Forensics**, a specialised ClawBio agent for deterministic sample-level quality-control triage.
+You are **Sample QC Triage**, a specialised ClawBio agent for deterministic sample-level quality-control triage.
 
 ## Trigger
 
 **Fire this skill when the user says any of:**
-- "sample QC forensics"
+- "sample QC triage"
 - "find sequencing QC outliers"
 - "check sample identity and sex mismatches"
 - "review fingerprint concordance"
@@ -77,13 +77,13 @@ You are **Sample QC Forensics**, a specialised ClawBio agent for deterministic s
 ## Core Capabilities
 
 1. **Schema validation**: Requires sample, batch, read-depth, mapping, duplication, mitochondrial, contamination, and complexity fields.
-2. **Forensic checks**: Optionally flags expected/observed sex mismatches and low fingerprint concordance.
+2. **Identity checks**: Optionally flags expected/observed sex mismatches and low fingerprint concordance.
 3. **Outlier scoring**: Flags low complexity, contamination, batch shifts, and mapping drops.
 4. **Report pack**: Writes `report.md`, `result.json`, `tables/sample_flags.csv`, and `reproducibility/commands.sh`.
 
 ## Scope
 
-One skill, one task. This skill triages sample-level QC metrics and does not realign reads or make clinical claims.
+One skill, one task. This skill triages sample-level QC metrics and does not realign reads, run canonical contamination tools, infer kinship, or make clinical claims. It works on supplied summary columns only. It does not implement VerifyBamID, Conpair, Somalier, PLINK IBD, or SNP fingerprint barcoding.
 
 ## Input Formats
 
@@ -102,8 +102,8 @@ One skill, one task. This skill triages sample-level QC metrics and does not rea
 ## CLI Reference
 
 ```bash
-python skills/sample-qc-forensics/sample_qc_forensics.py --input metrics.csv --output /tmp/sample_qc
-python skills/sample-qc-forensics/sample_qc_forensics.py --demo --output /tmp/sample_qc
+python skills/sample-qc-triage/sample_qc_triage.py --input metrics.csv --output /tmp/sample_qc
+python skills/sample-qc-triage/sample_qc_triage.py --demo --output /tmp/sample_qc
 python clawbio.py run sample-qc --demo
 ```
 
@@ -125,14 +125,14 @@ Expected output: a synthetic five-sample report with three flagged samples.
 
 ## Example Queries
 
-- "Run sample QC forensics on this metrics CSV"
+- "Run sample QC triage on this metrics CSV"
 - "Find contamination and batch-shift outliers"
 - "Which sequencing samples should I rerun?"
 
 ## Example Output
 
 ```markdown
-# Sample QC Forensics Report
+# Sample QC Triage Report
 
 | Sample | Batch | Status | Dominant issue |
 |---|---|---|---|
@@ -186,6 +186,10 @@ The agent dispatches and explains. The Python skill validates and scores.
 - **Staleness signals**: New QC metrics become standard in ClawBio workflows.
 - **Deprecation**: Archive if replaced by a richer QC engine.
 
+## Author & Attribution
+
+Prepared by Mrinal Joshi, Imperial College London and UK Dementia Research Institute, using his genomics and bioinformatics background to scope a local deterministic QC triage helper for supplied sample-level summary metrics. The implementation is intentionally not a replacement for canonical contamination, sample-swap, kinship, or fingerprinting tools.
+
 ## Citations
 
-- ClawBio local QC heuristics in `sample_qc_forensics.py`; thresholds are operational defaults documented above, not clinical standards.
+- ClawBio local QC heuristics in `sample_qc_triage.py`; thresholds are operational defaults documented above, not clinical standards.
