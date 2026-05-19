@@ -35,6 +35,12 @@ When the user asks a question, match it to a skill and act:
 | Genome comparison, IBS, "how much DNA in common", George Church, Corpasome, pairwise | `skills/genome-compare/` | Run `genome_compare.py` |
 | Route a query, multi-step analysis, "what skill should I use" | `skills/bio-orchestrator/` | Run `orchestrator.py` |
 | Variant annotation, VEP, ClinVar, gnomAD | `skills/variant-annotation/` | Run `variant_annotation.py` |
+| Promoter prediction, TSS prediction, find promoter, score promoter activity, GENA-LM promoter, G0 promoter | `skills/gi-promoter/` | Run `gi_promoter.py` |
+| Splice site prediction, splice donor, splice acceptor, intron/exon boundary, cryptic splice site | `skills/gi-splice/` | Run `gi_splice.py` |
+| Enhancer activity prediction, regulatory element, cis-regulatory, DeepSTARR, STARR-seq, MPRA | `skills/gi-enhancer/` | Run `gi_enhancer.py` |
+| Chromatin state prediction, histone marks, DNase, ATAC, TF binding, DeepSEA, epigenome prediction | `skills/gi-chromatin/` | Run `gi_chromatin.py` |
+| Sequence-to-expression, predict expression, TPM prediction, cell-type expression, tissue expression | `skills/gi-expression/` | Run `gi_expression.py` |
+| De novo gene annotation from sequence, predict transcripts, gene structure prediction, DNA annotation | `skills/gi-annotation/` | Run `gi_annotation.py` |
 | Bioconductor, BiocManager, Bioconductor package, R genomics workflow, DESeq2 package choice | `skills/bioconductor-bridge/` | Run `bioconductor_bridge.py` |
 | Clinical trials, ClinicalTrials.gov, EUCTR, trial eligibility, gene trial search, variant trial search | `skills/clinical-trial-finder/` | Run `clinical_trial_finder.py` |
 | Figure extraction, chart digitization, extract plot data, Kaplan-Meier extraction, forest plot extraction | `skills/data-extractor/` | Run `data_extractor.py` |

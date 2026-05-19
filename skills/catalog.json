@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 76,
+  "skill_count": 73,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -92,64 +92,10 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/archaic-introgression/archaic_introgression.py --demo",
+      "demo_command": "python skills/archaic-introgression/pipeline.py --demo",
       "dependencies": [],
       "tags": [],
-      "trigger_keywords": [
-        "archaic introgression",
-        "Neanderthal DNA",
-        "Denisovan ancestry",
-        "IBDmix",
-        "Sprime",
-        "hmmix",
-        "introgressed segments"
-      ],
-      "chaining_partners": []
-    },
-    {
-      "name": "article-data-fetcher",
-      "cli_alias": null,
-      "description": "Given an article DOI or PubMed ID, discover and download the genomics data files deposited by the authors (VCF, FASTA, H5AD, CSV, JSON, BAM, etc.) from public repositories such as GEO, ENA, Zenodo, Figshare, Dryad, and OSF.",
-      "version": "0.1.0",
-      "status": "planned",
-      "has_script": true,
-      "has_tests": true,
-      "has_demo": true,
-      "demo_command": "python skills/article-data-fetcher/article_data_fetcher.py --demo",
-      "dependencies": [
-        "python>=3.11",
-        "requests>=2.31",
-        "biopython>=1.83",
-        "tqdm>=4.66",
-        "pydantic>=2.0"
-      ],
-      "tags": [
-        "data-download",
-        "genomics",
-        "reproducibility",
-        "geo",
-        "ena",
-        "zenodo"
-      ],
-      "trigger_keywords": [
-        "download data from paper",
-        "download genomics data from article",
-        "get VCF from paper",
-        "get FASTA from study",
-        "fetch supplementary data files",
-        "download dataset from publication",
-        "retrieve genomics files from doi",
-        "get raw data from study",
-        "download from GEO",
-        "download from ENA",
-        "fetch h5ad from paper",
-        "get csv from publication",
-        "article data download",
-        "paper dataset download",
-        "download research data",
-        "get files from zenodo",
-        "fetch data from figshare"
-      ],
+      "trigger_keywords": [],
       "chaining_partners": []
     },
     {
@@ -280,49 +226,6 @@
       ]
     },
     {
-      "name": "busco-assessor",
-      "cli_alias": null,
-      "description": "Genome, transcriptome, and protein completeness assessment via BUSCO v6. Agentic lineage routing from organism description, all three BUSCO modes, auto-lineage support, and full demo mode without the BUSCO binary.",
-      "version": "0.1.0",
-      "status": "planned",
-      "has_script": true,
-      "has_tests": true,
-      "has_demo": true,
-      "demo_command": "python skills/busco-assessor/busco_assessor.py --demo",
-      "dependencies": [
-        "python>=3.10"
-      ],
-      "tags": [
-        "busco",
-        "genome-completeness",
-        "assembly-qc",
-        "transcriptome",
-        "lineage",
-        "orthodb",
-        "hmmer",
-        "prokaryote",
-        "eukaryote"
-      ],
-      "trigger_keywords": [
-        "genome completeness",
-        "BUSCO score",
-        "BUSCO assessment",
-        "assembly quality",
-        "check my assembly",
-        "BUSCO genome mode",
-        "completeness metrics",
-        "assembly QC",
-        "transcriptome completeness",
-        "protein set completeness",
-        "auto-lineage",
-        "busco -m genome",
-        "how complete is my genome",
-        "BUSCO bacteria",
-        "run BUSCO"
-      ],
-      "chaining_partners": []
-    },
-    {
       "name": "cell-detection",
       "cli_alias": null,
       "description": "Cell segmentation in fluorescence microscopy images. Supports Cellpose/cpsam (Cellpose 4.0) with additional backends planned. Produces segmentation masks, per-cell morphology metrics (area, diameter, centroid, eccentricity), overlay figures, and a report.md.",
@@ -429,16 +332,7 @@
         "MTHFR",
         "neurodevelopment"
       ],
-      "trigger_keywords": [
-        "methylation",
-        "MTHFR",
-        "folate cycle",
-        "BH4",
-        "homocysteine",
-        "methylation cycle",
-        "metilación",
-        "neurotransmitter synthesis"
-      ],
+      "trigger_keywords": [],
       "chaining_partners": []
     },
     {
@@ -480,7 +374,7 @@
       "has_script": true,
       "has_tests": false,
       "has_demo": true,
-      "demo_command": "python skills/clawpathy_autoresearch/dispatcher.py --demo",
+      "demo_command": "python skills/clawpathy_autoresearch/executor.py --demo",
       "dependencies": [],
       "tags": [
         "meta",
@@ -511,7 +405,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-trial-finder/opentargets.py --demo",
+      "demo_command": "python skills/clinical-trial-finder/gwas_bridge.py --demo",
       "dependencies": [
         "python>=3.11"
       ],
@@ -545,7 +439,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-variant-reporter/clinical_variant_reporter.py --demo",
+      "demo_command": "python skills/clinical-variant-reporter/acmg_engine.py --demo",
       "dependencies": [],
       "tags": [
         "acmg",
@@ -594,35 +488,6 @@
       "chaining_partners": [
         "pharmgx-reporter",
         "gwas-lookup"
-      ]
-    },
-    {
-      "name": "crispr-screen-triage",
-      "cli_alias": "crispr-triage",
-      "description": "Deterministic CRISPR screen hit ranking from local guide-level count tables",
-      "version": "0.1.0",
-      "status": "mvp",
-      "has_script": true,
-      "has_tests": true,
-      "has_demo": true,
-      "demo_command": "python clawbio.py run crispr-triage --demo",
-      "dependencies": [
-        "python>=3.10"
-      ],
-      "tags": [
-        "crispr",
-        "screen",
-        "triage"
-      ],
-      "trigger_keywords": [
-        "CRISPR screen triage",
-        "guide count ranking",
-        "rank CRISPR hits",
-        "depleted guide screen"
-      ],
-      "chaining_partners": [
-        "target-validation-scorer",
-        "omics-target-evidence-mapper"
       ]
     },
     {
@@ -1075,35 +940,235 @@
       "chaining_partners": []
     },
     {
-      "name": "gwas-catalog-region-fetch",
+      "name": "gi-annotation",
       "cli_alias": null,
-      "description": "Fetch a region of GWAS summary statistics from the NHGRI-EBI GWAS Catalog\nharmonised collection via tabix-on-FTP. Use when an agent needs GWAS beta /\nSE / p-value for every variant in a window for one specific study (GCST\naccession). Input: accession, chromosome, start, end. Output: harmonised\nTSV slice in canonical format.\n",
+      "description": "Predict gene and transcript structure (intervals, exons, strand) from a DNA sequence using the Genomic Intelligence DNA Annotation model, via the hosted /v1/tasks/annotation/predict API. Async-only — the pipeline takes ~20 s for ~20 kbp.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/gwas-catalog-region-fetch/gwas_catalog_region_fetch.py --demo",
+      "demo_command": "python skills/gi-annotation/gi_annotation.py --demo",
       "dependencies": [
         "python>=3.10",
-        "pysam>=0.22",
-        "pandas>=2.0",
-        "requests>=2.28"
+        "requests>=2.31"
       ],
       "tags": [
-        "gwas",
-        "gwas-catalog",
-        "region-fetch",
-        "tabix",
-        "summary-statistics",
-        "harmonised"
+        "genomics",
+        "annotation",
+        "gene-prediction",
+        "transcript-prediction",
+        "gene-structure",
+        "dna-lm",
+        "gi-api"
       ],
       "trigger_keywords": [
-        "gwas region fetch",
-        "gwas catalog region",
-        "gwas sumstats slice",
-        "GCST harmonised tabix",
-        "GWAS catalog tabix"
+        "gene annotation",
+        "transcript annotation",
+        "annotate sequence",
+        "gene structure prediction",
+        "predict transcripts",
+        "de novo gene prediction",
+        "DNA annotation",
+        "gene boundaries",
+        "exon prediction",
+        "gi annotation",
+        "genomic intelligence annotation"
+      ],
+      "chaining_partners": []
+    },
+    {
+      "name": "gi-chromatin",
+      "cli_alias": null,
+      "description": "Predict chromatin state — histone marks, DNase, TF binding — across 919 tracks (DeepSEA-style) for DNA sequences, via the hosted Genomic Intelligence /v1/tasks/chromatin/predict API.",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/gi-chromatin/gi_chromatin.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "requests>=2.31"
+      ],
+      "tags": [
+        "genomics",
+        "chromatin",
+        "histone",
+        "DNase",
+        "ATAC",
+        "TF-binding",
+        "deepsea",
+        "dna-lm",
+        "gi-api"
+      ],
+      "trigger_keywords": [
+        "chromatin",
+        "chromatin state",
+        "chromatin annotation",
+        "histone mark",
+        "histone modification",
+        "DNase",
+        "ATAC",
+        "TF binding",
+        "transcription factor binding",
+        "DeepSEA",
+        "epigenome",
+        "gi chromatin",
+        "genomic intelligence chromatin"
+      ],
+      "chaining_partners": []
+    },
+    {
+      "name": "gi-enhancer",
+      "cli_alias": null,
+      "description": "Predict enhancer activity in DNA sequences using the Genomic Intelligence G0 DeepSTARR model, via the hosted /v1/tasks/enhancer/predict API. Returns per-window activity scores.",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/gi-enhancer/gi_enhancer.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "requests>=2.31"
+      ],
+      "tags": [
+        "genomics",
+        "enhancer",
+        "regulatory",
+        "cis-regulatory",
+        "deepstarr",
+        "dna-lm",
+        "gi-api"
+      ],
+      "trigger_keywords": [
+        "enhancer",
+        "enhancer activity",
+        "predict enhancer",
+        "regulatory element",
+        "cis-regulatory",
+        "CRE",
+        "DeepSTARR",
+        "STARR-seq",
+        "massively parallel reporter assay",
+        "MPRA",
+        "gi enhancer",
+        "genomic intelligence enhancer"
+      ],
+      "chaining_partners": []
+    },
+    {
+      "name": "gi-expression",
+      "cli_alias": null,
+      "description": "Predict tissue / cell-type expression (log TPM + TPM) from a 9,198 bp TSS-centered DNA sequence using the Genomic Intelligence G0 Expression model, via the hosted /v1/tasks/expression/predict API. The model is conditioned on a free-text cell-type / assay description.",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/gi-expression/gi_expression.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "requests>=2.31"
+      ],
+      "tags": [
+        "genomics",
+        "expression",
+        "RNA-seq",
+        "TPM",
+        "sequence-to-expression",
+        "dna-lm",
+        "gi-api"
+      ],
+      "trigger_keywords": [
+        "expression prediction",
+        "predict expression",
+        "sequence to expression",
+        "TPM prediction",
+        "cell type expression",
+        "tissue expression",
+        "RNA-seq prediction",
+        "gi expression",
+        "G0 expression",
+        "genomic intelligence expression"
+      ],
+      "chaining_partners": []
+    },
+    {
+      "name": "gi-promoter",
+      "cli_alias": null,
+      "description": "Detect promoter regions in DNA sequences using the Genomic Intelligence G0 transformer (GENA-LM BERT Large), via the hosted /v1/tasks/promoter/predict API. Returns per-window promoter probabilities and called regions.",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/gi-promoter/gi_promoter.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "requests>=2.31"
+      ],
+      "tags": [
+        "genomics",
+        "promoter",
+        "transcription",
+        "regulatory",
+        "dna-lm",
+        "transformer",
+        "gi-api"
+      ],
+      "trigger_keywords": [
+        "promoter",
+        "promoter prediction",
+        "predict promoter",
+        "find promoter",
+        "promoter region",
+        "TSS prediction",
+        "transcription start site",
+        "gi promoter",
+        "genomic intelligence promoter",
+        "G0 promoter",
+        "GENA-LM promoter"
+      ],
+      "chaining_partners": []
+    },
+    {
+      "name": "gi-splice",
+      "cli_alias": null,
+      "description": "Detect splice donor and acceptor sites in DNA sequences using the Genomic Intelligence G0 BigBird transformer, via the hosted /v1/tasks/splice/predict API. Returns per-position site probabilities and called sites.",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/gi-splice/gi_splice.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "requests>=2.31"
+      ],
+      "tags": [
+        "genomics",
+        "splice",
+        "splice-site",
+        "splicing",
+        "intron-exon",
+        "dna-lm",
+        "transformer",
+        "gi-api"
+      ],
+      "trigger_keywords": [
+        "splice",
+        "splice site",
+        "splice donor",
+        "splice acceptor",
+        "splicing prediction",
+        "intron exon boundary",
+        "cryptic splice site",
+        "GT-AG site",
+        "gi splice",
+        "G0 splice",
+        "genomic intelligence splice"
       ],
       "chaining_partners": []
     },
@@ -1223,7 +1288,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/illumina-bridge/illumina_providers.py --demo",
+      "demo_command": "python skills/illumina-bridge/illumina_bridge.py --demo",
       "dependencies": [],
       "tags": [
         "illumina",
@@ -1276,40 +1341,6 @@
       "chaining_partners": []
     },
     {
-      "name": "ld-1000g-region-compute",
-      "cli_alias": null,
-      "description": "Compute pairwise r² between a lead variant and every variant in a window\nusing the 1000 Genomes Phase 3 GRCh38 reference panel, ancestry-stratified.\nUse when an agent needs LD coloring for a regional plot or LD pruning\naround a candidate causal variant. Single client (on-demand region fetch\nfrom EBI 1000G FTP); no multi-GB cold-start.\n",
-      "version": "0.1.0",
-      "status": "planned",
-      "has_script": true,
-      "has_tests": true,
-      "has_demo": true,
-      "demo_command": "python skills/ld-1000g-region-compute/ld_1000g_region_compute.py --demo",
-      "dependencies": [
-        "python>=3.10",
-        "pysam>=0.22",
-        "pandas>=2.0",
-        "requests>=2.28"
-      ],
-      "tags": [
-        "ld",
-        "1000-genomes",
-        "reference-panel",
-        "plink",
-        "ancestry-stratified",
-        "on-demand"
-      ],
-      "trigger_keywords": [
-        "ld around lead",
-        "ld region 1000g",
-        "r-squared 1000g phase 3",
-        "ancestry-stratified ld",
-        "locuszoom ld coloring",
-        "1000 genomes ld panel"
-      ],
-      "chaining_partners": []
-    },
-    {
       "name": "lit-synthesizer",
       "cli_alias": null,
       "description": "Search PubMed and bioRxiv for bioinformatics literature, synthesise results into a structured report, and build a citation graph — all locally, with a reproducibility bundle.\n",
@@ -1343,34 +1374,6 @@
         "recent papers on"
       ],
       "chaining_partners": []
-    },
-    {
-      "name": "marker-dominance-mapper",
-      "cli_alias": "marker-map",
-      "description": "Deterministic marker-dominance region mapping from local spot-count CSVs",
-      "version": "0.1.0",
-      "status": "mvp",
-      "has_script": true,
-      "has_tests": true,
-      "has_demo": true,
-      "demo_command": "python clawbio.py run marker-map --demo",
-      "dependencies": [
-        "python>=3.10"
-      ],
-      "tags": [
-        "marker-dominance",
-        "spot-map",
-        "marker-mapping"
-      ],
-      "trigger_keywords": [
-        "marker dominance mapping",
-        "map marker spots",
-        "marker-based tissue regions"
-      ],
-      "chaining_partners": [
-        "scrna-orchestrator",
-        "diff-visualizer"
-      ]
     },
     {
       "name": "mendelian-randomisation",
@@ -1433,16 +1436,7 @@
         "illlumina-450k",
         "EPIC"
       ],
-      "trigger_keywords": [
-        "epigenetic age",
-        "methylation clock",
-        "pyaging",
-        "horvath",
-        "grimage",
-        "dunedinpace",
-        "GEO",
-        "GSE"
-      ],
+      "trigger_keywords": [],
       "chaining_partners": []
     },
     {
@@ -1527,45 +1521,6 @@
       "chaining_partners": []
     },
     {
-      "name": "nfcore-rnaseq-wrapper",
-      "cli_alias": "rnaseq-pipeline",
-      "description": "Wrapper skill for running nf-core/rnaseq bulk RNA-seq preprocessing from FASTQ or BAM inputs with strict preflight, reproducibility outputs, and downstream handoff to ClawBio bulk RNA-seq DE skills.",
-      "version": "0.1.0",
-      "status": "mvp",
-      "has_script": true,
-      "has_tests": true,
-      "has_demo": true,
-      "demo_command": "python clawbio.py run rnaseq-pipeline --demo",
-      "dependencies": [
-        "python>=3.11"
-      ],
-      "tags": [
-        "rnaseq",
-        "bulk-rna-seq",
-        "nextflow",
-        "nf-core",
-        "fastq",
-        "preprocessing",
-        "counts"
-      ],
-      "trigger_keywords": [
-        "bulk RNA-seq preprocessing",
-        "nf-core rnaseq",
-        "run rnaseq from fastq",
-        "preprocess RNA-seq FASTQs",
-        "FASTQ to count matrix",
-        "STAR Salmon RNA-seq pipeline",
-        "RSEM RNA-seq pipeline",
-        "HISAT2 RNA-seq alignment",
-        "bowtie2 salmon prokaryotic rnaseq"
-      ],
-      "chaining_partners": [
-        "rnaseq-de",
-        "diff-visualizer",
-        "bio-orchestrator"
-      ]
-    },
-    {
       "name": "nfcore-scrnaseq-wrapper",
       "cli_alias": "scrnaseq-pipeline",
       "description": "Wrapper skill for running nf-core/scrnaseq upstream single-cell RNA-seq preprocessing from FASTQ with strict preflight, reproducibility outputs, and downstream handoff to ClawBio scRNA skills.",
@@ -1610,7 +1565,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/nutrigx-advisor/parse_input.py --demo",
+      "demo_command": "python skills/nutrigx-advisor/extract_genotypes.py --demo",
       "dependencies": [],
       "tags": [
         "nutrigenomics",
@@ -1971,48 +1926,15 @@
         "PCA"
       ],
       "trigger_keywords": [
-        "rna-seq",
         "differential expression",
-        "bulk RNA",
-        "pseudo-bulk",
-        "volcano plot",
-        "ma plot",
+        "bulk rna",
+        "rna-seq",
         "count matrix",
-        "DESeq2",
+        "deseq2",
         "pydeseq2"
       ],
       "chaining_partners": [
         "diff-visualizer"
-      ]
-    },
-    {
-      "name": "sample-qc-triage",
-      "cli_alias": "sample-qc",
-      "description": "Deterministic multi-sample QC triage for identity, sex, contamination, and batch-shift outliers",
-      "version": "0.1.0",
-      "status": "mvp",
-      "has_script": true,
-      "has_tests": true,
-      "has_demo": true,
-      "demo_command": "python clawbio.py run sample-qc --demo",
-      "dependencies": [
-        "python>=3.10"
-      ],
-      "tags": [
-        "quality-control",
-        "sequencing-qc",
-        "triage"
-      ],
-      "trigger_keywords": [
-        "sample QC triage",
-        "sequencing QC outliers",
-        "sex mismatch",
-        "fingerprint concordance",
-        "contamination batch shift"
-      ],
-      "chaining_partners": [
-        "multiqc-reporter",
-        "seq-wrangler"
       ]
     },
     {
@@ -2299,39 +2221,6 @@
       "chaining_partners": [
         "llm-biobank-bench"
       ]
-    },
-    {
-      "name": "ukb-ppp-region-fetch",
-      "cli_alias": null,
-      "description": "Fetch a regional slice of plasma pQTL summary statistics from the UK\nBiobank Pharma Proteomics Project (UKB-PPP; Sun 2023 Nature) for a\nspecific (protein, ancestry) measurement. Use when an agent needs\nper-variant beta / SE / p-value around a coloc-lead variant for\ndownstream colocalisation, Mendelian randomisation, or regional\nplotting against a pQTL exposure. The canonical use case is the\ncis-window around the protein's coding gene TSS, but UKB-PPP releases\nfull-genome summary stats per protein so any GRCh38 window (including\ntrans loci) is supported when the user supplies an explicit\n(chromosome, start_bp, end_bp). Input: protein_label (HGNC or\nUniProt), ancestry, chromosome, start_bp, end_bp. Output: harmonised\nTSV slice + manifest + human-readable report.\n",
-      "version": "0.1.0",
-      "status": "planned",
-      "has_script": true,
-      "has_tests": true,
-      "has_demo": true,
-      "demo_command": "python skills/ukb-ppp-region-fetch/ukb_ppp_region_fetch.py --demo",
-      "dependencies": [
-        "python>=3.10",
-        "synapseclient>=3.0",
-        "requests>=2.28"
-      ],
-      "tags": [
-        "pqtl",
-        "ukb-ppp",
-        "region-fetch",
-        "regenie",
-        "summary-statistics",
-        "proteomics",
-        "olink"
-      ],
-      "trigger_keywords": [
-        "ukb-ppp pqtl region fetch",
-        "pqtl regional summary stats",
-        "sun 2023 ukbppp",
-        "protein qtl summary stats",
-        "plasma pqtl regional fetch"
-      ],
-      "chaining_partners": []
     },
     {
       "name": "variant-annotation",
