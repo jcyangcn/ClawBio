@@ -124,7 +124,7 @@ When an agent asks for r² between a lead and partners in a region:
 
 1. **Resolve `lead` + `partners` + `chromosome` + `window_bp` + `super_pop`**: lead in `chr_pos_ref_alt` GRCh38 form; partners as a list (or `null` to compute against all variants in the window); super-population from `{EUR, AFR, AMR, EAS, SAS}` (default EUR; choose to match the upstream cohort's ancestry; see Gotcha #1).
 2. **Region VCF fetch**: the skill performs a tabix-on-FTP byte-range request against `https://ftp.1000genomes.ebi.ac.uk/` for the requested chromosome × window. Cache hit at `~/.clawbio/locuscompare_cache/1000g/<chr>_<start>_<end>.vcf.gz` skips the fetch.
-3. **Super-pop filter**: subset the VCF to the chosen super-population's samples via the canonical Phase 3 panel TSV (`integrated_call_samples_v3.20130502.ALL.panel`); `plink --keep` with FID=0 convention (Gotcha #4).
+3. **Super-pop filter**: subset the VCF to the chosen super-population's samples via the canonical Phase 3 panel TSV (`integrated_call_samples_v3.20130502.ALL.panel`); `plink --keep` writes `<sample>\t<sample>` rows because plink 1.9 + `--vcf` assigns `FID = IID = sample-id` (NOT FID=0 like plink2; see Gotcha #4).
 4. **r² compute**: `plink --r2 --ld-snp <lead>` against the lead variant. Variant ids are rewritten to `chr:pos:ref:alt` form via `plink --set-missing-var-ids '@:#:$1:$2'` (Gotcha #3).
 5. **Write outputs** to `--output <dir>/`: a flat `ld_pairs.tsv` (partner_variant_id, r2, optional dprime), a `manifest.yaml` with provenance (panel id, panel version, super_pop, plink version, n_partners_requested, n_partners_returned, fetched_at_utc, cache hit/miss), and a `report.md` human-readable summary.
 
