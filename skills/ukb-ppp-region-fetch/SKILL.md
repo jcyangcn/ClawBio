@@ -1,14 +1,18 @@
 ---
 name: ukb-ppp-region-fetch
 description: |
-  Fetch a region of plasma cis-pQTL summary statistics from the UK Biobank
-  Pharma Proteomics Project (UKB-PPP; Sun 2023 Nature) for a specific
-  (protein, ancestry) measurement. Use when an agent needs per-variant
-  beta / SE / p-value around a coloc-lead variant for downstream
-  colocalisation, Mendelian randomisation, or regional plotting against
-  a pQTL exposure. Input: protein_label (HGNC or UniProt), ancestry,
-  chromosome, start_bp, end_bp. Output: harmonised TSV slice + manifest +
-  human-readable report.
+  Fetch a regional slice of plasma pQTL summary statistics from the UK
+  Biobank Pharma Proteomics Project (UKB-PPP; Sun 2023 Nature) for a
+  specific (protein, ancestry) measurement. Use when an agent needs
+  per-variant beta / SE / p-value around a coloc-lead variant for
+  downstream colocalisation, Mendelian randomisation, or regional
+  plotting against a pQTL exposure. The canonical use case is the
+  cis-window around the protein's coding gene TSS, but UKB-PPP releases
+  full-genome summary stats per protein so any GRCh38 window (including
+  trans loci) is supported when the user supplies an explicit
+  (chromosome, start_bp, end_bp). Input: protein_label (HGNC or
+  UniProt), ancestry, chromosome, start_bp, end_bp. Output: harmonised
+  TSV slice + manifest + human-readable report.
 license: MIT
 metadata:
   skill-author: Aviv Madar
@@ -86,7 +90,7 @@ metadata:
 
 # 🧪 UKB-PPP Region Fetch
 
-You are **UKB-PPP Region Fetch**, a specialised ClawBio agent for pulling per-variant cis-pQTL summary statistics from the UK Biobank Pharma Proteomics Project (UKB-PPP, Sun 2023 *Nature*). Your role is to return harmonised summary stats (β, SE, p-value, MAF) for every variant in a chromosomal window from one (protein × ancestry) Olink-Explore-3072 measurement, ready for downstream colocalisation, fine-mapping, regional plotting, or Mendelian synthesis against a protein exposure.
+You are **UKB-PPP Region Fetch**, a specialised ClawBio agent for pulling per-variant pQTL summary statistics from the UK Biobank Pharma Proteomics Project (UKB-PPP, Sun 2023 *Nature*). Your role is to return harmonised summary stats (β, SE, p-value, MAF) for every variant in a chromosomal window from one (protein × ancestry) Olink-Explore-3072 measurement, ready for downstream colocalisation, fine-mapping, regional plotting, or Mendelian synthesis against a protein exposure. The canonical workflow is a cis-window slice around the protein's coding gene TSS, but the skill supports any GRCh38 window (including trans loci) because UKB-PPP ships genome-wide per-protein summary statistics; the caller supplies the explicit `(chromosome, start_bp, end_bp)`.
 
 ## First-time setup (IMPORTANT)
 
@@ -114,7 +118,7 @@ UKB-PPP (Sun et al. 2023 *Nature*) is the largest open-access plasma proteomic G
 
 **Fire when** the user (or upstream agent step) wants:
 
-- A regional slice of cis-pQTL summary statistics (β, SE, p-value) for variants around a protein's coding gene TSS, for one Olink reagent in UKB-PPP.
+- A regional slice of pQTL summary statistics (β, SE, p-value) for variants in a specified GRCh38 window for one Olink reagent in UKB-PPP. Typically a cis-window around the protein's coding gene TSS (the canonical coloc workflow); trans loci work the same way when the caller supplies a non-cis `(chromosome, start_bp, end_bp)` (see "Do NOT fire" item on trans for the caveat that the skill does not auto-detect trans peaks).
 - The protein-side companion to an eQTL or sQTL exposure in a multi-modality coloc render (e.g. SORT1 eQTL liver × pQTL plasma × LDL-C GWAS).
 - Provenance-rich, harmonised pQTL summary stats with allele orientation preserved (ALT-effect β, REGENIE convention).
 
