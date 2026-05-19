@@ -29,7 +29,7 @@ eqtl_render:
     ld_panel: "none"
     ld_panel_super_pop: "EUR"
     ld_panel_version: ""
-    plink2_version: ""
+    plink_version: ""
     window_bp: 1000000
     lead_variant_id: "1_109274968_G_T"
     n_pairs: 2547
@@ -37,7 +37,7 @@ eqtl_render:
     scatter_downsampled: false
     scatter_downsample_target: 5000
     ancestry_caveats:
-      - "LD r\xB2 unavailable (no plink2 client provided); points show as grey"
+      - "LD r\xB2 unavailable (no plink client provided); points show as grey"
     # v1.4 addition: data_source_warnings carries prefixed fetcher notes.
     # The cassettes for this golden fixture were captured with zero notes
     # from all three fetchers, so the locked value is the empty list.
@@ -60,7 +60,7 @@ pqtl_render:
     ld_panel: "none"
     ld_panel_super_pop: "EUR"
     ld_panel_version: ""
-    plink2_version: ""
+    plink_version: ""
     window_bp: 1000000
     lead_variant_id: "1_109274968_G_T"
     n_pairs: 4606
@@ -68,5 +68,5 @@ pqtl_render:
     scatter_downsampled: false
     scatter_downsample_target: 5000
     ancestry_caveats:
-      - "LD r\xB2 unavailable (no plink2 client provided); points show as grey"
+      - "LD r\xB2 unavailable (no plink client provided); points show as grey"
     data_source_warnings: []

@@ -177,10 +177,12 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
     from eqtl_catalogue_region_fetch import EQTLCatalogueClient
     from gwas_catalog_region_fetch import GWASCatalogClient
     from ld_1000g_region_compute import (
-        DEFAULT_PLINK2_BIN,
-        LDComputeError,
-        Plink2LDClient,
         SuperPop,
+    )
+    from ondemand_client import (
+        DEFAULT_PLINK_BIN,
+        OnDemand1000GLDClient,
+        OnDemandLDError,
     )
     from ukb_ppp_region_fetch import UKBPPPClient
 
@@ -264,38 +266,20 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
     gwas_accession = outcome["fetch"]["accession"]
 
     # ----- LD client (optional; gracefully degrades if unset / unavailable)
-    # Three modes, in priority order:
-    # 1. Pre-baked PLINK2 panel path (legacy / power-user; fastest, no network).
-    # 2. On-demand region fetch from EBI 1000G FTP (default; matches ClawBio
-    #    "local-first install, no multi-GB pre-download" UX).
-    # 3. None: render without LD coloring (graceful fallback).
+    # Two modes, in priority order:
+    # 1. On-demand region fetch from EBI 1000G FTP via plink 1.9 (default;
+    #    matches ClawBio "local-first install, no multi-GB pre-download" UX).
+    # 2. None: render without LD coloring (graceful fallback).
     ld_client = None
     ld_block = config.get("ld") or {}
     super_pop_str = ld_block.get("super_pop", "EUR")
     super_pop = SuperPop[super_pop_str]
-    plink2_panel = ld_block.get("plink2_panel_path") or os.environ.get("LOCUSCOMPARE_1000G_PANEL")
-    if plink2_panel:
+    if ld_block.get("source", "1000g_phase3_grch38") == "1000g_phase3_grch38":
         try:
-            ld_client = Plink2LDClient(
-                panel_path=plink2_panel,
-                super_pop=super_pop,
-                panel_id=ld_block.get("panel_id", "1000g_phase3_v5b_grch38_basic"),
-                panel_version=ld_block.get("panel_version", "5b"),
-                plink2_bin=ld_block.get("plink2_bin", DEFAULT_PLINK2_BIN),
-            )
-        except LDComputeError as e:
-            print(f"warning: pre-baked LD client init failed ({e!s}); falling through to on-demand", file=sys.stderr)
-            ld_client = None
-    if ld_client is None and ld_block.get("source", "1000g_phase3_grch38") == "1000g_phase3_grch38":
-        # Try the on-demand region fetcher.
-        try:
-            from ld_1000g_region_compute import (
-                OnDemand1000GLDClient,
-                OnDemandLDError,
-            )
+            plink_bin = ld_block.get("plink_bin") or DEFAULT_PLINK_BIN
             ld_client = OnDemand1000GLDClient(
                 super_pop=super_pop_str,
-                plink2_bin=ld_block.get("plink2_bin", DEFAULT_PLINK2_BIN),
+                plink_bin=plink_bin,
             )
             print(
                 f"info: using on-demand 1000G LD client (super_pop={super_pop_str}); "
@@ -306,7 +290,8 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
             print(
                 f"warning: on-demand LD client unavailable ({e!s}). "
                 "Rendering without LD coloring; variants will appear grey. "
-                "Either supply ld.plink2_panel_path or install plink2 + pysam.",
+                "Install plink 1.9 (brew / apt / conda) and pysam, or set "
+                "PLINK_BIN to a plink binary path.",
                 file=sys.stderr,
             )
             ld_client = None

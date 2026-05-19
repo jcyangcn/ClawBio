@@ -37,6 +37,7 @@ from typing import Any
 import sys
 from pathlib import Path
 
+import requests
 import yaml
 
 # Resolve sibling-skill imports for the fork's flat layout. This skill
@@ -69,8 +70,10 @@ from gwas_catalog_region_fetch import (
 )
 from ld_1000g_region_compute import (
     LDComputeError,
-    Plink2LDClient,
     SuperPop,
+)
+from ondemand_client import (
+    OnDemand1000GLDClient,
 )
 from ukb_ppp_region_fetch import (
     RegionResult as UKBPPPRegionResult,
@@ -88,15 +91,7 @@ from regional_plot import (
 # GENCODE gene-track parser: bundled embedded helper, lives next to this
 # script under _fetchers/. The on-demand Ensembl-REST fetcher avoids the
 # multi-GB local-GTF dependency.
-from _fetchers.gencode_ondemand import (
-    GTFFetchError,
-    fetch_region_genes,
-)
-# Manifest builder stays in target_validation (it's OT-shaped tooling, not
-# part of the generic locuscompare contribution).
-from skills.decision.target_validation.renderers import (
-    build_regional_locuscompare_block,
-)
+from _fetchers.gencode_ondemand import fetch_region_genes_remote
 
 
 # Exposure kind dispatch (v1.3). The eQTL Catalogue fetcher serves
@@ -246,7 +241,7 @@ def render_locuscompare_for_lead(
     *,
     eqtl_client: EQTLCatalogueClient,
     gwas_client: GWASCatalogClient,
-    ld_client: Plink2LDClient | None,
+    ld_client: OnDemand1000GLDClient | None,
     out_path: Path,
     ukb_ppp_client: UKBPPPClient | None = None,
 ) -> Tier2Result:
@@ -279,7 +274,7 @@ def render_tier2_for_lead(
     study_mapping: StudyIdMapping,
     eqtl_client: EQTLCatalogueClient,
     gwas_client: GWASCatalogClient,
-    ld_client: Plink2LDClient | None,
+    ld_client: OnDemand1000GLDClient | None,
     out_path: Path,
     ot_release: str,
     super_pop: SuperPop = SuperPop.EUR,
@@ -399,7 +394,7 @@ def _render_for_spec(
     spec: LocusCompareSpec,
     eqtl_client: EQTLCatalogueClient,
     gwas_client: GWASCatalogClient,
-    ld_client: Plink2LDClient | None,
+    ld_client: OnDemand1000GLDClient | None,
     out_path: Path,
     ukb_ppp_client: UKBPPPClient | None = None,
 ) -> Tier2Result:
@@ -541,9 +536,9 @@ def _render_for_spec(
             f"{gwas_accession} at {chromosome}:{start_bp}-{end_bp}"
         )
 
-    # 3. LD r² (optional; gracefully degrade when plink2 not installed).
+    # 3. LD r² (optional; gracefully degrade when plink not installed).
     r2_by_variant: dict[str, float] = {lead_variant_id: 1.0}
-    plink2_version = ""
+    plink_version = ""
     panel_id = "none"
     panel_version = ""
     if ld_client is not None:
@@ -561,12 +556,12 @@ def _render_for_spec(
         else:
             for pair in ld.pairs:
                 r2_by_variant[pair.partner_variant_id] = pair.r2
-            plink2_version = ld.plink2_version
+            plink_version = ld.plink_version
             panel_id = ld.panel_id
             panel_version = ld.panel_version
     else:
         notes.append("ld_client is None; rendering without LD coloring")
-        extra_caveats.append("LD r² unavailable (no plink2 client provided); points show as grey")
+        extra_caveats.append("LD r² unavailable (no plink client provided); points show as grey")
 
     # 4. Harmonise + join.
     pairs = harmonise_regions_for_locuscompare(
@@ -604,20 +599,20 @@ def _render_for_spec(
         pqtl_release=pqtl.release if spec.exposure_kind == EXPOSURE_KIND_UKB_PPP else None,
     )
 
-    # Gene track. Three sources, in priority order:
+    # Gene track. Two sources, in priority order:
     # 1. spec.prefetched_gene_track — caller-supplied list (e.g. from the
     #    locuscompare CLI's Ensembl REST on-demand fetcher).
-    # 2. local GTF path on spec.gencode_gtf_path (legacy / power-user).
-    # 3. fall back to no gene track + a caveat (graceful degradation).
+    # 2. on-demand Ensembl REST fetch via fetch_region_genes_remote (fallback
+    #    when no prefetched track was supplied; graceful-degrades to no track
+    #    if Ensembl is offline).
     gene_track: list[GeneTrackEntry] = []
     if spec.prefetched_gene_track is not None:
         gene_track = list(spec.prefetched_gene_track)
-    elif gencode_gtf_path is not None:
+    else:
         try:
-            genes_result = fetch_region_genes(
+            genes, release_meta, gt_notes = fetch_region_genes_remote(
                 chromosome=chromosome.lstrip("chr"),
                 start_bp=start_bp, end_bp=end_bp,
-                gtf_path=gencode_gtf_path,
                 biotypes=gene_biotypes,
             )
             gene_track = [
@@ -627,14 +622,12 @@ def _render_for_spec(
                     exons=[(e.start, e.end) for e in g.exons],
                     biotype=g.biotype,
                 )
-                for g in genes_result.genes
+                for g in genes
             ]
-        except GTFFetchError as e:
+            notes.extend(gt_notes)
+        except (requests.RequestException, ValueError) as e:
             notes.append(f"gene track unavailable: {e!s}")
-            extra_caveats.append("gene track unavailable (GTF not installed)")
-    else:
-        notes.append("no gene track source supplied")
-        extra_caveats.append("gene track unavailable (no source supplied)")
+            extra_caveats.append("gene track unavailable (Ensembl REST error)")
 
     if spec.exposure_kind == EXPOSURE_KIND_UKB_PPP:
         exposure_label_long = (
@@ -655,7 +648,7 @@ def _render_for_spec(
         chromosome=chromosome,
         window_bp=window_bp,
         ld_panel_label=(
-            f"{panel_id} ({super_pop.value}); plink2 {plink2_version}"
+            f"{panel_id} ({super_pop.value}); plink {plink_version}"
             if ld_client is not None and panel_id != "none"
             else "no LD reference (plot rendered without LD coloring)"
         ),
@@ -696,7 +689,7 @@ def _render_for_spec(
         ld_panel=panel_id,
         ld_panel_super_pop=super_pop.value,
         ld_panel_version=panel_version,
-        plink2_version=plink2_version,
+        plink_version=plink_version,
         window_bp=window_bp,
         lead_variant_id=lead_variant_id,
         n_pairs=len(pairs),
@@ -901,6 +894,93 @@ def _extract_ensg_from_ot_study_id(ot_study_id: str) -> str | None:
     if m:
         return m.group(1).upper()
     return None
+
+
+# ---- Manifest block builder (inlined from skills/decision/target_validation/
+#      renderers/manifest.py for fork self-containment; keep byte-equivalent
+#      if the canonical changes) ----
+
+def build_regional_locuscompare_block(
+    *,
+    ot_release: str,
+    exposure_source: str,
+    exposure_source_release: str,
+    exposure_study_id: str,
+    outcome_source: str,
+    outcome_source_release: str,
+    outcome_study_id: str,
+    ld_panel: str,
+    ld_panel_super_pop: str,
+    ld_panel_version: str,
+    plink_version: str,
+    window_bp: int,
+    lead_variant_id: str,
+    n_pairs: int,
+    n_palindromic_excluded: int = 0,
+    scatter_downsampled: bool = False,
+    scatter_downsample_target: int = 5000,
+    ancestry_caveats: list[str] | None = None,
+    data_source_warnings: list[str] | None = None,
+    exposure_harmonisation_version: str = "",
+    outcome_harmonisation_version: str = "",
+    plot_artifact: str | None = None,
+    fetched_at: str | None = None,
+    exposure_protein_label: str = "",
+    exposure_ancestry: str = "",
+    exposure_ancestry_label: str = "",
+) -> dict[str, Any]:
+    """Construct one `regional_locuscompare` manifest block per
+    docs/research/regional_locuscompare_data_sources.md §5.1.
+
+    The orchestrator builds this dict per Tier-2 render and passes a list to
+    `write_manifest(..., tier2_renders=[...])`.
+
+    v1.3 adds three optional pQTL caption fields (exposure_protein_label,
+    exposure_ancestry, exposure_ancestry_label) per the §5.5 disclosure
+    extension. These remain empty strings for eQTL / sQTL / sceQTL renders
+    where the existing tissue / quant fields carry equivalent context;
+    they're populated for UKB-PPP renders where plasma is implicit but
+    protein identity isn't.
+
+    v1.4 adds `data_source_warnings`: an additive sibling to `ancestry_caveats`
+    that carries fetcher-emitted warnings (schema drift, pagination notes,
+    etc.) prefixed with the originating fetcher name. Kept separate from
+    `ancestry_caveats` so the curated bucket stays clean and the noisy
+    fetcher channel can be observed / triaged independently.
+    """
+    return {
+        "ot_release": ot_release,
+        "exposure_source": exposure_source,
+        "exposure_source_release": exposure_source_release,
+        "exposure_study_id": exposure_study_id,
+        "exposure_protein_label": exposure_protein_label,
+        "exposure_ancestry": exposure_ancestry,
+        "exposure_ancestry_label": exposure_ancestry_label,
+        "exposure_harmonisation_version": exposure_harmonisation_version,
+        "outcome_source": outcome_source,
+        "outcome_source_release": outcome_source_release,
+        "outcome_study_id": outcome_study_id,
+        "outcome_harmonisation_version": outcome_harmonisation_version,
+        "ld_panel": ld_panel,
+        "ld_panel_super_pop": ld_panel_super_pop,
+        "ld_panel_version": ld_panel_version,
+        "plink_version": plink_version,
+        "window_bp": window_bp,
+        "lead_variant_id": lead_variant_id,
+        "n_pairs": n_pairs,
+        "n_palindromic_excluded": n_palindromic_excluded,
+        "scatter_downsampled": scatter_downsampled,
+        "scatter_downsample_target": scatter_downsample_target,
+        "ancestry_caveats": list(ancestry_caveats or []),
+        "data_source_warnings": list(data_source_warnings or []),
+        "plot_artifact": plot_artifact,
+        "fetched_at": fetched_at or _now_utc(),
+    }
+
+
+def _now_utc() -> str:
+    import time as _time
+    return _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
 
 
 __all__ = [

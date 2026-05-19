@@ -241,7 +241,7 @@ render_block:
   outcome_study_id: GCST90269602
   ld_panel: 1000g_phase3_v5b_grch38_basic
   ld_panel_super_pop: EUR
-  plink2_version: PLINK v2.0.0-a.7.1 M1
+  plink_version: PLINK v1.90b6.27 64-bit (2023-05-09)
   window_bp: 1000000
   ancestry_caveats: []
   fetched_at: '2026-05-09T11:42:06Z'

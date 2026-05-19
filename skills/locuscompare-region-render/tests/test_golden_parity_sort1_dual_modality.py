@@ -22,7 +22,7 @@ eQTL row in caption text.
 Fields explicitly NOT locked (see expected.yaml comments):
 - `fetched_at`: timestamp emitted at render time
 - `plot_artifact`: filename basename varies with out_path
-- `ld_panel*` / `plink2_version`: depend on whether plink2 is installed
+- `ld_panel*` / `plink_version`: depend on whether plink 1.9 is installed
   on the runner; the fixture is captured with `ld_panel == "none"` and
   the LD block stays out of the assertion.
 

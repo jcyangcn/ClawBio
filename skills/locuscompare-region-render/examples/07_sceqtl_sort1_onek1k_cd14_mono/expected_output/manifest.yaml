@@ -22,7 +22,7 @@ render_block:
   ld_panel: none
   ld_panel_super_pop: EUR
   ld_panel_version: ''
-  plink2_version: ''
+  plink_version: ''
   window_bp: 1000000
   lead_variant_id: 1_109274968_G_T
   n_pairs: 2886
@@ -30,7 +30,7 @@ render_block:
   scatter_downsampled: false
   scatter_downsample_target: 5000
   ancestry_caveats:
-  - "LD r\xB2 unavailable (no plink2 client provided); points show as grey"
+  - "LD r\xB2 unavailable (no plink client provided); points show as grey"
   - OneK1K sceQTL signal at SORT1 may be sparse in CD14+ monocytes; the renderer may
     degrade to Tier-1 if there are fewer than 5 joinable variants.
   plot_artifact: 1_109274968_G_T_full_locuscompare.png

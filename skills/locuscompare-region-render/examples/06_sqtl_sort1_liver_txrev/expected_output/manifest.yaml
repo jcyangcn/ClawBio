@@ -22,7 +22,7 @@ render_block:
   ld_panel: none
   ld_panel_super_pop: EUR
   ld_panel_version: ''
-  plink2_version: ''
+  plink_version: ''
   window_bp: 1000000
   lead_variant_id: 1_109274968_G_T
   n_pairs: 2648
@@ -32,6 +32,6 @@ render_block:
   ancestry_caveats:
   - sumstats are credible-set-filtered (eQTL Catalogue .cc.tsv.gz; quant_method=txrev);
     retains the strongest molecular trait per fine-mapped signal
-  - "LD r\xB2 unavailable (no plink2 client provided); points show as grey"
+  - "LD r\xB2 unavailable (no plink client provided); points show as grey"
   plot_artifact: 1_109274968_G_T_full_locuscompare.png
   fetched_at: '2026-05-15T18:10:21Z'
