@@ -16,7 +16,7 @@ SYNAPSE_AUTH_TOKEN=eyJ... python skills/ukb-ppp-region-fetch/ukb_ppp_region_fetc
 produces (numbers below verified live 2026-05-15 against UKB-PPP r1):
 
 ```
-info: using bundled slice SORT1__EUR__chr1__108774968_109774968.json (no Synapse auth needed)
+info: using bundled slice SORT1__EUR__chr1__108774968_109774968.json.gz (no Synapse auth needed)
 ukb-ppp-region-fetch: 5205 variants -> /tmp/sort1_ukbppp_demo/variants.tsv
   source: UKB-PPP | SORT1 (Q99523, OID20213) | European (discovery) (EUR)
 ```
