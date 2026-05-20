@@ -210,7 +210,7 @@ FOLDER_TO_ALIAS = {
     "nfcore-scrnaseq-wrapper": "scrnaseq-pipeline",
     "rnaseq-de": "rnaseq",
     "diff-visualizer": "diffviz",
-    "marker-dominance-mapper": "spatial-map",
+    "marker-dominance-mapper": "marker-map",
     "llm-biobank-bench": "llm-bench",
 }
 

@@ -717,7 +717,7 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
-    "spatial-map": {
+    "marker-map": {
         "script": SKILLS_DIR / "marker-dominance-mapper" / "marker_dominance_mapper.py",
         "demo_args": ["--demo"],
         "description": "Marker dominance mapper (marker-based spot regions + SVG map)",

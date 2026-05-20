@@ -101,13 +101,13 @@ One skill, one task. This skill maps spots by marker dominance and does not perf
 ```bash
 python skills/marker-dominance-mapper/marker_dominance_mapper.py --input spots.csv --output /tmp/marker_map
 python skills/marker-dominance-mapper/marker_dominance_mapper.py --demo --output /tmp/marker_map
-python clawbio.py run spatial-map --demo
+python clawbio.py run marker-map --demo
 ```
 
 ## Demo
 
 ```bash
-python clawbio.py run spatial-map --demo
+python clawbio.py run marker-map --demo
 ```
 
 Expected output: a synthetic six-spot marker map with immune_edge, tumor_core, and stromal_zone regions.
