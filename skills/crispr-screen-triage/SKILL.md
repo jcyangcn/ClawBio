@@ -121,7 +121,7 @@ Expected output: a synthetic twelve-guide, six-gene ranked report with BRCA1 as 
 2. **Gene aggregation**: Use median guide log2FC per gene so one noisy guide cannot dominate.
 3. **Score**: `0.55 * max(0, -median_log2FC) + 0.25 * druggability + 0.20 * essentiality`.
 4. **Priority**: High requires score >= 1.35 and median log2FC <= -1.0.
-5. **Non-goal**: This is not MAGeCK RRA, BAGEL, CERES, or Chronos. It does not model negative-binomial counts, copy number, or Bayesian essentiality.
+5. **Non-goal**: This is not a canonical statistical screen caller. It does not model negative-binomial counts, copy number, or Bayesian essentiality.
 
 ## Example Queries
 
@@ -184,7 +184,7 @@ The agent dispatches and explains. The Python skill scores and writes outputs.
 ## Maintenance
 
 - **Review cadence**: Re-evaluate weights quarterly.
-- **Staleness signals**: Repo adds guide-level MAGeCK or BAGEL support.
+- **Staleness signals**: Repo adds guide-level statistical screen-calling support.
 - **Deprecation**: Archive if replaced by a full screen-analysis workflow.
 
 ## Author & Attribution
@@ -193,4 +193,4 @@ Prepared by Mrinal Joshi, Imperial College London and UK Dementia Research Insti
 
 ## Citations
 
-- Li W. et al. MAGeCK enables robust identification of essential genes from genome-scale CRISPR/Cas9 knockout screens. Genome Biology 2014. Background context only. This skill is a deterministic triage scorer, not a MAGeCK, BAGEL, CERES, or Chronos reimplementation.
+- ClawBio local deterministic triage rules in `crispr_screen_triage.py`; this skill does not claim a method-paper implementation.
