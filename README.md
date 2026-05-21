@@ -180,7 +180,7 @@ The exact contents can vary by skill, and some replays also require the original
 
 ## Skills
 
-A curated cross-section of ClawBio's 66 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
+A curated cross-section of ClawBio's 67 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
 
 | Skill | Scale | Description |
 |-------|-------|-------------|
