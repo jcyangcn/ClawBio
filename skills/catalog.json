@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 72,
+  "skill_count": 73,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -1309,6 +1309,34 @@
       ],
       "trigger_keywords": [],
       "chaining_partners": []
+    },
+    {
+      "name": "marker-dominance-mapper",
+      "cli_alias": "marker-map",
+      "description": "Deterministic marker-dominance region mapping from local spot-count CSVs",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run marker-map --demo",
+      "dependencies": [
+        "python>=3.10"
+      ],
+      "tags": [
+        "marker-dominance",
+        "spot-map",
+        "marker-mapping"
+      ],
+      "trigger_keywords": [
+        "marker dominance mapping",
+        "map marker spots",
+        "marker-based tissue regions"
+      ],
+      "chaining_partners": [
+        "scrna-orchestrator",
+        "diff-visualizer"
+      ]
     },
     {
       "name": "multiqc-reporter",

@@ -755,6 +755,13 @@ SKILLS = {
         "allowed_extra_flags": set(),
         "accepts_genotypes": False,
     },
+    "marker-map": {
+        "script": SKILLS_DIR / "marker-dominance-mapper" / "marker_dominance_mapper.py",
+        "demo_args": ["--demo"],
+        "description": "Marker dominance mapper (marker-based spot regions + SVG map)",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
     "fastreer": {
         "script": SKILLS_DIR / "fastreer" / "fastreer.py",
         "demo_args": ["--demo"],
