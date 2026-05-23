@@ -683,6 +683,14 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "ld-region": {
+        "script": SKILLS_DIR / "ld-1000g-region-compute" / "ld_1000g_region_compute.py",
+        "demo_args": ["--demo"],
+        "description": "1000G LD region compute — plink 1.9 r² between a lead and partners in a region for one super-population",
+        "allowed_extra_flags": {"--list-demos", "--no-cache", "--super-pop", "--panel"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
     "affprot": {
         "script": SKILLS_DIR / "affinity-proteomics" / "affinity_proteomics.py",
         "demo_args": ["--demo", "--platform", "olink"],

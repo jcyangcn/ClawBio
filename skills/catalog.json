@@ -1150,6 +1150,39 @@
       "chaining_partners": []
     },
     {
+      "name": "ld-1000g-region-compute",
+      "cli_alias": null,
+      "description": "Compute pairwise r² between a lead variant and every variant in a window\nusing the 1000 Genomes Phase 3 GRCh38 reference panel, ancestry-stratified.\nUse when an agent needs LD coloring for a regional plot or LD pruning\naround a candidate causal variant. Single client (on-demand region fetch\nfrom EBI 1000G FTP via plink 1.9); no multi-GB cold-start.\n",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/ld-1000g-region-compute/ld_1000g_region_compute.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "pysam>=0.22",
+        "pandas>=2.0",
+        "requests>=2.28"
+      ],
+      "tags": [
+        "ld",
+        "1000-genomes",
+        "reference-panel",
+        "plink",
+        "ancestry-stratified",
+        "on-demand"
+      ],
+      "trigger_keywords": [
+        "ld around lead",
+        "1000G LD",
+        "plink r2",
+        "linkage disequilibrium",
+        "regional LD"
+      ],
+      "chaining_partners": []
+    },
+    {
       "name": "lit-synthesizer",
       "cli_alias": null,
       "description": "Search PubMed and bioRxiv for bioinformatics literature, synthesise results into a structured report, and build a citation graph — all locally, with a reproducibility bundle.\n",
