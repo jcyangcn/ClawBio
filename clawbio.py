@@ -863,11 +863,13 @@ def _promote_structured_result_fields(result: dict, out_dir: Path | None) -> Non
         # - chat_summary_lines: concise, skill-authored text for chat UIs
         # - preferred_artifacts: generated files the UI should surface first
         # - suggested_actions: deterministic next-step requests to offer later
+        # - workflow_state: skill-emitted state identity/lifecycle metadata
         # - report_md: full markdown report text embedded in result.json
         for field in (
             "chat_summary_lines",
             "preferred_artifacts",
             "suggested_actions",
+            "workflow_state",
             "report_md",
         ):
             if field in payload:

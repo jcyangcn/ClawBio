@@ -66,6 +66,7 @@ try:
         make_pending_action_entry,
         parse_action_reply,
         render_action_offer,
+        render_workflow_state_header,
     )
 except ImportError:  # pragma: no cover - package import fallback
     from bot.action_offers import (
@@ -80,6 +81,7 @@ except ImportError:  # pragma: no cover - package import fallback
         make_pending_action_entry,
         parse_action_reply,
         render_action_offer,
+        render_workflow_state_header,
     )
 
 # --------------------------------------------------------------------------- #
@@ -670,6 +672,8 @@ def _render_skill_result(channel_id: int, skill_key: str, result: dict) -> str:
     report_text = str(result.get("report_md", "") or "").strip()
     summary_lines = extract_chat_summary_lines(result)
     actions = extract_action_offer(result)
+    workflow_state = result.get("workflow_state")
+    state_header = render_workflow_state_header(workflow_state)
 
     if actions:
         reply_parts: list[str] = []
@@ -681,7 +685,7 @@ def _render_skill_result(channel_id: int, skill_key: str, result: dict) -> str:
             reply_parts.append(raw_output)
         else:
             reply_parts.append(f"{skill_key} completed.")
-        reply_parts.append(render_action_offer(actions))
+        reply_parts.append(render_action_offer(actions, workflow_state=workflow_state))
         rendered = "\n\n".join(part for part in reply_parts if part).strip()
         _pending_actions[channel_id] = make_pending_action_entry(
             skill=skill_key,
@@ -703,15 +707,19 @@ def _render_skill_result(channel_id: int, skill_key: str, result: dict) -> str:
 
     if skill_key in ("compare", "drugphoto", "profile"):
         rendered = raw_output or report_text or f"{skill_key} completed."
+        if state_header:
+            rendered = "\n\n".join([state_header, rendered])
         if rendered:
             _pending_text.setdefault(channel_id, []).append(rendered)
         return "Result sent directly to chat. Do not repeat or paraphrase it."
 
     if summary_lines:
-        return "\n".join(summary_lines)
+        return "\n\n".join(part for part in (state_header, "\n".join(summary_lines)) if part)
     if report_text:
-        return _trim_report_for_chat(report_text)
-    return raw_output if raw_output else f"{skill_key} completed. Output: {output_dir}"
+        rendered_report = _trim_report_for_chat(report_text)
+        return "\n\n".join(part for part in (state_header, rendered_report) if part)
+    rendered_output = raw_output if raw_output else f"{skill_key} completed. Output: {output_dir}"
+    return "\n\n".join(part for part in (state_header, rendered_output) if part)
 
 
 async def execute_clawbio(args: dict) -> str:
