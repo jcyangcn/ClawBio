@@ -210,6 +210,7 @@ FOLDER_TO_ALIAS = {
     "nfcore-scrnaseq-wrapper": "scrnaseq-pipeline",
     "rnaseq-de": "rnaseq",
     "diff-visualizer": "diffviz",
+    "sample-qc-triage": "sample-qc",
     "crispr-screen-triage": "crispr-triage",
     "llm-biobank-bench": "llm-bench",
 }
@@ -226,6 +227,7 @@ MVP_FOLDERS = {
     "profile-report", "bio-orchestrator", "claw-ancestry-pca", "claw-semantic-sim",
     "ukb-navigator", "galaxy-bridge", "rnaseq-de", "diff-visualizer",
     "bioconductor-bridge",
+    "sample-qc-triage",
     "crispr-screen-triage",
     "llm-biobank-bench",
     "analyze-fasta",
@@ -256,6 +258,7 @@ TRIGGER_KEYWORDS: dict[str, list[str]] = {
     "llm-biobank-bench": ["llm benchmark", "benchmark language models", "biobank knowledge retrieval", "coverage score", "weighted coverage", "model comparison biobank"],
     "galaxy-bridge": ["galaxy", "usegalaxy", "tool shed", "bioblend", "run on galaxy", "galaxy tool", "galaxy workflow", "NGS pipeline"],
     "bioconductor-bridge": ["bioconductor", "bioc", "biocmanager", "summarizedexperiment", "singlecellexperiment", "genomicranges", "variantannotation", "annotationhub", "experimenthub"],
+    "sample-qc-triage": ["sample QC triage", "sample identity", "sex mismatch", "fingerprint concordance", "contamination", "batch shift", "low complexity"],
     "crispr-screen-triage": ["CRISPR screen", "guide counts", "rank CRISPR hits", "depleted genes", "knockout screen", "hit triage"],
     "analyze-fasta": ["fasta", "analyze fasta", "gc content", "find orfs", "isoelectric point", "gravy index", "protein properties"],
 }
@@ -285,6 +288,7 @@ CHAINING: dict[str, list[str]] = {
     "llm-biobank-bench": ["ukb-navigator", "pubmed-summariser", "lit-synthesizer"],
     "galaxy-bridge": ["pharmgx-reporter", "claw-metagenomics", "equity-scorer", "vcf-annotator"],
     "bioconductor-bridge": ["rnaseq-de", "scrna-orchestrator", "diff-visualizer", "bio-orchestrator"],
+    "sample-qc-triage": ["multiqc-reporter", "seq-wrangler"],
     "crispr-screen-triage": ["target-validation-scorer", "omics-target-evidence-mapper"],
     "analyze-fasta": ["struct-predictor", "variant-annotation", "pubmed-summariser"],
 }

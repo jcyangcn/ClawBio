@@ -15,16 +15,17 @@ RoboTerri turns Telegram or Discord into conversational front ends for that loca
 ## Prerequisites
 
 - Python 3.11+
+- [uv](https://docs.astral.sh/uv/) installed
 - A Telegram or Discord account
 - An API key from any OpenAI-compatible LLM provider
-- ClawBio cloned and working (`python3 clawbio.py run pharmgx --demo`)
+- ClawBio cloned and working (`uv run python clawbio.py run pharmgx --demo`)
 
 ## Setup
 
 ### 1. Install dependencies
 
 ```bash
-pip3 install -r bot/requirements.txt
+uv sync --group bot
 ```
 
 ### 2a. Create a Telegram bot
@@ -129,14 +130,14 @@ CLAWBIO_MODEL=local-model
 
 ```bash
 # Telegram bot
-python3 bot/roboterri.py
+uv run python bot/roboterri.py
 
 # Discord bot
-python3 bot/roboterri_discord.py
+uv run python bot/roboterri_discord.py
 
 # Both at the same time (separate terminals)
-python3 bot/roboterri.py &
-python3 bot/roboterri_discord.py &
+uv run python bot/roboterri.py &
+uv run python bot/roboterri_discord.py &
 ```
 
 If you want a direct browser chat instead of a messenger adapter, see [../docs/custom-domain-webchat.md](../docs/custom-domain-webchat.md) for the self-hosted OpenClaw gateway setup.
