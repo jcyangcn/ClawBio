@@ -1747,6 +1747,36 @@
       ]
     },
     {
+      "name": "sample-qc-triage",
+      "cli_alias": "sample-qc",
+      "description": "Deterministic multi-sample QC triage for identity, sex, contamination, and batch-shift outliers",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run sample-qc --demo",
+      "dependencies": [
+        "python>=3.10"
+      ],
+      "tags": [
+        "quality-control",
+        "sequencing-qc",
+        "triage"
+      ],
+      "trigger_keywords": [
+        "sample QC triage",
+        "sequencing QC outliers",
+        "sex mismatch",
+        "fingerprint concordance",
+        "contamination batch shift"
+      ],
+      "chaining_partners": [
+        "multiqc-reporter",
+        "seq-wrangler"
+      ]
+    },
+    {
       "name": "scrna-embedding",
       "cli_alias": "scrna-embedding",
       "description": "Local scVI/scANVI-based single-cell latent embedding and batch-aware integration from raw-count .h5ad or 10x Matrix Market input, with stable integrated AnnData export for downstream latent analysis.",
