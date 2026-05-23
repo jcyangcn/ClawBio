@@ -32,8 +32,8 @@ ClawBio is a collection of modular AI agent skills for bioinformatics, designed 
                     │   Output Layer       │
                     │  - Markdown report   │
                     │  - Figures (PNG/SVG) │
-                    │  - Audit log         │
-                    │  - Repro bundle      │
+                    │  - Optional repro    │
+                    │    bundle            │
                     └─────────────────────┘
 ```
 
@@ -52,7 +52,7 @@ Every skill works standalone. The Bio Orchestrator adds:
 - Automatic routing (user does not need to know skill names)
 - Multi-skill chaining (pipe output of one skill to the next)
 - Unified reporting (combine results from multiple skills)
-- Reproducibility wrapping (Repro Enforcer applied automatically)
+- Access to skill-defined reproducibility outputs where a routed skill implements them
 
 A user can invoke any skill directly without the orchestrator.
 
@@ -77,10 +77,7 @@ Visualisation (matplotlib/seaborn figures)
 Report Assembly (markdown + embedded figures)
     │
     ▼
-Reproducibility Export (conda env, commands, checksums)
-    │
-    ▼
-Audit Log Append (timestamped action record)
+Optional Reproducibility Export (helper-backed commands, environment, checksums)
 ```
 
 ## Privacy Model
@@ -94,14 +91,21 @@ ClawBio enforces a strict local-first privacy model:
 
 ## Reproducibility Contract
 
-Every analysis produces:
+ClawBio's validated reproducibility contract is not universal across every skill. For skills that use the shared reproducibility helpers, the output directory typically includes:
 
-1. **commands.sh**: Exact shell commands to reproduce the analysis without the agent.
-2. **environment.yml**: Conda environment specification with pinned versions.
-3. **checksums.sha256**: SHA-256 hashes of all input files.
-4. **analysis_log.md**: Timestamped record of every action taken.
+1. **`reproducibility/commands.sh`**: A replay command for the skill run without needing the original agent session.
+2. **`reproducibility/environment.yml`**: A suggested Conda environment snapshot for the run.
+3. **`reproducibility/checksums.sha256`**: SHA-256 hashes for selected output files.
+4. **Optional extras**: Some skills may emit additional provenance files such as `runtime-lock.json` or other lock metadata.
 
-This means any result can be reproduced on any machine with the same inputs, independent of OpenClaw.
+Important boundaries:
+
+- Reproducibility behavior can vary by skill.
+- Replays may still require external tools or the original input files to be present locally.
+- `analysis_log.md` is not a guaranteed output for every skill.
+- Portable replay scripts reduce path friction, but they are not a blanket promise that every run will reproduce unchanged on every machine.
+
+See `docs/reproducibility.md` for the user workflow and a concrete `multiqc-reporter` example.
 
 ## Skill Packaging
 
