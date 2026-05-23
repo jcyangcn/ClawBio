@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 66,
+  "skill_count": 73,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -258,6 +258,35 @@
       "chaining_partners": []
     },
     {
+      "name": "crispr-screen-triage",
+      "cli_alias": "crispr-triage",
+      "description": "Deterministic CRISPR screen hit ranking from local guide-level count tables",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run crispr-triage --demo",
+      "dependencies": [
+        "python>=3.10"
+      ],
+      "tags": [
+        "crispr",
+        "screen",
+        "triage"
+      ],
+      "trigger_keywords": [
+        "CRISPR screen triage",
+        "guide count ranking",
+        "rank CRISPR hits",
+        "depleted guide screen"
+      ],
+      "chaining_partners": [
+        "target-validation-scorer",
+        "omics-target-evidence-mapper"
+      ]
+    },
+    {
       "name": "claw-ancestry-pca",
       "cli_alias": null,
       "description": "Ancestry decomposition PCA against the Simons Genome Diversity Project",
@@ -312,6 +341,35 @@
         "CARD",
         "HUMAnN3",
         "microbiome"
+      ],
+      "chaining_partners": []
+    },
+    {
+      "name": "claw-methylation-cycle",
+      "cli_alias": null,
+      "description": "",
+      "version": "0.1.3",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/claw-methylation-cycle/methylation_cycle.py --demo",
+      "dependencies": [],
+      "tags": [
+        "genomics",
+        "methylation",
+        "MTHFR",
+        "neurodevelopment"
+      ],
+      "trigger_keywords": [
+        "methylation",
+        "MTHFR",
+        "folate cycle",
+        "BH4",
+        "homocysteine",
+        "methylation cycle",
+        "metilación",
+        "neurotransmitter synthesis"
       ],
       "chaining_partners": []
     },
@@ -920,6 +978,39 @@
       "chaining_partners": []
     },
     {
+      "name": "gwas-catalog-region-fetch",
+      "cli_alias": null,
+      "description": "Fetch a region of GWAS summary statistics from the NHGRI-EBI GWAS Catalog\nharmonised collection via tabix-on-FTP. Use when an agent needs GWAS beta /\nSE / p-value for every variant in a window for one specific study (GCST\naccession). Input: accession, chromosome, start, end. Output: harmonised\nTSV slice in canonical format.\n",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/gwas-catalog-region-fetch/gwas_catalog_region_fetch.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "pysam>=0.22",
+        "pandas>=2.0",
+        "requests>=2.28"
+      ],
+      "tags": [
+        "gwas",
+        "gwas-catalog",
+        "region-fetch",
+        "tabix",
+        "summary-statistics",
+        "harmonised"
+      ],
+      "trigger_keywords": [
+        "gwas region fetch",
+        "gwas catalog region",
+        "gwas sumstats slice",
+        "GCST harmonised tabix",
+        "GWAS catalog tabix"
+      ],
+      "chaining_partners": []
+    },
+    {
       "name": "gwas-lookup",
       "cli_alias": "gwas",
       "description": "Federated variant lookup across 9 genomic databases — GWAS Catalog, Open Targets, PheWeb (UKB, FinnGen, BBJ), GTEx, eQTL Catalogue, and more.",
@@ -1084,6 +1175,39 @@
         "reagent inventory",
         "lab inventory",
         "LIMS"
+      ],
+      "chaining_partners": []
+    },
+    {
+      "name": "ld-1000g-region-compute",
+      "cli_alias": null,
+      "description": "Compute pairwise r² between a lead variant and every variant in a window\nusing the 1000 Genomes Phase 3 GRCh38 reference panel, ancestry-stratified.\nUse when an agent needs LD coloring for a regional plot or LD pruning\naround a candidate causal variant. Single client (on-demand region fetch\nfrom EBI 1000G FTP via plink 1.9); no multi-GB cold-start.\n",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/ld-1000g-region-compute/ld_1000g_region_compute.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "pysam>=0.22",
+        "pandas>=2.0",
+        "requests>=2.28"
+      ],
+      "tags": [
+        "ld",
+        "1000-genomes",
+        "reference-panel",
+        "plink",
+        "ancestry-stratified",
+        "on-demand"
+      ],
+      "trigger_keywords": [
+        "ld around lead",
+        "1000G LD",
+        "plink r2",
+        "linkage disequilibrium",
+        "regional LD"
       ],
       "chaining_partners": []
     },
@@ -1713,6 +1837,36 @@
       ]
     },
     {
+      "name": "sample-qc-triage",
+      "cli_alias": "sample-qc",
+      "description": "Deterministic multi-sample QC triage for identity, sex, contamination, and batch-shift outliers",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run sample-qc --demo",
+      "dependencies": [
+        "python>=3.10"
+      ],
+      "tags": [
+        "quality-control",
+        "sequencing-qc",
+        "triage"
+      ],
+      "trigger_keywords": [
+        "sample QC triage",
+        "sequencing QC outliers",
+        "sex mismatch",
+        "fingerprint concordance",
+        "contamination batch shift"
+      ],
+      "chaining_partners": [
+        "multiqc-reporter",
+        "seq-wrangler"
+      ]
+    },
+    {
       "name": "scrna-embedding",
       "cli_alias": "scrna-embedding",
       "description": "Local scVI/scANVI-based single-cell latent embedding and batch-aware integration from raw-count .h5ad or 10x Matrix Market input, with stable integrated AnnData export for downstream latent analysis.",
@@ -1996,6 +2150,39 @@
       "chaining_partners": [
         "llm-biobank-bench"
       ]
+    },
+    {
+      "name": "ukb-ppp-region-fetch",
+      "cli_alias": null,
+      "description": "Fetch a region of plasma cis-pQTL summary statistics from UKB-PPP\n(Sun 2023 Nature) via Synapse. Use when an agent needs pQTL beta / SE /\np-value for every variant in a window around a protein's TSS for one\n(protein, ancestry) Olink-Explore-3072 measurement. Bundled-slice path\nrequires no auth for the canonical demo cohort; arbitrary queries fall\nthrough to a live Synapse fetch that requires a free PAT. Input: protein,\nancestry, chromosome, start, end. Output: harmonised TSV slice.\n",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/ukb-ppp-region-fetch/ukb_ppp_region_fetch.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "synapseclient>=3.0",
+        "requests>=2.28"
+      ],
+      "tags": [
+        "pqtl",
+        "ukb-ppp",
+        "region-fetch",
+        "regenie",
+        "summary-statistics",
+        "proteomics",
+        "olink"
+      ],
+      "trigger_keywords": [
+        "ukb-ppp pqtl region fetch",
+        "pqtl regional summary stats",
+        "sun 2023 ukbppp",
+        "protein qtl summary stats",
+        "plasma pqtl regional fetch"
+      ],
+      "chaining_partners": []
     },
     {
       "name": "variant-annotation",

@@ -11,6 +11,7 @@ from bot.action_offers import (
     make_pending_action_entry,
     parse_action_reply,
     render_action_offer,
+    render_workflow_state_header,
 )
 
 
@@ -50,6 +51,38 @@ def test_render_action_offer_lists_choices_and_safe_refresh_hint():
     assert "1. Show demo report (safe refresh)" in rendered
     assert "2. Prepare local resource" in rendered
     assert "Reply with `1`, `2`" in rendered
+
+
+def test_render_action_offer_adds_state_header_and_estimate():
+    actions = [{**_demo_actions()[0], "estimate": "~5s"}]
+    rendered = render_action_offer(
+        actions,
+        workflow_state={
+            "lifecycle": "ready",
+            "state_label": "demo-ready",
+        },
+    )
+
+    assert rendered.startswith("State: ready — demo-ready\n")
+    assert "1. Show demo report (~5s)" in rendered
+    assert "(safe refresh)" not in rendered
+
+
+def test_render_workflow_state_header_requires_explicit_lifecycle():
+    assert render_workflow_state_header({"state_label": "implicit-ready"}) == ""
+    assert render_workflow_state_header({"lifecycle": "expired"}) == "State: expired"
+
+
+def test_render_action_offer_can_render_state_without_actions():
+    rendered = render_action_offer(
+        [],
+        workflow_state={
+            "lifecycle": "expired",
+            "state_label": "stale-action-request",
+        },
+    )
+
+    assert rendered == "State: expired — stale-action-request"
 
 
 def test_extract_action_offer_requires_structured_request():
@@ -158,6 +191,12 @@ def test_load_bundle_fields_promotes_structured_chat_fields(tmp_path: Path):
     payload = {
         "chat_summary_lines": ["The skill found one follow-up action."],
         "suggested_actions": _demo_actions(),
+        "workflow_state": {
+            "state_schema": "example.workflow_state.v1",
+            "state_id": "sha256:abc",
+            "lifecycle": "ready",
+            "state_label": "demo-ready",
+        },
         "preferred_artifacts": [{"path": "generated/demo.png"}],
         "report_md": "# Embedded report\n",
     }
@@ -172,5 +211,6 @@ def test_load_bundle_fields_promotes_structured_chat_fields(tmp_path: Path):
     assert fields["skill_result_json"] == payload
     assert fields["chat_summary_lines"] == ["The skill found one follow-up action."]
     assert fields["suggested_actions"] == _demo_actions()
+    assert fields["workflow_state"]["state_id"] == "sha256:abc"
     assert fields["preferred_artifacts"] == [{"path": "generated/demo.png"}]
     assert fields["report_md"] == "# Embedded report\n"

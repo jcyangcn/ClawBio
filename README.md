@@ -9,7 +9,7 @@
   <a href="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml"><img src="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="#quick-start"><img src="https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=white" alt="Python 3.10+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
-  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-66_skills-orange" alt="ClawHub Skills"></a>
+  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-67_skills-orange" alt="ClawHub Skills"></a>
   <a href="https://doi.org/10.5281/zenodo.19420648"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.19420648.svg" alt="DOI"></a>
   <a href="https://github.com/ClawBio/ClawBio/issues"><img src="https://img.shields.io/github/issues/ClawBio/ClawBio" alt="Open Issues"></a>
   <a href="https://clawbio.github.io/ClawBio/slides/"><img src="https://img.shields.io/badge/slides-London_Bioinformatics_Meetup-purple" alt="Slides"></a>
@@ -22,7 +22,14 @@
 ```bash
 git clone https://github.com/ClawBio/ClawBio.git
 cd ClawBio
-pip install -r requirements.txt    # Python 3.10+
+uv sync                            # Python 3.11+ (installs from pyproject.toml + uv.lock)
+uv run python clawbio.py run pharmgx --demo
+```
+
+Don't have [uv](https://docs.astral.sh/uv/)? Install it with `curl -LsSf https://astral.sh/uv/install.sh | sh` (Linux/macOS) or `brew install uv` (macOS via Homebrew), or use pip instead:
+
+```bash
+pip install -e .                   # reads pyproject.toml
 python clawbio.py run pharmgx --demo
 ```
 
@@ -47,7 +54,7 @@ Or install as a [Claude Code](https://claude.ai/claude-code) plugin: `/plugin ma
 
 ## What ClawBio Does Today
 
-**66 skills + 8,000 Galaxy tools + 1,756 tests + benchmark validation. Local-first. No cloud. No guessing.**
+**67 skills + 8,000 Galaxy tools + 1,756 tests + benchmark validation. Local-first. No cloud. No guessing.**
 
 > **v0.5.0 released** (4 Apr 2026): Validation and Benchmark Infrastructure. AD ground truth benchmark, mock API server for offline testing, swappable fine-mapping pipeline (SuSiE vs ABF), 74 benchmark tests, red/green TDD mandate. [Release notes](https://github.com/ClawBio/ClawBio/releases/tag/v0.5.0). DOI: [10.5281/zenodo.19420648](https://doi.org/10.5281/zenodo.19420648).
 
@@ -173,7 +180,7 @@ The exact contents can vary by skill, and some replays also require the original
 
 ## Featured Skills
 
-A curated cross-section of ClawBio's 66 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
+A curated cross-section of ClawBio's 67 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
 
 | Skill | Scale | Description |
 |-------|-------|-------------|
@@ -369,11 +376,11 @@ To experience that orchestration layer conversationally, ClawBio can be used thr
 
 ```bash
 git clone https://github.com/ClawBio/ClawBio.git && cd ClawBio
-pip install -r requirements.txt
-python clawbio.py run pharmgx --demo
+uv sync                                  # or: pip install -e .
+uv run python clawbio.py run pharmgx --demo
 ```
 
-PharmGx demo runs in <2 seconds. Only needs Python 3.10+.
+PharmGx demo runs in <2 seconds. Only needs Python 3.10+. Dependencies and the locked dependency graph live in `pyproject.toml` and `uv.lock`.
 
 > **Note:** ClawBio is currently installed by cloning the repository. There is no `pip install clawbio` package yet (planned for a future release).
 
@@ -450,13 +457,14 @@ python clawbio.py run methylation --geo-id GSE139307 --output results_methylatio
 ### Run tests
 
 ```bash
-pip install pytest
-python -m pytest
+uv run pytest                # or: pip install pytest && python -m pytest
 ```
 
 ### Dependencies
 
-Core dependencies (`requirements.txt`): biopython, pandas, numpy, scikit-learn, matplotlib, openai, pydeseq2. Most skills run with just these.
+Core dependencies are declared in [`pyproject.toml`](pyproject.toml) and pinned in [`uv.lock`](uv.lock): biopython, pandas, numpy, scikit-learn, matplotlib, openai, pydeseq2, google-cloud-bigquery, google-auth, conda-lock, rocrate. Most skills run with just these.
+
+`uv sync` installs everything in a reproducible virtual environment. To add or update a dependency, run `uv add <package>` (or edit `pyproject.toml` and re-run `uv sync`); commit the resulting `uv.lock` change.
 
 Some skills have additional requirements:
 

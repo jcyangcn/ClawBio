@@ -10,11 +10,11 @@ Works with any OpenAI-compatible provider: OpenAI, Anthropic (via proxy),
 Google, Mistral, Groq, Together, OpenRouter, Ollama, LM Studio, etc.
 
 Prerequisites:
-    pip3 install python-telegram-bot[job-queue] openai python-dotenv
+    uv sync --group bot
 
 Usage:
     # Set environment variables in .env (see bot/README.md)
-    python3 bot/roboterri.py
+    uv run python bot/roboterri.py
 """
 
 import asyncio
@@ -74,6 +74,7 @@ try:  # Allow running as `python bot/roboterri.py` and as a package import.
         make_pending_action_entry,
         parse_action_reply,
         render_action_offer,
+        render_workflow_state_header,
     )
 except ImportError:  # pragma: no cover - package import fallback
     from bot.action_offers import (
@@ -88,6 +89,7 @@ except ImportError:  # pragma: no cover - package import fallback
         make_pending_action_entry,
         parse_action_reply,
         render_action_offer,
+        render_workflow_state_header,
     )
 
 # --------------------------------------------------------------------------- #
@@ -168,22 +170,12 @@ for _secret in filter(None, [TELEGRAM_BOT_TOKEN, LLM_API_KEY]):
 
 
 # ---------------------------------------------------------------------------
-# Structured audit log (JSONL)
+# Structured audit log (JSONL) — shared with skill layer via clawbio.common.audit
 # ---------------------------------------------------------------------------
-_AUDIT_LOG_DIR = CLAWBIO_DIR / "bot" / "logs"
-_AUDIT_LOG_DIR.mkdir(parents=True, exist_ok=True)
-_AUDIT_LOG_PATH = _AUDIT_LOG_DIR / "audit.jsonl"
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
 
-
-def _audit(event: str, **kwargs):
-    """Append a structured JSON event to the audit log."""
-    from datetime import timezone as _tz
-    entry = {"ts": datetime.now(_tz.utc).isoformat(), "event": event, **kwargs}
-    try:
-        with open(_AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, default=str) + "\n")
-    except OSError:
-        pass
+from clawbio.common.audit import write as _audit
 
 
 def _user_ctx(update: Update) -> dict:
@@ -604,6 +596,8 @@ def _render_skill_result(chat_id: int, skill_key: str, result: dict) -> str:
     report_text = str(result.get("report_md", "") or "").strip()
     summary_lines = extract_chat_summary_lines(result)
     actions = extract_action_offer(result)
+    workflow_state = result.get("workflow_state")
+    state_header = render_workflow_state_header(workflow_state)
 
     if actions:
         reply_parts: list[str] = []
@@ -615,7 +609,7 @@ def _render_skill_result(chat_id: int, skill_key: str, result: dict) -> str:
             reply_parts.append(raw_output)
         else:
             reply_parts.append(f"{skill_key} completed.")
-        reply_parts.append(render_action_offer(actions))
+        reply_parts.append(render_action_offer(actions, workflow_state=workflow_state))
         rendered = "\n\n".join(part for part in reply_parts if part).strip()
         _pending_actions[chat_id] = make_pending_action_entry(
             skill=skill_key,
@@ -637,15 +631,19 @@ def _render_skill_result(chat_id: int, skill_key: str, result: dict) -> str:
 
     if skill_key in ("compare", "drugphoto", "profile"):
         rendered = raw_output or report_text or f"{skill_key} completed."
+        if state_header:
+            rendered = "\n\n".join([state_header, rendered])
         if rendered:
             _pending_text.setdefault(chat_id, []).append(rendered)
         return "Result sent directly to chat. Do not repeat or paraphrase it."
 
     if summary_lines:
-        return "\n".join(summary_lines)
+        return "\n\n".join(part for part in (state_header, "\n".join(summary_lines)) if part)
     if report_text:
-        return _trim_report_for_chat(report_text)
-    return raw_output if raw_output else f"{skill_key} completed. Output: {output_dir}"
+        rendered_report = _trim_report_for_chat(report_text)
+        return "\n\n".join(part for part in (state_header, rendered_report) if part)
+    rendered_output = raw_output if raw_output else f"{skill_key} completed. Output: {output_dir}"
+    return "\n\n".join(part for part in (state_header, rendered_output) if part)
 
 
 async def execute_clawbio(args: dict) -> str:
