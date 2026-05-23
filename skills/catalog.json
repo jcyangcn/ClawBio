@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 67,
+  "skill_count": 72,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -256,6 +256,35 @@
         "segmentation mask"
       ],
       "chaining_partners": []
+    },
+    {
+      "name": "crispr-screen-triage",
+      "cli_alias": "crispr-triage",
+      "description": "Deterministic CRISPR screen hit ranking from local guide-level count tables",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run crispr-triage --demo",
+      "dependencies": [
+        "python>=3.10"
+      ],
+      "tags": [
+        "crispr",
+        "screen",
+        "triage"
+      ],
+      "trigger_keywords": [
+        "CRISPR screen triage",
+        "guide count ranking",
+        "rank CRISPR hits",
+        "depleted guide screen"
+      ],
+      "chaining_partners": [
+        "target-validation-scorer",
+        "omics-target-evidence-mapper"
+      ]
     },
     {
       "name": "claw-ancestry-pca",

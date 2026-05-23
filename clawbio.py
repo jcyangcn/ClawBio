@@ -748,6 +748,13 @@ SKILLS = {
         "allowed_extra_flags": set(),
         "accepts_genotypes": False,
     },
+    "crispr-triage": {
+        "script": SKILLS_DIR / "crispr-screen-triage" / "crispr_screen_triage.py",
+        "demo_args": ["--demo"],
+        "description": "CRISPR screen triage (deterministic guide-level hit ranking)",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
     "fastreer": {
         "script": SKILLS_DIR / "fastreer" / "fastreer.py",
         "demo_args": ["--demo"],
