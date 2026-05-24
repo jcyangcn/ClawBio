@@ -216,3 +216,61 @@ def test_prefetched_synthetic_demo_runs_end_to_end_offline(tmp_path: Path):
     assert manifest.is_file()
     manifest_text = manifest.read_text()
     assert "1_500000_A_T" in manifest_text
+
+
+def test_focal_gene_highlight_styles_matching_label(tmp_path: Path):
+    """render_gene_track must bold + tint the label of the gene whose symbol
+    matches `focal_gene_symbol` and leave all other labels in the default
+    grey-black style. The focal-gene highlight is the visual anchor for the
+    QTL gene in 10-30-gene windows."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    sys.path.insert(0, str(SKILL_DIR))
+    from regional_plot import FOCAL_GENE_COLOR, GeneTrackEntry, render_gene_track
+
+    genes = [
+        GeneTrackEntry(gene_symbol="GENE_A", start=100, end=200, strand="+"),
+        GeneTrackEntry(gene_symbol="SORT1",  start=450, end=550, strand="-"),
+        GeneTrackEntry(gene_symbol="GENE_C", start=800, end=900, strand="+"),
+    ]
+    fig, ax = plt.subplots()
+    render_gene_track(
+        ax, genes, xlim_bp=(0, 1000),
+        focal_gene_symbol="SORT1",
+    )
+    texts = {t.get_text(): t for t in ax.texts}
+    sort1_label = next(t for k, t in texts.items() if "SORT1" in k)
+    other_label = next(t for k, t in texts.items() if "GENE_A" in k)
+    assert sort1_label.get_fontweight() == "bold"
+    assert sort1_label.get_color() == FOCAL_GENE_COLOR
+    assert other_label.get_fontweight() == "normal"
+    assert other_label.get_color() != FOCAL_GENE_COLOR
+    plt.close(fig)
+
+
+def test_lead_rs_id_propagates_into_manifest_and_report(tmp_path: Path):
+    """Optional `lead.rs_id` must flow end-to-end: config -> spec -> manifest +
+    report. The orchestrator joins on variant_id, not rs_id; this field is
+    human-readability metadata only. ai_scientist's coloc_with_mr workflow
+    sets it automatically; manual configs may set it for human clarity."""
+    out = tmp_path / "out"
+    # Reuse the 01_synthetic_demo bundle but override the lead block with rs_id.
+    base_dir = SKILL_DIR / "examples" / "01_synthetic_demo"
+    base_config = json.loads((base_dir / "config.json").read_text())
+    base_config["lead"]["rs_id"] = "rs99999999"
+    # Make paths absolute so the override config can live in tmp_path.
+    base_config["exposure"]["sumstats_path"] = str(base_dir / "exposure.tsv")
+    base_config["outcome"]["sumstats_path"] = str(base_dir / "outcome.tsv")
+    base_config["ld"]["ld_matrix_path"] = str(base_dir / "ld_matrix.tsv")
+    base_config["gene_track"]["genes_path"] = str(base_dir / "genes.tsv")
+    override_path = tmp_path / "config_with_rsid.json"
+    override_path.write_text(json.dumps(base_config))
+    rc = locuscompare.main(["--input", str(override_path), "--output", str(out)])
+    assert rc == 0
+    manifest = yaml.safe_load((out / "manifest.yaml").read_text())
+    assert manifest["lead_rs_id"] == "rs99999999"
+    report_text = (out / "report.md").read_text()
+    assert "rs99999999" in report_text

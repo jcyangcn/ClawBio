@@ -195,6 +195,7 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
     chromosome = str(lead["chromosome"])
     lead_position_bp = int(lead["position_bp"])
     window_bp = int(lead["window_bp"])
+    lead_rs_id = lead.get("rs_id") or None
 
     exposure = config.get("exposure") or {}
     outcome = config.get("outcome") or {}
@@ -433,6 +434,7 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
         gencode_gtf_path=gencode_gtf_path,
         gene_biotypes=gene_biotypes,
         prefetched_gene_track=prefetched_gene_track,
+        lead_rs_id=lead_rs_id,
     )
 
     # ----- Build clients
@@ -499,6 +501,7 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
         "skill": "locuscompare",
         "version": "0.1.0",
         "lead_variant_id": lead_variant_id,
+        "lead_rs_id": lead_rs_id,
         "n_pairs": result.n_pairs,
         "n_palindromic_excluded": result.n_palindromic_excluded,
         "plot_path": str(plot_path.relative_to(output)),
@@ -507,10 +510,15 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
     }
     (output / "manifest.yaml").write_text(yaml.safe_dump(manifest, sort_keys=False))
 
+    lead_line = (
+        f"- **Lead variant:** `{lead_variant_id}`"
+        + (f" ({lead_rs_id}; " if lead_rs_id else " (")
+        + f"chr{chromosome}:{lead_position_bp}, +/-{window_bp//1000}kb)"
+    )
     report_lines = [
         "# locuscompare report",
         "",
-        f"- **Lead variant:** `{lead_variant_id}` (chr{chromosome}:{lead_position_bp}, +/-{window_bp//1000}kb)",
+        lead_line,
         f"- **Exposure:** {exposure_label}",
         f"- **Outcome:** {outcome_label}",
         f"- **n_pairs:** {result.n_pairs}",

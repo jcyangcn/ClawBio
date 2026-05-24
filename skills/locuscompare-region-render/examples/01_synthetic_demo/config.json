@@ -8,6 +8,7 @@
   },
   "exposure": {
     "trait_label": "Synthetic exposure (ENSG_DEMO_EXPRESSION)",
+    "gene_symbol": "DEMOGENE_B",
     "sumstats_path": "exposure.tsv"
   },
   "outcome": {

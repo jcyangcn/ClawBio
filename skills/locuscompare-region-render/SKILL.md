@@ -193,6 +193,8 @@ ld:
 
 Mix-and-match (one side pre-fetched, other side via fetcher) is supported. See `INPUT_SCHEMA.md` for the canonical TSV column spec; `examples/recipes/` for harmonisation scripts converting other sources (FinnGen, Pan-UKBB, UKB-PPP, GTEx v10) into this format.
 
+Optional `lead.rs_id: "rsXXXXXX"` (string) propagates into the emitted manifest + report alongside the canonical `variant_id`. Upstream agents (e.g. ai_scientist `coloc_with_mr` workflow) resolve and populate this automatically from OT / dbSNP; manual configs may set it for human readability. The orchestrator joins on `variant_id` (chr_pos_ref_alt), not rs_id; the rs_id is human-readability metadata only.
+
 Bundled examples in `examples/`:
 
 - `01_synthetic_demo/` - offline 200-variant synthetic locus; no network required
@@ -203,6 +205,8 @@ Bundled examples in `examples/`:
 
 ## Example Output
 
+The focal QTL gene (carried on the spec via `exposure.gene_symbol`, or auto-resolved from the OT exposure studyId in OT-followup configs) is rendered bold and tinted on the gene track so it anchors the visual in 10-30-gene windows. Other genes render in the default grey-blue.
+
 A real run on the SORT1 × cholesterol-VLDL canonical demo (`examples/02_eqtl_catalogue_x_gwas_catalog/config.yaml`) produces:
 
 `<output_dir>/report.md`:
@@ -210,7 +214,7 @@ A real run on the SORT1 × cholesterol-VLDL canonical demo (`examples/02_eqtl_ca
 ```markdown
 # locuscompare-region-render report
 
-- **Lead variant:** `1_109274968_G_T` (chr1:109274968, ±1000 kb)
+- **Lead variant:** `1_109274968_G_T` (rs12740374; chr1:109274968, ±1000 kb)
 - **Exposure:** SORT1 expression - minor salivary gland (eQTL Catalogue QTD000276)
 - **Outcome:** cholesterol in medium VLDL (GWAS Catalog GCST90269602)
 - **n_pairs joined:** 2547
@@ -229,6 +233,7 @@ A real run on the SORT1 × cholesterol-VLDL canonical demo (`examples/02_eqtl_ca
 skill: locuscompare-region-render
 version: 0.1.0
 lead_variant_id: 1_109274968_G_T
+lead_rs_id: rs12740374
 n_pairs: 2547
 n_palindromic_excluded: 333
 plot_path: 1_109274968_G_T_full_locuscompare.png

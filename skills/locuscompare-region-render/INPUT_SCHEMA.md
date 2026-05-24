@@ -43,6 +43,8 @@ These must be present in every row. Missing values: empty string OR explicit `NA
 
 ## Optional columns
 
+Note: the *config-level* `lead.rs_id` field (orchestrator-only; propagates into the manifest and report) is separate from the TSV `rsid` column below. See `SKILL.md` for the `lead.rs_id` config knob; the column below is the per-variant rs-ID inside a sumstats slice.
+
 Present if the source emits them; ignored if absent. Skills SHOULD produce these when the source has them, for downstream filtering / weighting.
 
 | Column | Type | Description |

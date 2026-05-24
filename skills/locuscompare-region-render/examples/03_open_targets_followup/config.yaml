@@ -15,12 +15,14 @@ schema_version: "1.0"
 
 lead:
   variant_id: "1_109274968_G_T"
+  rs_id: "rs12740374"
   chromosome: "1"
   position_bp: 109274968
   window_bp: 1000000
 
 exposure:
   trait_label: "SORT1 expression — minor salivary gland (gtex_ge)"
+  gene_symbol: "SORT1"
   fetch:
     source: eqtl_catalogue
     dataset_id: QTD000276

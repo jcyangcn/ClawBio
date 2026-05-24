@@ -124,6 +124,11 @@ class RegionalLocusCompareInput:
     # the manhattans and the bottom-row scatters. When empty, the gene track
     # row collapses (no panel rendered).
     gene_track: list["GeneTrackEntry"] = field(default_factory=list)
+    # Optional focal-gene symbol. When set, the matching entry in `gene_track`
+    # renders bold + red on the gene-track panel so the QTL gene is anchored
+    # visually in 10-30-gene windows. Threaded from the orchestrator's
+    # `spec.exposure_gene_symbol`.
+    focal_gene_symbol: str | None = None
 
 
 def _build_caption(inp: RegionalLocusCompareInput, n_excluded_palindromic: int) -> str:
@@ -477,6 +482,9 @@ def _stack_genes_into_rows(
     return rows
 
 
+FOCAL_GENE_COLOR = "#d62728"  # matplotlib qualitative red — anchors the QTL gene visually
+
+
 def render_gene_track(
     ax,
     genes: list[GeneTrackEntry],
@@ -485,6 +493,7 @@ def render_gene_track(
     lead_position: int | None = None,
     track_label: str = "Genes (GENCODE v39)",
     show_xticklabels: bool = True,
+    focal_gene_symbol: str | None = None,
 ):
     """Render a LocusZoom-style gene track on `ax`.
 
@@ -524,12 +533,18 @@ def render_gene_track(
     exon_color = "#274A8A"
 
     for g, r in zip(genes, rows):
+        is_focal = bool(focal_gene_symbol) and g.gene_symbol == focal_gene_symbol
+        gene_intron_color = FOCAL_GENE_COLOR if is_focal else intron_color
+        gene_exon_color = FOCAL_GENE_COLOR if is_focal else exon_color
+        gene_label_color = FOCAL_GENE_COLOR if is_focal else "0.15"
+        gene_label_weight = "bold" if is_focal else "normal"
+
         # Top row index (visually) is the LOWEST r; flip so r=0 -> top of axes.
         y_center = (n_rows - 1 - r) * row_height + line_y_offset
         # Intron line.
         ax.hlines(
             y_center, g.start, g.end,
-            colors=intron_color, linewidth=1.0, zorder=2,
+            colors=gene_intron_color, linewidth=(1.4 if is_focal else 1.0), zorder=2,
         )
         # Strand arrows along the intron line. Spaced every ~4% of the window
         # so even short genes get at least one arrow.
@@ -541,7 +556,7 @@ def render_gene_track(
             ax.scatter(
                 gene_arrow_xs, [y_center] * len(gene_arrow_xs),
                 marker=arrow_marker, s=14.0,
-                facecolors=intron_color, edgecolors="none",
+                facecolors=gene_intron_color, edgecolors="none",
                 zorder=3,
             )
         # Exon rectangles.
@@ -550,7 +565,7 @@ def render_gene_track(
                 (ex_start, y_center - exon_height / 2),
                 width=max(ex_end - ex_start, 1),
                 height=exon_height,
-                facecolor=exon_color, edgecolor="none", zorder=4,
+                facecolor=gene_exon_color, edgecolor="none", zorder=4,
             ))
         # Label below the gene at its visible-window midpoint.
         label = f"{g.gene_symbol} →" if g.strand == "+" else f"← {g.gene_symbol}"
@@ -558,7 +573,8 @@ def render_gene_track(
         ax.text(
             x_lab, y_center - label_y_offset,
             label, ha="center", va="top",
-            fontsize=7.5, color="0.15",
+            fontsize=7.5, color=gene_label_color,
+            fontweight=gene_label_weight,
             zorder=5,
         )
 
@@ -820,6 +836,7 @@ def render_full_locuscompare(
             lead_position=lead_pos,
             track_label="Genes (GENCODE v39 protein_coding)",
             show_xticklabels=True,
+            focal_gene_symbol=inp.focal_gene_symbol or None,
         )
         ax_genes.set_xlabel(
             f"genomic position, Mb (chromosome {chrom})" if chrom else "genomic position (Mb)",

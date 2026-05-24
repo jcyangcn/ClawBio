@@ -216,6 +216,13 @@ class LocusCompareSpec:
     exposure_gene_symbol: str = ""
     outcome_trait_label: str = ""
 
+    # Optional rs-ID for the lead variant. Set by upstream agents
+    # (e.g. ai_scientist's coloc_with_mr workflow resolves via OT / dbSNP);
+    # propagates into the manifest + report only. The orchestrator joins on
+    # variant_id (chr_pos_ref_alt), not rs_id; this field is human-readability
+    # metadata only.
+    lead_rs_id: str | None = None
+
     exposure_id_extra: str = ""
     outcome_id_extra: str = ""
     provenance_prefix: str = ""
@@ -673,6 +680,7 @@ def _render_for_spec(
         exposure_short_label=exposure_short_label,
         outcome_short_label=outcome_short_label,
         gene_track=gene_track,
+        focal_gene_symbol=spec.exposure_gene_symbol or None,
     )
     render_full_locuscompare(inp, out_path)
 
