@@ -44,6 +44,12 @@ def test_run_skill_promotes_structured_result_fields(monkeypatch, tmp_path: Path
                         "The skill prepared a structured response.",
                     ],
                     "preferred_artifacts": ["report.md", "result.json"],
+                    "workflow_state": {
+                        "state_schema": "example.workflow_state.v1",
+                        "state_id": "sha256:abc",
+                        "lifecycle": "ready",
+                        "state_label": "demo-ready",
+                    },
                     "suggested_actions": [
                         {
                             "action_id": "show-demo-report",
@@ -81,5 +87,6 @@ def test_run_skill_promotes_structured_result_fields(monkeypatch, tmp_path: Path
     assert result["report_md"] == "# Structured Report\n"
     assert result["chat_summary_lines"] == ["The skill prepared a structured response."]
     assert result["preferred_artifacts"] == ["report.md", "result.json"]
+    assert result["workflow_state"]["state_id"] == "sha256:abc"
     assert result["suggested_actions"][0]["action_id"] == "show-demo-report"
     assert result["skill_result_json"]["schema"] == "example.skill_result.v1"
