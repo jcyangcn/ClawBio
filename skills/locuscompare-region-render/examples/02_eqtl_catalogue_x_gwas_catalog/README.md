@@ -19,7 +19,7 @@ SORT1 expression direction is what matters.
 ## Run
 
 ```bash
-python skills/locuscompare/locuscompare.py \
+python skills/locuscompare-region-render/cli.py \
     --input examples/02_eqtl_catalogue_x_gwas_catalog/config.yaml \
     --output runs/sort1_vldl/
 ```

@@ -10,8 +10,8 @@ schema_version: "1.0"
 #       --chr 1 --start 109000000 --end 110000000 --output runs/finemap_exposure/
 #   python clawbio.py run fine-mapping --sumstats outcome_full.tsv \
 #       --chr 1 --start 109000000 --end 110000000 --output runs/finemap_outcome/
-#   python skills/locuscompare/locuscompare.py \
-#       --input examples/04_finemapping_chain/config.yaml \
+#   python skills/locuscompare-region-render/cli.py \
+#       --input skills/locuscompare-region-render/examples/04_finemapping_chain/config.yaml \
 #       --output runs/locuscompare_chain/
 
 lead:

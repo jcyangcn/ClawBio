@@ -36,7 +36,7 @@ CHROM  POS  ID  REF  ALT  A1  TEST  OBS_CT  BETA  SE  P  ERRCODE
 synapse get syn51365303/CYS_C_OID20128_v1.tsv.gz
 
 # Harmonise to canonical schema
-bash skills/locuscompare/examples/recipes/ukb_ppp_pqtl/harmonise.sh \
+bash skills/locuscompare-region-render/examples/recipes/ukb_ppp_pqtl/harmonise.sh \
     CYS_C_OID20128_v1.tsv.gz \
     cys_c_pqtl.canonical.tsv
 

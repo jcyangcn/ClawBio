@@ -57,7 +57,7 @@ window_bp)`, the rest of the config is identical to example 02.
 ## Run
 
 ```bash
-python skills/locuscompare/locuscompare.py \
+python skills/locuscompare-region-render/cli.py \
     --input examples/03_open_targets_followup/config.yaml \
     --output runs/sort1_ot_followup/
 ```

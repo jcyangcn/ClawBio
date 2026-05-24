@@ -118,11 +118,11 @@ def _list_demos() -> list[Path]:
 
 def _resolve_demo_path(name: str) -> Path:
     """Map --demo NAME to a bundled config path. Special name `__default__`
-    (bare --demo) picks `01_synthetic_demo/`'s config (or the first listed demo)."""
+    (bare --demo) picks `02_eqtl_catalogue_x_gwas_catalog/`'s config (or the
+    first listed demo)."""
     base = _examples_dir()
     if name == "__default__":
-        # Prefer the synthetic offline demo when present
-        for cand in ("01_synthetic_demo", "02_eqtl_catalogue_x_gwas_catalog"):
+        for cand in ("02_eqtl_catalogue_x_gwas_catalog",):
             for ext in ("yaml", "yml", "json"):
                 p = base / cand / f"config.{ext}"
                 if p.is_file():
@@ -156,7 +156,7 @@ def _print_available_demos() -> None:
         return
     print(f"Bundled demos in {_examples_dir()}:")
     for p in paths:
-        is_default = p.parent.name in ("01_synthetic_demo",)
+        is_default = p.parent.name in ("02_eqtl_catalogue_x_gwas_catalog",)
         marker = " (default)" if is_default else ""
         print(f"  {p.parent.name}{marker}    [{p.name}]")
 
@@ -205,76 +205,116 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
     exposure_label = exposure.get("trait_label", "")
     outcome_label = outcome.get("trait_label", "")
 
-    # ----- Resolve eQTL Catalogue + GWAS Catalog inputs
-    # The current internal core only supports the eQTL Cat + GWAS Cat fetchers
-    # via the bundled-fetcher path. Pre-fetched TSV input is task-#10/#11
-    # follow-up at the SKILL level (will require teaching the core to read a
-    # TSV path instead of calling the fetcher).
-    if "fetch" not in exposure:
+    # ----- Resolve exposure + outcome inputs
+    # Two entry vectors per side, mix-and-match supported (per INPUT_SCHEMA.md):
+    #   1. `fetch:` block -> live tabix call via the bundled eQTL Cat / UKB-PPP
+    #      / GWAS Cat fetchers.
+    #   2. `sumstats_path:` -> pre-fetched TSV in the canonical INPUT_SCHEMA
+    #      format; resolved via a duck-typed stub client so the core
+    #      orchestrator's fetcher dispatch is unchanged.
+    if "sumstats_path" not in exposure and "fetch" not in exposure:
         print(
-            "exposure.fetch block required (this build supports bundled "
-            "eqtl_catalogue + ukb_ppp fetchers; pre-fetched TSV input lands in a "
-            "follow-up).",
+            "exposure requires either a `fetch:` block (live tabix) or a "
+            "`sumstats_path:` field (pre-fetched canonical TSV; see "
+            "INPUT_SCHEMA.md).",
             file=sys.stderr,
         )
         return 2
-    if "fetch" not in outcome:
+    if "sumstats_path" not in outcome and "fetch" not in outcome:
         print(
-            "outcome.fetch block required (this build supports the bundled "
-            "gwas_catalog fetcher only; pre-fetched TSV input lands in a "
-            "follow-up).",
-            file=sys.stderr,
-        )
-        return 2
-    exposure_source = exposure["fetch"]["source"]
-    if exposure_source not in ("eqtl_catalogue", "ukb_ppp"):
-        print(
-            f"unsupported exposure.fetch.source: {exposure_source} "
-            f"(expected one of: eqtl_catalogue, ukb_ppp)",
-            file=sys.stderr,
-        )
-        return 2
-    if outcome["fetch"]["source"] != "gwas_catalog":
-        print(
-            f"unsupported outcome.fetch.source: {outcome['fetch']['source']}",
+            "outcome requires either a `fetch:` block (live tabix) or a "
+            "`sumstats_path:` field (pre-fetched canonical TSV; see "
+            "INPUT_SCHEMA.md).",
             file=sys.stderr,
         )
         return 2
 
-    # eQTL-side fields (used for the eqtl_catalogue path; left as harmless
-    # defaults for the ukb_ppp path).
-    eqtl_dataset_id = exposure["fetch"].get("dataset_id", "")
-    molecular_trait_id = exposure["fetch"].get("molecular_trait_id")
+    exposure_prefetched = "sumstats_path" in exposure
+    outcome_prefetched = "sumstats_path" in outcome
 
-    # pQTL-side fields (used for the ukb_ppp path).
-    pqtl_protein_label = exposure["fetch"].get("protein_label", "")
-    pqtl_ancestry = exposure["fetch"].get("ancestry", "EUR")
+    # Defaults; overridden below per branch.
+    exposure_source = "prefetched"
+    eqtl_dataset_id = ""
+    molecular_trait_id: str | None = None
+    pqtl_protein_label = ""
+    pqtl_ancestry = "EUR"
+    gwas_accession = "prefetched"
 
-    if exposure_source == "ukb_ppp" and not pqtl_protein_label:
-        print(
-            "exposure.fetch.protein_label required when source=ukb_ppp",
-            file=sys.stderr,
-        )
-        return 2
-    if exposure_source == "eqtl_catalogue" and not eqtl_dataset_id:
-        print(
-            "exposure.fetch.dataset_id required when source=eqtl_catalogue",
-            file=sys.stderr,
-        )
-        return 2
+    if exposure_prefetched:
+        # Force the eqtl-catalogue dispatch branch -- shape-compatible with
+        # the loaded variants; the renderer is fetcher-agnostic downstream.
+        exposure_source = "eqtl_catalogue"
+        eqtl_dataset_id = exposure.get("study_id") or "prefetched"
+        molecular_trait_id = exposure.get("molecular_trait_id")
+    else:
+        exposure_source = exposure["fetch"]["source"]
+        if exposure_source not in ("eqtl_catalogue", "ukb_ppp"):
+            print(
+                f"unsupported exposure.fetch.source: {exposure_source} "
+                f"(expected one of: eqtl_catalogue, ukb_ppp)",
+                file=sys.stderr,
+            )
+            return 2
+        eqtl_dataset_id = exposure["fetch"].get("dataset_id", "")
+        molecular_trait_id = exposure["fetch"].get("molecular_trait_id")
+        pqtl_protein_label = exposure["fetch"].get("protein_label", "")
+        pqtl_ancestry = exposure["fetch"].get("ancestry", "EUR")
+        if exposure_source == "ukb_ppp" and not pqtl_protein_label:
+            print(
+                "exposure.fetch.protein_label required when source=ukb_ppp",
+                file=sys.stderr,
+            )
+            return 2
+        if exposure_source == "eqtl_catalogue" and not eqtl_dataset_id:
+            print(
+                "exposure.fetch.dataset_id required when source=eqtl_catalogue",
+                file=sys.stderr,
+            )
+            return 2
 
-    gwas_accession = outcome["fetch"]["accession"]
+    if outcome_prefetched:
+        gwas_accession = outcome.get("study_id") or "prefetched"
+    else:
+        if outcome["fetch"]["source"] != "gwas_catalog":
+            print(
+                f"unsupported outcome.fetch.source: {outcome['fetch']['source']}",
+                file=sys.stderr,
+            )
+            return 2
+        gwas_accession = outcome["fetch"]["accession"]
 
     # ----- LD client (optional; gracefully degrades if unset / unavailable)
-    # Two modes, in priority order:
-    # 1. On-demand region fetch from EBI 1000G FTP via plink 1.9 (default;
+    # Three modes, in priority order:
+    # 1. `ld.source: synthetic` (+ `ld_matrix_path`): pre-loaded r2 dict from
+    #    a two-column TSV. Used by the offline synthetic demo and any other
+    #    case where the caller already has an LD matrix in hand.
+    # 2. On-demand region fetch from EBI 1000G FTP via plink 1.9 (default;
     #    matches ClawBio "local-first install, no multi-GB pre-download" UX).
-    # 2. None: render without LD coloring (graceful fallback).
+    # 3. None: render without LD coloring (graceful fallback).
     ld_client = None
     ld_block = config.get("ld") or {}
     super_pop_str = ld_block.get("super_pop", "EUR")
     super_pop = SuperPop[super_pop_str]
-    if ld_block.get("source", "1000g_phase3_grch38") == "1000g_phase3_grch38":
+    ld_source = ld_block.get("source", "1000g_phase3_grch38")
+    if ld_source == "synthetic":
+        from _prefetched import PrefetchedLDClient, load_synthetic_ld
+        ld_matrix_path = ld_block.get("ld_matrix_path")
+        if not ld_matrix_path:
+            print(
+                "ld.source=synthetic requires ld.ld_matrix_path pointing at "
+                "a 2-column TSV (partner_variant_id, r2).",
+                file=sys.stderr,
+            )
+            return 2
+        ld_matrix_full = _resolve_path(ld_matrix_path, config_dir)
+        r2_by_partner = load_synthetic_ld(ld_matrix_full)
+        ld_client = PrefetchedLDClient(r2_by_partner=r2_by_partner)
+        print(
+            f"info: using synthetic LD matrix ({len(r2_by_partner)} partners; "
+            f"no plink call): {ld_matrix_full}",
+            file=sys.stderr,
+        )
+    elif ld_source == "1000g_phase3_grch38":
         try:
             plink_bin = ld_block.get("plink_bin") or DEFAULT_PLINK_BIN
             ld_client = OnDemand1000GLDClient(
@@ -296,19 +336,39 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
             )
             ld_client = None
 
-    # ----- Gene track. Three sources in priority order:
-    # 1. Caller-supplied local GTF path (legacy; fastest).
-    # 2. On-demand fetch from Ensembl REST (default).
-    # 3. None: render without gene track + caveat (graceful fallback).
+    # ----- Gene track. Four sources in priority order:
+    # 1. `gene_track.source: synthetic` (+ `genes_path`): load from a TSV
+    #    (gene_symbol, start, end, strand, [biotype]). Used by the offline
+    #    synthetic demo and any case where the caller already has a gene
+    #    track in hand. No Ensembl REST call.
+    # 2. Caller-supplied local GTF path (legacy; fastest).
+    # 3. On-demand fetch from Ensembl REST (default).
+    # 4. None: render without gene track + caveat (graceful fallback).
     gene_track_block = config.get("gene_track") or {}
     gencode_gtf_path = gene_track_block.get("gtf_path") or os.environ.get("GENCODE_GTF")
     if gencode_gtf_path:
         gencode_gtf_path = Path(gencode_gtf_path)
     gene_biotypes = tuple(gene_track_block.get("biotypes") or ("protein_coding",))
     prefetched_gene_track = None
-    if gencode_gtf_path is None and gene_track_block.get("source", "gencode_v39") in (
-        "gencode_v39", "ensembl_rest",
-    ):
+    gt_source = gene_track_block.get("source", "gencode_v39")
+    if gt_source == "synthetic":
+        from _prefetched import load_synthetic_gene_track
+        genes_path = gene_track_block.get("genes_path")
+        if not genes_path:
+            print(
+                "gene_track.source=synthetic requires gene_track.genes_path "
+                "pointing at a TSV (gene_symbol, start, end, strand, [biotype]).",
+                file=sys.stderr,
+            )
+            return 2
+        genes_full = _resolve_path(genes_path, config_dir)
+        prefetched_gene_track = load_synthetic_gene_track(genes_full)
+        print(
+            f"info: gene track from synthetic TSV ({len(prefetched_gene_track)} "
+            f"genes): {genes_full}",
+            file=sys.stderr,
+        )
+    elif gencode_gtf_path is None and gt_source in ("gencode_v39", "ensembl_rest"):
         try:
             from _fetchers.gencode_ondemand import (
                 fetch_region_genes_remote,
@@ -376,9 +436,48 @@ def _run(*, config: dict, config_dir: Path, output: Path) -> int:
     )
 
     # ----- Build clients
-    eqtl_client = EQTLCatalogueClient()
-    gwas_client = GWASCatalogClient()
-    ukb_ppp_client = UKBPPPClient() if exposure_kind == EXPOSURE_KIND_UKB_PPP else None
+    # Exposure side: stub from a pre-fetched TSV when the config block uses
+    # `sumstats_path:`, else the live fetcher matching the dispatched kind.
+    if exposure_prefetched:
+        from _prefetched import PrefetchedEQTLClient, load_sumstats_tsv
+        exposure_tsv = _resolve_path(exposure["sumstats_path"], config_dir)
+        exposure_variants = load_sumstats_tsv(exposure_tsv)
+        eqtl_client = PrefetchedEQTLClient(
+            variants=exposure_variants,
+            dataset_id=eqtl_dataset_id,
+            study_label=exposure.get("trait_label") or None,
+        )
+        ukb_ppp_client = None
+        print(
+            f"info: exposure sumstats from pre-fetched TSV "
+            f"({len(exposure_variants)} variants): {exposure_tsv}",
+            file=sys.stderr,
+        )
+    else:
+        eqtl_client = EQTLCatalogueClient()
+        ukb_ppp_client = UKBPPPClient() if exposure_kind == EXPOSURE_KIND_UKB_PPP else None
+
+    # Outcome side: stub from a pre-fetched TSV when the config block uses
+    # `sumstats_path:`, else the live GWAS Catalog fetcher.
+    if outcome_prefetched:
+        from _prefetched import (
+            PrefetchedGWASClient,
+            gwas_variants_from_eqtl,
+            load_sumstats_tsv,
+        )
+        outcome_tsv = _resolve_path(outcome["sumstats_path"], config_dir)
+        outcome_variants = gwas_variants_from_eqtl(load_sumstats_tsv(outcome_tsv))
+        gwas_client = PrefetchedGWASClient(
+            variants=outcome_variants,
+            accession=gwas_accession,
+        )
+        print(
+            f"info: outcome sumstats from pre-fetched TSV "
+            f"({len(outcome_variants)} variants): {outcome_tsv}",
+            file=sys.stderr,
+        )
+    else:
+        gwas_client = GWASCatalogClient()
 
     # ----- Render
     plot_path = output / f"{lead_variant_id}_full_locuscompare.png"
@@ -449,6 +548,14 @@ def _load_config(path: Path) -> dict:
     if path.suffix.lower() == ".json":
         return json.loads(text)
     raise ValueError(f"unsupported config extension: {path.suffix}")
+
+
+def _resolve_path(p: str | Path, config_dir: Path) -> Path:
+    """Resolve a possibly-relative path against the config file's directory."""
+    pp = Path(p)
+    if pp.is_absolute():
+        return pp
+    return (config_dir / pp).resolve()
 
 
 if __name__ == "__main__":

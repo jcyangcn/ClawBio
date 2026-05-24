@@ -9,7 +9,7 @@ schema_version: "1.0"
 #   python clawbio.py run gwas-lookup --rsid rs646776 --output runs/gwas_lookup/
 #   # Inspect runs/gwas_lookup/tables/{gwas_associations,eqtl_associations}.csv
 #   # Pick the strongest co-localizing pair, write this config, render:
-#   python skills/locuscompare/locuscompare.py \
+#   python skills/locuscompare-region-render/cli.py \
 #       --input examples/05_gwas_lookup_followup/config.yaml \
 #       --output runs/locuscompare_rs646776/
 

@@ -31,7 +31,7 @@ wget https://pan-ukb-us-east-1.s3.amazonaws.com/sumstats_release/biomarkers-3076
 wget https://pan-ukb-us-east-1.s3.amazonaws.com/sumstats_release/biomarkers-30760-both_sexes-irnt.tsv.bgz.tbi
 
 # Harmonise to canonical schema (EUR ancestry)
-bash skills/locuscompare/examples/recipes/pan_ukbb_direct/harmonise.sh \
+bash skills/locuscompare-region-render/examples/recipes/pan_ukbb_direct/harmonise.sh \
     biomarkers-30760-both_sexes-irnt.tsv.bgz \
     EUR \
     pan_ukbb_30760_irnt_eur.canonical.tsv

@@ -22,7 +22,7 @@ FinnGen direct download: <https://finngen.gitbook.io/documentation/data-download
 wget https://storage.googleapis.com/finngen-public-data-r12/summary_stats/finngen_R12_I9_HEARTFAIL.gz
 
 # 2. Harmonise to canonical schema
-bash skills/locuscompare/examples/recipes/finngen_direct/harmonise.sh \
+bash skills/locuscompare-region-render/examples/recipes/finngen_direct/harmonise.sh \
     finngen_R12_I9_HEARTFAIL.gz \
     finngen_R12_I9_HEARTFAIL.canonical.tsv
 

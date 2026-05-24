@@ -19,7 +19,7 @@ cat runs/gwas_lookup/tables/eqtl_associations.csv | head
 
 # 3. Pick the strongest co-localizing (GWAS accession, eQTL dataset) pair, encode
 #    in a locuscompare config, render the regional plot
-python skills/locuscompare/locuscompare.py \
+python skills/locuscompare-region-render/cli.py \
     --input examples/05_gwas_lookup_followup/config.yaml \
     --output runs/locuscompare_rs646776/
 ```

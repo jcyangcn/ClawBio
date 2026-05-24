@@ -37,7 +37,7 @@ match locuscompare's canonical convention.
 gsutil cp gs://adult-gtex/bulk-qtl/v10/single-tissue-cis-qtl/all_pairs/Minor_Salivary_Gland/Minor_Salivary_Gland.allpairs.tsv.bgz .
 
 # Harmonise (slice to one gene region)
-bash skills/locuscompare/examples/recipes/gtex_v10_direct/harmonise.sh \
+bash skills/locuscompare-region-render/examples/recipes/gtex_v10_direct/harmonise.sh \
     Minor_Salivary_Gland.allpairs.tsv.bgz \
     ENSG00000134243.16 \
     sort1_minor_salivary_gland.canonical.tsv

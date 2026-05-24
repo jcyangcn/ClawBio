@@ -24,8 +24,8 @@ python clawbio.py run fine-mapping \
     --output runs/finemap_outcome/
 
 # 3. Render the regional LocusCompare from both fine-mapping outputs
-python skills/locuscompare/locuscompare.py \
-    --input examples/04_finemapping_chain/config.yaml \
+python skills/locuscompare-region-render/cli.py \
+    --input skills/locuscompare-region-render/examples/04_finemapping_chain/config.yaml \
     --output runs/locuscompare_chain/
 ```
 
