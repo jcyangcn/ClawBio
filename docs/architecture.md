@@ -6,36 +6,17 @@ ClawBio is a collection of modular AI agent skills for bioinformatics, designed 
 
 ## System Design
 
-```
-                    ┌─────────────────────┐
-                    │    User Request      │
-                    │  (natural language)  │
-                    └──────────┬──────────┘
-                               │
-                    ┌──────────▼──────────┐
-                    │   Bio Orchestrator   │
-                    │  (routing + planning │
-                    │   + report assembly) │
-                    └──────────┬──────────┘
-                               │
-              ┌────────────────┼────────────────┐
-              │                │                 │
-    ┌─────────▼───────┐ ┌─────▼──────┐ ┌───────▼────────┐
-    │  Equity Scorer   │ │ Seq Wrangler│ │ Struct Predictor│
-    │  VCF Annotator   │ │ scRNA Orch  │ │ Lit Synthesizer │
-    │                  │ │             │ │ Repro Enforcer  │
-    └─────────┬───────┘ └─────┬──────┘ └───────┬────────┘
-              │                │                 │
-              └────────────────┼────────────────┘
-                               │
-                    ┌──────────▼──────────┐
-                    │   Output Layer       │
-                    │  - Markdown report   │
-                    │  - Figures (PNG/SVG) │
-                    │  - Audit log         │
-                    │  - Repro bundle      │
-                    └─────────────────────┘
-```
+ClawBio is easiest to read as a set of layers rather than one monolithic
+agent. Each layer has a narrow responsibility:
+
+| Layer | Main Files / Components | Responsibility |
+|-------|-------------------------|----------------|
+| Interfaces | CLI, Python API, RoboTerri, Discord, OpenClaw gateway, Claude Code | Accept a user request, collect files, and either name a skill directly or ask for routing. |
+| Skill self-description | `skills/<name>/SKILL.md`, optional `skills/<name>/INTENTS.json`, `skills/catalog.json` | Describe what the skill does, what inputs it accepts, how it is invoked, and when it should be considered. |
+| Routing and planning | `skills/bio-orchestrator/`, `clawbio/skill_intents.py`, `docs/skill-intents.md` | Detect file types, headers, keywords, and structured intent descriptors; select a suitable skill or plan a small chain. |
+| Runner and safety gate | `clawbio.py` / `clawbio.run_skill()` | Validate the selected skill, enforce allowed flags, prepare output directories, and launch the skill script. |
+| Specialist skill execution | `skills/<name>/<script>.py` plus skill-local helpers | Run the domain method and produce skill-owned outputs. |
+| Output contract | `report.md`, `result.json`, `tables/`, `figures/`, `reproducibility/` | Return human-readable reports, machine-readable results, preferred artifacts, suggested follow-ups, and replay metadata where supported. |
 
 ## Routing Logic
 
@@ -52,9 +33,27 @@ Every skill works standalone. The Bio Orchestrator adds:
 - Automatic routing (user does not need to know skill names)
 - Multi-skill chaining (pipe output of one skill to the next)
 - Unified reporting (combine results from multiple skills)
-- Reproducibility wrapping (Repro Enforcer applied automatically)
+- Access to skill-defined reproducibility outputs where a routed skill implements them
 
 A user can invoke any skill directly without the orchestrator.
+
+## Skill Self-Description
+
+Skills describe themselves before they execute. `SKILL.md` is the primary
+human- and agent-readable contract: it records the domain method, expected
+inputs, outputs, safety boundaries, demo commands, and gotchas. Python scripts
+are implementations of that contract, not replacements for it.
+
+Some skills also publish optional intent descriptors in `INTENTS.json` or
+`skill_intents.json`; see [docs/skill-intents.md](skill-intents.md) for the
+descriptor schema. These files are data-only routing metadata for chat adapters
+and planners: aliases, trigger terms, slot extraction rules, safe execution
+plans, and confirmation gates. They do not grant new shell powers or new CLI
+flags; `clawbio.py` still enforces the registered allow-list.
+
+Together, `SKILL.md`, optional intent descriptors, and `skills/catalog.json`
+let agents discover what a skill can do without scraping prose from previous
+chat sessions.
 
 ## Data Flow
 
@@ -74,14 +73,36 @@ Results (tables, metrics, intermediate files)
 Visualisation (matplotlib/seaborn figures)
     │
     ▼
+Structured Output (result.json + preferred artifacts)
+    │
+    ▼
 Report Assembly (markdown + embedded figures)
     │
     ▼
-Reproducibility Export (conda env, commands, checksums)
-    │
-    ▼
-Audit Log Append (timestamped action record)
+Optional Reproducibility Export (helper-backed commands, environment, checksums)
 ```
+
+The same run may also expose UI-facing fields from `result.json`, including
+`chat_summary_lines`, `preferred_artifacts`, `workflow_state`, and
+`suggested_actions`. These fields let chat or GUI frontends render compact
+summaries and offer deterministic next steps without inventing follow-up
+commands.
+
+## Structured Next Steps
+
+Where supported, a skill can describe valid follow-up actions in its
+`result.json` output:
+
+- `workflow_state`: the lifecycle, label, and stable state identity for the
+  completed run.
+- `preferred_artifacts`: files the UI should surface first.
+- `suggested_actions`: deterministic next-step requests, such as "show top
+  results" or "summarise by category".
+- `chat_summary_lines`: short skill-authored text suitable for chat adapters.
+
+This keeps next-step menus tied to the skill's own state rather than to an
+agent's guess. Not every skill emits these fields yet; skills without them still
+return the standard report and output bundle.
 
 ## Privacy Model
 
@@ -94,14 +115,21 @@ ClawBio enforces a strict local-first privacy model:
 
 ## Reproducibility Contract
 
-Every analysis produces:
+ClawBio's validated reproducibility contract is not universal across every skill. For skills that use the shared reproducibility helpers, the output directory typically includes:
 
-1. **commands.sh**: Exact shell commands to reproduce the analysis without the agent.
-2. **environment.yml**: Conda environment specification with pinned versions.
-3. **checksums.sha256**: SHA-256 hashes of all input files.
-4. **analysis_log.md**: Timestamped record of every action taken.
+1. **`reproducibility/commands.sh`**: A replay command for the skill run without needing the original agent session.
+2. **`reproducibility/environment.yml`**: A suggested Conda environment snapshot for the run.
+3. **`reproducibility/checksums.sha256`**: SHA-256 hashes for selected output files.
+4. **Optional extras**: Some skills may emit additional provenance files such as `runtime-lock.json` or other lock metadata.
 
-This means any result can be reproduced on any machine with the same inputs, independent of OpenClaw.
+Important boundaries:
+
+- Reproducibility behavior can vary by skill.
+- Replays may still require external tools or the original input files to be present locally.
+- `analysis_log.md` is not a guaranteed output for every skill.
+- Portable replay scripts reduce path friction, but they are not a blanket promise that every run will reproduce unchanged on every machine.
+
+See `docs/reproducibility.md` for the user workflow and a concrete `multiqc-reporter` example.
 
 ## Skill Packaging
 

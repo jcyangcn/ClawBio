@@ -1,5 +1,6 @@
 """Tests for clawbio.common.reproducibility."""
 
+import json
 import subprocess
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -8,10 +9,13 @@ import pytest
 
 from clawbio.common.checksums import sha256_file
 from clawbio.common.reproducibility import (
+    ReproCommand,
     write_checksums,
     write_environment_yml,
     write_commands_sh,
     write_conda_lock,
+    write_ro_crate,
+    write_portable_commands_sh,
 )
 
 
@@ -220,6 +224,45 @@ class TestWriteCommandsSh:
         assert mode & stat.S_IXUSR, "owner execute bit not set"
 
 
+class TestWritePortableCommandsSh:
+    def test_portable_commands_validate_clawbio_root_directory(self, tmp_path):
+        command = ReproCommand(
+            script_path=Path("skills/example/example.py"),
+            args=["--demo"],
+            comment="Replay example run",
+        )
+
+        path = write_portable_commands_sh(
+            tmp_path,
+            command,
+            repo_root=tmp_path,
+        )
+
+        text = path.read_text()
+        assert 'if [ ! -d "$CLAWBIO_ROOT" ]; then' in text
+        assert 'echo "Invalid CLAWBIO_ROOT: $CLAWBIO_ROOT" >&2' in text
+        assert "exit 1" in text
+
+    def test_portable_commands_keep_existing_root_and_output_exports(self, tmp_path):
+        command = ReproCommand(
+            script_path=Path("skills/example/example.py"),
+            args=["--demo"],
+        )
+
+        path = write_portable_commands_sh(
+            tmp_path,
+            command,
+            repo_root=tmp_path,
+        )
+
+        text = path.read_text()
+        assert 'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' in text
+        assert 'OUTPUT_DIR="$(dirname "$SCRIPT_DIR")"' in text
+        assert f': "${{CLAWBIO_ROOT:={tmp_path.resolve()}}}"' in text
+        assert 'python "$CLAWBIO_ROOT/skills/example/example.py" --demo' in text
+        assert f'python "{(tmp_path.resolve() / "skills/example/example.py")}" --demo' not in text
+
+
 # ---------------------------------------------------------------------------
 # TestWriteCondaLock
 # ---------------------------------------------------------------------------
@@ -283,3 +326,137 @@ class TestWriteCondaLock:
             mock_run.side_effect = subprocess.CalledProcessError(1, "conda-lock")
             with pytest.raises(subprocess.CalledProcessError):
                 write_conda_lock(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# TestWriteRoCrate
+# ---------------------------------------------------------------------------
+
+
+class TestWriteRoCrate:
+    def test_creates_metadata_file(self, tmp_path):
+        out = write_ro_crate(
+            tmp_path,
+            skill_name="test-skill",
+            skill_version="0.1.0",
+            script_path="skills/test-skill/test_skill.py",
+        )
+        assert out == tmp_path / "ro-crate-metadata.json"
+        assert out.exists()
+
+    def test_metadata_is_valid_json(self, tmp_path):
+        write_ro_crate(
+            tmp_path,
+            skill_name="test-skill",
+            skill_version="0.1.0",
+            script_path="skills/test-skill/test_skill.py",
+        )
+        data = json.loads((tmp_path / "ro-crate-metadata.json").read_text())
+        assert "@context" in data
+        assert "@graph" in data
+
+    def test_root_dataset_contains_skill_version(self, tmp_path):
+        write_ro_crate(
+            tmp_path,
+            skill_name="test-skill",
+            skill_version="1.2.3",
+            script_path="skills/test-skill/test_skill.py",
+        )
+        graph = json.loads((tmp_path / "ro-crate-metadata.json").read_text())["@graph"]
+        root = next(e for e in graph if e.get("@id") == "./")
+        assert root.get("version") == "1.2.3"
+
+    def test_create_action_present(self, tmp_path):
+        write_ro_crate(
+            tmp_path,
+            skill_name="test-skill",
+            skill_version="0.1.0",
+            script_path="skills/test-skill/test_skill.py",
+        )
+        graph = json.loads((tmp_path / "ro-crate-metadata.json").read_text())["@graph"]
+        actions = [e for e in graph if e.get("@type") == "CreateAction"]
+        assert len(actions) == 1
+        assert actions[0]["instrument"]["@id"] == "skills/test-skill/test_skill.py"
+
+    def test_params_included_as_property_values(self, tmp_path):
+        write_ro_crate(
+            tmp_path,
+            skill_name="test-skill",
+            skill_version="0.1.0",
+            script_path="skills/test-skill/test_skill.py",
+            params={"input": "sample.vcf", "threshold": "0.05"},
+        )
+        graph = json.loads((tmp_path / "ro-crate-metadata.json").read_text())["@graph"]
+        pv = [e for e in graph if e.get("@type") == "PropertyValue"]
+        names = {e["name"] for e in pv}
+        assert {"input", "threshold"} == names
+
+    def test_output_files_registered_as_has_part(self, tmp_path):
+        (tmp_path / "report.md").write_text("# Report")
+        (tmp_path / "figure.png").write_bytes(b"PNG")
+        write_ro_crate(
+            tmp_path,
+            skill_name="test-skill",
+            skill_version="0.1.0",
+            script_path="skills/test-skill/test_skill.py",
+        )
+        graph = json.loads((tmp_path / "ro-crate-metadata.json").read_text())["@graph"]
+        root = next(e for e in graph if e.get("@id") == "./")
+        has_part_ids = {e["@id"] for e in root.get("hasPart", [])}
+        assert "report.md" in has_part_ids
+        assert "figure.png" in has_part_ids
+
+    def test_description_propagated(self, tmp_path):
+        write_ro_crate(
+            tmp_path,
+            skill_name="test-skill",
+            skill_version="0.1.0",
+            script_path="skills/test-skill/test_skill.py",
+            description="Demo run for testing",
+        )
+        graph = json.loads((tmp_path / "ro-crate-metadata.json").read_text())["@graph"]
+        root = next(e for e in graph if e.get("@id") == "./")
+        assert root.get("description") == "Demo run for testing"
+
+    def test_completed_at_override(self, tmp_path):
+        ts = "2026-01-01T00:00:00+00:00"
+        write_ro_crate(
+            tmp_path,
+            skill_name="test-skill",
+            skill_version="0.1.0",
+            script_path="skills/test-skill/test_skill.py",
+            completed_at=ts,
+        )
+        graph = json.loads((tmp_path / "ro-crate-metadata.json").read_text())["@graph"]
+        action = next(e for e in graph if e.get("@type") == "CreateAction")
+        assert action["endTime"] == ts
+
+
+# ---------------------------------------------------------------------------
+# TestBuildPortableCommandsSh
+# ---------------------------------------------------------------------------
+
+
+class TestBuildPortableCommandsSh:
+    def test_shell_var_reference_is_double_quoted(self):
+        """${SHELL_VAR} tokens must be wrapped in double quotes so bash word-splitting
+        doesn't break the command when the variable expands to a path with spaces."""
+        from clawbio.common.portable_commands import build_portable_commands_sh
+
+        content = build_portable_commands_sh(
+            skill_name="nfcore-rnaseq-wrapper",
+            script_name="nfcore_rnaseq_wrapper.py",
+            args={"--input": "${SCRIPT_DIR}/samplesheet.valid.csv"},
+        )
+        assert '"${SCRIPT_DIR}/samplesheet.valid.csv"' in content
+
+    def test_plain_path_with_spaces_is_single_quoted(self):
+        """A plain user path with spaces must be single-quoted by shlex.quote."""
+        from clawbio.common.portable_commands import build_portable_commands_sh
+
+        content = build_portable_commands_sh(
+            skill_name="nfcore-rnaseq-wrapper",
+            script_name="nfcore_rnaseq_wrapper.py",
+            args={"--output": "/tmp/my output dir"},
+        )
+        assert "'/tmp/my output dir'" in content
