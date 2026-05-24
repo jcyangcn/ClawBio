@@ -869,6 +869,30 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "gwas-region": {
+        "script": SKILLS_DIR / "gwas-catalog-region-fetch" / "gwas_catalog_region_fetch.py",
+        "demo_args": ["--demo"],
+        "description": "GWAS Catalog region fetch — tabix-on-FTP harmonised summary stats per genomic window",
+        "allowed_extra_flags": {"--list-demos", "--no-cache"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
+    "ld-region": {
+        "script": SKILLS_DIR / "ld-1000g-region-compute" / "ld_1000g_region_compute.py",
+        "demo_args": ["--demo"],
+        "description": "1000G LD region compute — plink 1.9 r² between a lead and partners in a region for one super-population",
+        "allowed_extra_flags": {"--list-demos", "--no-cache", "--super-pop", "--panel"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
+    "ukb-ppp-region": {
+        "script": SKILLS_DIR / "ukb-ppp-region-fetch" / "ukb_ppp_region_fetch.py",
+        "demo_args": ["--demo"],
+        "description": "UKB-PPP region fetch: per-variant plasma cis-pQTL summary stats per genomic window (Sun 2023, Synapse-backed)",
+        "allowed_extra_flags": {"--list-demos", "--no-cache"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
     "affprot": {
         "script": SKILLS_DIR / "affinity-proteomics" / "affinity_proteomics.py",
         "demo_args": ["--demo", "--platform", "olink"],
@@ -909,6 +933,27 @@ SKILLS = {
             "--genome", "--json",
         },
         "no_input_required": True,
+        "accepts_genotypes": False,
+    },
+    "sample-qc": {
+        "script": SKILLS_DIR / "sample-qc-triage" / "sample_qc_triage.py",
+        "demo_args": ["--demo"],
+        "description": "Sample QC triage (identity, sex, contamination, batch-shift outlier triage)",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
+    "crispr-triage": {
+        "script": SKILLS_DIR / "crispr-screen-triage" / "crispr_screen_triage.py",
+        "demo_args": ["--demo"],
+        "description": "CRISPR screen triage (deterministic guide-level hit ranking)",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
+    "marker-map": {
+        "script": SKILLS_DIR / "marker-dominance-mapper" / "marker_dominance_mapper.py",
+        "demo_args": ["--demo"],
+        "description": "Marker dominance mapper (marker-based spot regions + SVG map)",
+        "allowed_extra_flags": set(),
         "accepts_genotypes": False,
     },
     "fastreer": {
@@ -1042,11 +1087,13 @@ def _promote_structured_result_fields(result: dict, out_dir: Path | None) -> Non
         # - chat_summary_lines: concise, skill-authored text for chat UIs
         # - preferred_artifacts: generated files the UI should surface first
         # - suggested_actions: deterministic next-step requests to offer later
+        # - workflow_state: skill-emitted state identity/lifecycle metadata
         # - report_md: full markdown report text embedded in result.json
         for field in (
             "chat_summary_lines",
             "preferred_artifacts",
             "suggested_actions",
+            "workflow_state",
             "report_md",
         ):
             if field in payload:

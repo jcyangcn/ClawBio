@@ -8,7 +8,12 @@
 
 ## What is ClawBio?
 
-ClawBio is a bioinformatics skill library for local, reproducible genomic analysis. It packages domain methods as composable skills that an agent can route, execute, and report on without sending biological data to third-party cloud services.
+ClawBio is a bioinformatics skill library for local, reproducible genomic analysis. It gives AI agents two things they otherwise lack in computational biology:
+
+- **Skill wrapping**: a consistent way to interact with specialist tools and workflows through documented inputs, outputs, commands, safety constraints, and reproducibility artifacts.
+- **Routing**: a way to decide which specialist skill or agent should handle a request, and what information needs to be retrieved or forwarded between steps.
+
+Both are designed for local execution: biological data does not leave the researcher's machine unless a workflow explicitly uses an external source.
 
 At a high level, ClawBio provides documented workflows for pharmacogenomics, GWAS lookup, PRS calculation, UK Biobank exploration, fine-mapping, and sequencing analysis, with clear inputs, outputs, and reproducibility artifacts.
 
@@ -45,21 +50,28 @@ This is a substantial expansion from the older brief, which described the projec
 
 ## How ClawBio Works
 
-ClawBio uses a simple operating model:
+In the repository, routing (when used) is handled by the **Bio Orchestrator** skill (`skills/bio-orchestrator/`), which looks at file types, table headers, keywords, and explicit user choices. Direct CLI/API calls can bypass routing entirely by naming a skill explicitly.
 
-```text
-User request or input file
-    -> agent routing layer
-        -> specialist ClawBio skill
-            -> report + tables + figures + reproducibility bundle
+```mermaid
+flowchart TD
+    request["User request or input file"]
+    classified["Input and intent classified"]
+    selected["Suitable skill selected"]
+    launched["Skill run launched"]
+    analysed["Domain analysis completed"]
+    artifacts["Report + tables + figures + reproducibility bundle"]
+
+    request -->|"Bio Orchestrator detects file type, headers, and intent"| classified
+    classified -->|"Bio Orchestrator selects a suitable skill from the registry"| selected
+    request -->|"User names a skill directly via CLI/API"| launched
+    selected -->|"clawbio.py validates the selected skill and allowed flags"| launched
+    launched -->|"Specialist skill script runs its documented method"| analysed
+    analysed -->|"Specialist skill writes its outputs"| artifacts
 ```
 
-In practice, that means an agent can:
+The diagram separates **selection** from **execution**. Bio Orchestrator first detects what kind of input or request it has received, then selects a suitable skill from the available registry. A user can override that suggestion by naming a skill directly through the CLI or API. `clawbio.py` then validates and launches the selected skill. The specialist skill performs the scientific work and is responsible for writing the report, tables, figures, and structured `result.json`. Where supported, reproducibility artifacts include `commands.sh`, `environment.yml`, and checksums. The structured `result.json` fields are summarised in [docs/architecture.md](architecture.md#structured-next-steps).
 
-- detect the analysis intent or file type
-- route to a specialist skill such as PharmGx, GWAS Lookup, UKB Navigator, or Fine-Mapping
-- run the analysis locally
-- return a report plus reproducibility artifacts such as `commands.sh`, `environment.yml`, and checksums
+Some skills use shared helper code for standardised metadata, disclaimers, checksums, or replay commands, but that is an implementation detail for developers rather than a separate agent role.
 
 ## Skills Snapshot
 

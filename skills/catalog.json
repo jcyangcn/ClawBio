@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 67,
+  "skill_count": 75,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -92,10 +92,56 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/archaic-introgression/archaic_introgression.py --demo",
+      "demo_command": "python skills/archaic-introgression/pipeline.py --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [],
+      "chaining_partners": []
+    },
+    {
+      "name": "article-data-fetcher",
+      "cli_alias": null,
+      "description": "Given an article DOI or PubMed ID, discover and download the genomics data files deposited by the authors (VCF, FASTA, H5AD, CSV, JSON, BAM, etc.) from public repositories such as GEO, ENA, Zenodo, Figshare, Dryad, and OSF.",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/article-data-fetcher/article_data_fetcher.py --demo",
+      "dependencies": [
+        "python>=3.11",
+        "requests>=2.31",
+        "biopython>=1.83",
+        "tqdm>=4.66",
+        "pydantic>=2.0"
+      ],
+      "tags": [
+        "data-download",
+        "genomics",
+        "reproducibility",
+        "geo",
+        "ena",
+        "zenodo"
+      ],
+      "trigger_keywords": [
+        "download data from paper",
+        "download genomics data from article",
+        "get VCF from paper",
+        "get FASTA from study",
+        "fetch supplementary data files",
+        "download dataset from publication",
+        "retrieve genomics files from doi",
+        "get raw data from study",
+        "download from GEO",
+        "download from ENA",
+        "fetch h5ad from paper",
+        "get csv from publication",
+        "article data download",
+        "paper dataset download",
+        "download research data",
+        "get files from zenodo",
+        "fetch data from figshare"
+      ],
       "chaining_partners": []
     },
     {
@@ -414,7 +460,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-trial-finder/opentargets.py --demo",
+      "demo_command": "python skills/clinical-trial-finder/euctr.py --demo",
       "dependencies": [
         "python>=3.11"
       ],
@@ -448,7 +494,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-variant-reporter/clinical_variant_reporter.py --demo",
+      "demo_command": "python skills/clinical-variant-reporter/acmg_engine.py --demo",
       "dependencies": [],
       "tags": [
         "acmg",
@@ -497,6 +543,35 @@
       "chaining_partners": [
         "pharmgx-reporter",
         "gwas-lookup"
+      ]
+    },
+    {
+      "name": "crispr-screen-triage",
+      "cli_alias": "crispr-triage",
+      "description": "Deterministic CRISPR screen hit ranking from local guide-level count tables",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run crispr-triage --demo",
+      "dependencies": [
+        "python>=3.10"
+      ],
+      "tags": [
+        "crispr",
+        "screen",
+        "triage"
+      ],
+      "trigger_keywords": [
+        "CRISPR screen triage",
+        "guide count ranking",
+        "rank CRISPR hits",
+        "depleted guide screen"
+      ],
+      "chaining_partners": [
+        "target-validation-scorer",
+        "omics-target-evidence-mapper"
       ]
     },
     {
@@ -949,6 +1024,39 @@
       "chaining_partners": []
     },
     {
+      "name": "gwas-catalog-region-fetch",
+      "cli_alias": null,
+      "description": "Fetch a region of GWAS summary statistics from the NHGRI-EBI GWAS Catalog\nharmonised collection via tabix-on-FTP. Use when an agent needs GWAS beta /\nSE / p-value for every variant in a window for one specific study (GCST\naccession). Input: accession, chromosome, start, end. Output: harmonised\nTSV slice in canonical format.\n",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/gwas-catalog-region-fetch/gwas_catalog_region_fetch.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "pysam>=0.22",
+        "pandas>=2.0",
+        "requests>=2.28"
+      ],
+      "tags": [
+        "gwas",
+        "gwas-catalog",
+        "region-fetch",
+        "tabix",
+        "summary-statistics",
+        "harmonised"
+      ],
+      "trigger_keywords": [
+        "gwas region fetch",
+        "gwas catalog region",
+        "gwas sumstats slice",
+        "GCST harmonised tabix",
+        "GWAS catalog tabix"
+      ],
+      "chaining_partners": []
+    },
+    {
       "name": "gwas-lookup",
       "cli_alias": "gwas",
       "description": "Federated variant lookup across 9 genomic databases — GWAS Catalog, Open Targets, PheWeb (UKB, FinnGen, BBJ), GTEx, eQTL Catalogue, and more.",
@@ -1064,7 +1172,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/illumina-bridge/illumina_providers.py --demo",
+      "demo_command": "python skills/illumina-bridge/illumina_bridge.py --demo",
       "dependencies": [],
       "tags": [
         "illumina",
@@ -1117,6 +1225,40 @@
       "chaining_partners": []
     },
     {
+      "name": "ld-1000g-region-compute",
+      "cli_alias": null,
+      "description": "Compute pairwise r² between a lead variant and every variant in a window\nusing the 1000 Genomes Phase 3 GRCh38 reference panel, ancestry-stratified.\nUse when an agent needs LD coloring for a regional plot or LD pruning\naround a candidate causal variant. Single client (on-demand region fetch\nfrom EBI 1000G FTP); no multi-GB cold-start.\n",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/ld-1000g-region-compute/ld_1000g_region_compute.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "pysam>=0.22",
+        "pandas>=2.0",
+        "requests>=2.28"
+      ],
+      "tags": [
+        "ld",
+        "1000-genomes",
+        "reference-panel",
+        "plink",
+        "ancestry-stratified",
+        "on-demand"
+      ],
+      "trigger_keywords": [
+        "ld around lead",
+        "ld region 1000g",
+        "r-squared 1000g phase 3",
+        "ancestry-stratified ld",
+        "locuszoom ld coloring",
+        "1000 genomes ld panel"
+      ],
+      "chaining_partners": []
+    },
+    {
       "name": "lit-synthesizer",
       "cli_alias": null,
       "description": "Search PubMed and bioRxiv for bioinformatics literature, synthesise results into a structured report, and build a citation graph — all locally, with a reproducibility bundle.\n",
@@ -1150,6 +1292,34 @@
         "recent papers on"
       ],
       "chaining_partners": []
+    },
+    {
+      "name": "marker-dominance-mapper",
+      "cli_alias": "marker-map",
+      "description": "Deterministic marker-dominance region mapping from local spot-count CSVs",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run marker-map --demo",
+      "dependencies": [
+        "python>=3.10"
+      ],
+      "tags": [
+        "marker-dominance",
+        "spot-map",
+        "marker-mapping"
+      ],
+      "trigger_keywords": [
+        "marker dominance mapping",
+        "map marker spots",
+        "marker-based tissue regions"
+      ],
+      "chaining_partners": [
+        "scrna-orchestrator",
+        "diff-visualizer"
+      ]
     },
     {
       "name": "mendelian-randomisation",
@@ -1381,7 +1551,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/nutrigx-advisor/parse_input.py --demo",
+      "demo_command": "python skills/nutrigx-advisor/score_variants.py --demo",
       "dependencies": [],
       "tags": [
         "nutrigenomics",
@@ -1634,7 +1804,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/pubmed-summariser/pubmed_summariser.py --demo",
+      "demo_command": "python skills/pubmed-summariser/pubmed_api.py --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [
@@ -1751,6 +1921,36 @@
       ],
       "chaining_partners": [
         "diff-visualizer"
+      ]
+    },
+    {
+      "name": "sample-qc-triage",
+      "cli_alias": "sample-qc",
+      "description": "Deterministic multi-sample QC triage for identity, sex, contamination, and batch-shift outliers",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run sample-qc --demo",
+      "dependencies": [
+        "python>=3.10"
+      ],
+      "tags": [
+        "quality-control",
+        "sequencing-qc",
+        "triage"
+      ],
+      "trigger_keywords": [
+        "sample QC triage",
+        "sequencing QC outliers",
+        "sex mismatch",
+        "fingerprint concordance",
+        "contamination batch shift"
+      ],
+      "chaining_partners": [
+        "multiqc-reporter",
+        "seq-wrangler"
       ]
     },
     {
@@ -2037,6 +2237,39 @@
       "chaining_partners": [
         "llm-biobank-bench"
       ]
+    },
+    {
+      "name": "ukb-ppp-region-fetch",
+      "cli_alias": null,
+      "description": "Fetch a regional slice of plasma pQTL summary statistics from the UK\nBiobank Pharma Proteomics Project (UKB-PPP; Sun 2023 Nature) for a\nspecific (protein, ancestry) measurement. Use when an agent needs\nper-variant beta / SE / p-value around a coloc-lead variant for\ndownstream colocalisation, Mendelian randomisation, or regional\nplotting against a pQTL exposure. The canonical use case is the\ncis-window around the protein's coding gene TSS, but UKB-PPP releases\nfull-genome summary stats per protein so any GRCh38 window (including\ntrans loci) is supported when the user supplies an explicit\n(chromosome, start_bp, end_bp). Input: protein_label (HGNC or\nUniProt), ancestry, chromosome, start_bp, end_bp. Output: harmonised\nTSV slice + manifest + human-readable report.\n",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/ukb-ppp-region-fetch/ukb_ppp_region_fetch.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "synapseclient>=3.0",
+        "requests>=2.28"
+      ],
+      "tags": [
+        "pqtl",
+        "ukb-ppp",
+        "region-fetch",
+        "regenie",
+        "summary-statistics",
+        "proteomics",
+        "olink"
+      ],
+      "trigger_keywords": [
+        "ukb-ppp pqtl region fetch",
+        "pqtl regional summary stats",
+        "sun 2023 ukbppp",
+        "protein qtl summary stats",
+        "plasma pqtl regional fetch"
+      ],
+      "chaining_partners": []
     },
     {
       "name": "variant-annotation",
