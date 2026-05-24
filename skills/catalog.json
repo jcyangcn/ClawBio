@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 63,
+  "skill_count": 67,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -312,6 +312,35 @@
         "CARD",
         "HUMAnN3",
         "microbiome"
+      ],
+      "chaining_partners": []
+    },
+    {
+      "name": "claw-methylation-cycle",
+      "cli_alias": null,
+      "description": "",
+      "version": "0.1.3",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/claw-methylation-cycle/methylation_cycle.py --demo",
+      "dependencies": [],
+      "tags": [
+        "genomics",
+        "methylation",
+        "MTHFR",
+        "neurodevelopment"
+      ],
+      "trigger_keywords": [
+        "methylation",
+        "MTHFR",
+        "folate cycle",
+        "BH4",
+        "homocysteine",
+        "methylation cycle",
+        "metilación",
+        "neurotransmitter synthesis"
       ],
       "chaining_partners": []
     },
@@ -647,6 +676,39 @@
       ]
     },
     {
+      "name": "eqtl-catalogue-region-fetch",
+      "cli_alias": null,
+      "description": "Fetch a region of cis-eQTL summary statistics from EBI eQTL Catalogue v7+\nvia tabix-on-FTP. Use when an agent needs eQTL beta / SE / p-value for\nevery variant in a window around a gene's TSS for one specific dataset\n(study × tissue × quantification method). Input: dataset_id, chromosome,\nstart, end, optional molecular_trait_id. Output: harmonised TSV slice.\n",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/eqtl-catalogue-region-fetch/eqtl_catalogue_region_fetch.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "pysam>=0.22",
+        "pandas>=2.0",
+        "requests>=2.28"
+      ],
+      "tags": [
+        "eqtl",
+        "eqtl-catalogue",
+        "region-fetch",
+        "tabix",
+        "summary-statistics",
+        "cis-eqtl"
+      ],
+      "trigger_keywords": [
+        "eqtl region fetch",
+        "eqtl catalogue tabix",
+        "eqtl sumstats slice",
+        "cis-eqtl region pull",
+        "GTEx eqtl region"
+      ],
+      "chaining_partners": []
+    },
+    {
       "name": "equity-scorer",
       "cli_alias": "equity",
       "description": "Compute HEIM diversity and equity metrics from VCF or ancestry data. Generates heterozygosity, FST, PCA plots, and a composite HEIM Equity Score with markdown reports.",
@@ -668,6 +730,48 @@
       "chaining_partners": [
         "claw-semantic-sim"
       ]
+    },
+    {
+      "name": "fastreer",
+      "cli_alias": null,
+      "description": "Phylogenetic distance matrices and trees from VCF or FASTA data using the fastreeR hybrid Java/Python toolkit (VCF2TREE, VCF2DIST, DIST2TREE, FASTA2DIST).",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/fastreer/fastreer.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "fastreer>=2.2.0"
+      ],
+      "tags": [
+        "phylogenetics",
+        "distance-matrix",
+        "tree-building",
+        "vcf",
+        "fasta",
+        "population-genomics"
+      ],
+      "trigger_keywords": [
+        "phylogenetic tree",
+        "distance matrix from VCF",
+        "VCF",
+        "VCF2TREE",
+        "VCF2DIST",
+        "fastreer",
+        "fastreeR",
+        "genomic distance",
+        "hierarchical clustering tree",
+        "k-mer distance",
+        "FASTA2DIST",
+        "variant distance matrix",
+        "population tree",
+        "DIST2TREE",
+        "cosine distance VCF",
+        "sample phylogeny"
+      ],
+      "chaining_partners": []
     },
     {
       "name": "fine-mapping",
@@ -1191,6 +1295,42 @@
         "GCA"
       ],
       "chaining_partners": []
+    },
+    {
+      "name": "nfcore-scrnaseq-wrapper",
+      "cli_alias": "scrnaseq-pipeline",
+      "description": "Wrapper skill for running nf-core/scrnaseq upstream single-cell RNA-seq preprocessing from FASTQ with strict preflight, reproducibility outputs, and downstream handoff to ClawBio scRNA skills.",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run scrnaseq-pipeline --demo",
+      "dependencies": [
+        "python>=3.11"
+      ],
+      "tags": [
+        "scrna",
+        "single-cell",
+        "nextflow",
+        "nf-core",
+        "fastq",
+        "10x",
+        "h5ad",
+        "preprocessing"
+      ],
+      "trigger_keywords": [
+        "scrnaseq",
+        "nf-core scrnaseq",
+        "single-cell preprocessing",
+        "10x fastq",
+        "generate h5ad from fastq"
+      ],
+      "chaining_partners": [
+        "scrna-orchestrator",
+        "scrna-embedding",
+        "bio-orchestrator"
+      ]
     },
     {
       "name": "nutrigx-advisor",
