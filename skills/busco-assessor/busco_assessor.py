@@ -126,14 +126,17 @@ _SCORE_RE = re.compile(
 
 NCBI_EUTILS_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 NCBI_REQUEST_TIMEOUT = 15  # seconds
-NCBI_USER_AGENT = "ClawBio/1.0 (busco-assessor; contact: Ideatharit@gmail.com)"
+NCBI_USER_AGENT = os.environ.get(
+    "NCBI_USER_AGENT",
+    "ClawBio/1.0 (busco-assessor; contact: ops@clawbio.ai)",
+)
 NCBI_API_KEY = os.environ.get("NCBI_API_KEY", "")
 
 MAX_DOWNLOAD_BYTES = 200 * 1024 * 1024  # 200 MB hard cap for demo downloads
 
 # Ensembl Genomes: S. cerevisiae mitochondrial chromosome (~22 KB gzipped)
 DEMO_LIVE_URL = (
-    "http://ftp.ensemblgenomes.org/pub/fungi/release-62/fasta/"
+    "https://ftp.ensemblgenomes.org/pub/fungi/release-62/fasta/"
     "saccharomyces_cerevisiae/dna/"
     "Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.Mito.fa.gz"
 )
