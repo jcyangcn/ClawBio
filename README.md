@@ -9,7 +9,7 @@
   <a href="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml"><img src="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="#quick-start"><img src="https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=white" alt="Python 3.10+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
-  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-74_skills-orange" alt="ClawHub Skills"></a>
+  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-75_skills-orange" alt="ClawHub Skills"></a>
   <a href="https://doi.org/10.5281/zenodo.19420648"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.19420648.svg" alt="DOI"></a>
   <a href="https://github.com/ClawBio/ClawBio/issues"><img src="https://img.shields.io/github/issues/ClawBio/ClawBio" alt="Open Issues"></a>
   <a href="https://clawbio.github.io/ClawBio/slides/"><img src="https://img.shields.io/badge/slides-London_Bioinformatics_Meetup-purple" alt="Slides"></a>
@@ -54,7 +54,7 @@ Or install as a [Claude Code](https://claude.ai/claude-code) plugin: `/plugin ma
 
 ## What ClawBio Does Today
 
-**74 skills (26 production-ready) + 8,000 Galaxy tools + 1,756 tests + benchmark validation. Local-first. No cloud. No guessing.**
+**75 skills (27 production-ready) + 8,000 Galaxy tools + 2,027 tests + benchmark validation. Local-first. No cloud. No guessing.**
 
 > **v0.5.0 released** (4 Apr 2026): Validation and Benchmark Infrastructure. AD ground truth benchmark, mock API server for offline testing, swappable fine-mapping pipeline (SuSiE vs ABF), 74 benchmark tests, red/green TDD mandate. [Release notes](https://github.com/ClawBio/ClawBio/releases/tag/v0.5.0). DOI: [10.5281/zenodo.19420648](https://doi.org/10.5281/zenodo.19420648).
 
@@ -178,9 +178,9 @@ The exact contents can vary by skill, and some replays also require the original
 
 ---
 
-## Featured Skills
+## Skills
 
-A curated cross-section of ClawBio's 67 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
+A curated cross-section of ClawBio's 75 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
 
 | Skill | Scale | Description |
 |-------|-------|-------------|
@@ -196,6 +196,7 @@ A curated cross-section of ClawBio's 67 skills. The full machine-readable catalo
 | [Variant Annotation](skills/variant-annotation/) | Clinical | Annotate VCF variants with Ensembl VEP REST, ClinVar significance, gnomAD frequencies |
 | [Clinical Variant Reporter](skills/clinical-variant-reporter/) | Clinical | ACMG-guided clinical variant classification from VCF with GiAB validation |
 | [nf-core scRNA Wrapper](skills/nfcore-scrnaseq-wrapper/) | Single-cell | Upstream FASTQ → h5ad preprocessing via nf-core/scrnaseq (simpleaf, STARsolo, kallisto, CellRanger) with strict preflight and reproducibility bundle |
+| [nf-core RNA-seq Wrapper](skills/nfcore-rnaseq-wrapper/) | Bulk RNA-seq | Upstream FASTQ/BAM → count matrices via nf-core/rnaseq with strict preflight and reproducibility bundle |
 | [scRNA Orchestrator](skills/scrna-orchestrator/) | Single-cell | Scanpy automation: QC, optional doublet detection, clustering, markers, annotation |
 | [Equity Scorer](skills/equity-scorer/) | Systemic | HEIM diversity metrics from VCF or ancestry CSV |
 | [DnaSP](skills/dnasp/) | Population *(community)* | Python reimplementation of DnaSP 6: 16 population-genetics analyses (Pi, Tajima's D, Fst, Ka/Ks, McDonald-Kreitman) |
@@ -415,7 +416,7 @@ All skills are then available as agent-routable commands. Alternatively, clone t
 The repository also ships reusable slash commands in [`commands/`](commands/) for Claude Code and compatible agents:
 
 | Command | Purpose |
-|---------|-------|
+|---------|---------|
 | `/analyse` | Analyse a file or input with the appropriate ClawBio skill |
 | `/new-skill` | Scaffold a new skill from the official template |
 | `/list-skills` | List available skills from `skills/catalog.json` |
@@ -469,7 +470,7 @@ Core dependencies are declared in [`pyproject.toml`](pyproject.toml) and pinned 
 Some skills have additional requirements:
 
 | Skill | Extra dependency | Install |
-|-------|-----------------|-------|
+|-------|-----------------|---------|
 | Metagenomics | Kraken2, RGI, HUMAnN3 | Conda (see skill README) |
 | Methylation Clock | PyAging | `pip install pyaging` |
 | scRNA Embedding | scvi-tools | `pip install scvi-tools` |
@@ -601,7 +602,7 @@ See [docs/architecture.md](docs/architecture.md) for the full design.
 ClawBio is designed to be discovered and used by AI coding agents, not just humans.
 
 | Resource | Purpose |
-|----------|-------|
+|----------|---------|
 | [`llms.txt`](llms.txt) | Token-optimized project summary for any LLM ([llmstxt.org](https://llmstxt.org) standard) |
 | [`AGENTS.md`](AGENTS.md) | Universal guide for AI coding agents — setup, commands, style, structure, git workflow |
 | [`CLAUDE.md`](CLAUDE.md) | Claude-specific routing table, CLI reference, demo commands, safety rules |
@@ -616,7 +617,7 @@ Agents can also run `python clawbio.py list` to discover available skills progra
 Open skill requests (PRs welcome):
 
 | Skill | Domain |
-|-------|-------|
+|-------|--------|
 | **claw-gwas** | PLINK/REGENIE automation (statistical genetics) |
 | **claw-acmg** | Clinical variant classification (clinical genomics) |
 | **claw-pathway** | GO/KEGG enrichment (functional genomics) |

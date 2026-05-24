@@ -33,14 +33,23 @@ Usage in a skill
 
 from __future__ import annotations
 
+import re
+import shlex
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+# Shell variable references (e.g. ${SCRIPT_DIR}) are wrapped in double quotes
+# so they expand at replay time while surviving paths with spaces.  Plain user
+# values (paths, identifiers) are single-quoted via shlex.quote to prevent
+# accidental $VAR expansion or broken quoting.
+_SHELL_VAR_RE = re.compile(r"\$\{[^}]+\}")
 
-# Depth from reproducibility/ to repo root:
-# output/reproducibility/ -> output/ -> (anywhere) -> repo root
-# We anchor to SCRIPT_DIR and walk up to the repo root via a known marker.
+
+# The generated script walks up from its own location until it finds a
+# directory containing skills/ — this works regardless of nesting depth.
+# Skills that set CLAWBIO_REPO (e.g. nfcore-rnaseq-wrapper) patch the
+# generated script after the fact via _patch_commands_sh_repo_fallback.
 _ANCHOR_HEADER = """\
 #!/usr/bin/env bash
 # ClawBio reproducibility bundle — portable replay command
@@ -82,14 +91,19 @@ python "$SKILL_SCRIPT" \\
 
 
 def _format_value(val: Any) -> str:
-    """Return a shell-safe representation of a CLI argument value."""
+    """Return a shell-safe representation of a CLI argument value.
+
+    Values containing shell variable references like ${SCRIPT_DIR} are passed
+    through verbatim so they expand at replay time.  All other values are
+    single-quoted via shlex.quote, which safely handles spaces, dollar signs,
+    backticks, backslashes, and embedded quotes.
+    """
     if val is None:
         return ""
     s = str(val)
-    # If value contains spaces or special chars, quote it
-    if any(c in s for c in (" ", "\t", "$", "`", "\\", '"', "'")):
+    if _SHELL_VAR_RE.search(s):
         return f'"{s}"'
-    return s
+    return shlex.quote(s)
 
 
 def _make_output_portable(output_path: str) -> str:
@@ -142,12 +156,16 @@ def build_portable_commands_sh(
         script_name=script_name,
     )
 
-    # Build args block — each arg on its own indented line
+    # Build args block — each arg on its own indented line.
+    # List values emit the flag once per element (e.g. repeated --nextflow-config).
     arg_lines = []
     for flag, value in args.items():
         if value is None:
             # Boolean flag, no value
             arg_lines.append(f"    {flag}")
+        elif isinstance(value, list):
+            for item in value:
+                arg_lines.append(f"    {flag} {_format_value(item)}")
         else:
             formatted = _format_value(value)
             arg_lines.append(f"    {flag} {formatted}")
