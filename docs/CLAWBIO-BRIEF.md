@@ -69,7 +69,7 @@ flowchart TD
     analysed -->|"Specialist skill writes its outputs"| artifacts
 ```
 
-The diagram separates **selection** from **execution**. Bio Orchestrator first detects what kind of input or request it has received, then selects a suitable skill from the available registry. A user can override that suggestion by naming a skill directly through the CLI or API. `clawbio.py` then validates and launches the selected skill. The specialist skill performs the scientific work and is responsible for writing the report, tables, figures, and structured `result.json`. Where supported, reproducibility artifacts include `commands.sh`, `environment.yml`, and checksums. The structured `result.json` envelope is documented in [docs/skill-action-contract.md](skill-action-contract.md).
+The diagram separates **selection** from **execution**. Bio Orchestrator first detects what kind of input or request it has received, then selects a suitable skill from the available registry. A user can override that suggestion by naming a skill directly through the CLI or API. `clawbio.py` then validates and launches the selected skill. The specialist skill performs the scientific work and is responsible for writing the report, tables, figures, and structured `result.json`. Where supported, reproducibility artifacts include `commands.sh`, `environment.yml`, and checksums. The structured `result.json` fields are summarised in [docs/architecture.md](architecture.md#structured-next-steps).
 
 Some skills use shared helper code for standardised metadata, disclaimers, checksums, or replay commands, but that is an implementation detail for developers rather than a separate agent role.
 
