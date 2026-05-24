@@ -207,8 +207,13 @@ FOLDER_TO_ALIAS = {
     "profile-report": "profile",
     "galaxy-bridge": "galaxy",
     "bioconductor-bridge": "bioc",
+    "nfcore-scrnaseq-wrapper": "scrnaseq-pipeline",
+    "nfcore-rnaseq-wrapper": "rnaseq-pipeline",
     "rnaseq-de": "rnaseq",
     "diff-visualizer": "diffviz",
+    "sample-qc-triage": "sample-qc",
+    "crispr-screen-triage": "crispr-triage",
+    "marker-dominance-mapper": "marker-map",
     "llm-biobank-bench": "llm-bench",
 }
 
@@ -218,13 +223,17 @@ EXCLUDED_FOLDERS = {"pr-audit", "wes-clinical-report-es"}
 # Skills that are MVP (have working Python + are in SKILLS dict or are bio-orchestrator)
 MVP_FOLDERS = {
     "pharmgx-reporter", "equity-scorer", "nutrigx_advisor", "claw-metagenomics",
-    "scrna-orchestrator", "scrna-embedding",
+    "nfcore-scrnaseq-wrapper", "nfcore-rnaseq-wrapper", "scrna-orchestrator", "scrna-embedding",
     "genome-compare", "drug-photo", "gwas-prs", "clinpgx", "gwas-lookup",
     "bigquery-public",
     "profile-report", "bio-orchestrator", "claw-ancestry-pca", "claw-semantic-sim",
     "ukb-navigator", "galaxy-bridge", "rnaseq-de", "diff-visualizer",
     "bioconductor-bridge",
+    "sample-qc-triage",
+    "crispr-screen-triage",
+    "marker-dominance-mapper",
     "llm-biobank-bench",
+    "analyze-fasta",
 }
 
 # Known trigger keywords for orchestrator routing
@@ -239,6 +248,8 @@ TRIGGER_KEYWORDS: dict[str, list[str]] = {
     "genome-compare": ["genome comparison", "IBS", "George Church", "Corpasome", "pairwise"],
     "equity-scorer": ["HEIM", "equity", "FST", "heterozygosity", "population representation"],
     "nutrigx_advisor": ["nutrition", "nutrigenomics", "diet genetics", "MTHFR", "caffeine", "lactose"],
+    "nfcore-scrnaseq-wrapper": ["scrnaseq", "nf-core scrnaseq", "single-cell preprocessing", "10x fastq", "generate h5ad from fastq"],
+    "nfcore-rnaseq-wrapper": ["bulk RNA-seq preprocessing", "nf-core rnaseq", "run rnaseq from fastq", "FASTQ to count matrix", "STAR Salmon RNA-seq pipeline"],
     "scrna-orchestrator": ["single-cell", "scrna", "h5ad", "mtx", "10x", "scanpy", "umap", "leiden"],
     "scrna-embedding": ["scvi", "scanvi", "latent", "embedding", "integration", "batch correction", "10x"],
     "rnaseq-de": ["differential expression", "bulk rna", "rna-seq", "count matrix", "deseq2", "pydeseq2"],
@@ -251,6 +262,10 @@ TRIGGER_KEYWORDS: dict[str, list[str]] = {
     "llm-biobank-bench": ["llm benchmark", "benchmark language models", "biobank knowledge retrieval", "coverage score", "weighted coverage", "model comparison biobank"],
     "galaxy-bridge": ["galaxy", "usegalaxy", "tool shed", "bioblend", "run on galaxy", "galaxy tool", "galaxy workflow", "NGS pipeline"],
     "bioconductor-bridge": ["bioconductor", "bioc", "biocmanager", "summarizedexperiment", "singlecellexperiment", "genomicranges", "variantannotation", "annotationhub", "experimenthub"],
+    "sample-qc-triage": ["sample QC triage", "sample identity", "sex mismatch", "fingerprint concordance", "contamination", "batch shift", "low complexity"],
+    "crispr-screen-triage": ["CRISPR screen", "guide counts", "rank CRISPR hits", "depleted genes", "knockout screen", "hit triage"],
+    "marker-dominance-mapper": ["marker dominance", "map marker spots", "marker-based tissue regions", "tumor core", "immune edge"],
+    "analyze-fasta": ["fasta", "analyze fasta", "gc content", "find orfs", "isoelectric point", "gravy index", "protein properties"],
 }
 
 # Known chaining partners
@@ -265,6 +280,8 @@ CHAINING: dict[str, list[str]] = {
     "genome-compare": ["claw-ancestry-pca", "profile-report"],
     "equity-scorer": ["claw-semantic-sim"],
     "nutrigx_advisor": ["profile-report", "pharmgx-reporter"],
+    "nfcore-scrnaseq-wrapper": ["scrna-orchestrator", "scrna-embedding", "bio-orchestrator"],
+    "nfcore-rnaseq-wrapper": ["rnaseq-de", "diff-visualizer", "bio-orchestrator"],
     "scrna-orchestrator": [],
     "scrna-embedding": ["scrna-orchestrator"],
     "rnaseq-de": ["diff-visualizer"],
@@ -277,6 +294,10 @@ CHAINING: dict[str, list[str]] = {
     "llm-biobank-bench": ["ukb-navigator", "pubmed-summariser", "lit-synthesizer"],
     "galaxy-bridge": ["pharmgx-reporter", "claw-metagenomics", "equity-scorer", "vcf-annotator"],
     "bioconductor-bridge": ["rnaseq-de", "scrna-orchestrator", "diff-visualizer", "bio-orchestrator"],
+    "sample-qc-triage": ["multiqc-reporter", "seq-wrangler"],
+    "crispr-screen-triage": ["target-validation-scorer", "omics-target-evidence-mapper"],
+    "marker-dominance-mapper": ["scrna-orchestrator", "diff-visualizer"],
+    "analyze-fasta": ["struct-predictor", "variant-annotation", "pubmed-summariser"],
 }
 
 

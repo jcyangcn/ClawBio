@@ -9,7 +9,7 @@
   <a href="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml"><img src="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="#quick-start"><img src="https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=white" alt="Python 3.10+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
-  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-55_skills-orange" alt="ClawHub Skills"></a>
+  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-75_skills-orange" alt="ClawHub Skills"></a>
   <a href="https://doi.org/10.5281/zenodo.19420648"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.19420648.svg" alt="DOI"></a>
   <a href="https://github.com/ClawBio/ClawBio/issues"><img src="https://img.shields.io/github/issues/ClawBio/ClawBio" alt="Open Issues"></a>
   <a href="https://clawbio.github.io/ClawBio/slides/"><img src="https://img.shields.io/badge/slides-London_Bioinformatics_Meetup-purple" alt="Slides"></a>
@@ -22,7 +22,14 @@
 ```bash
 git clone https://github.com/ClawBio/ClawBio.git
 cd ClawBio
-pip install -r requirements.txt    # Python 3.10+
+uv sync                            # Python 3.11+ (installs from pyproject.toml + uv.lock)
+uv run python clawbio.py run pharmgx --demo
+```
+
+Don't have [uv](https://docs.astral.sh/uv/)? Install it with `curl -LsSf https://astral.sh/uv/install.sh | sh` (Linux/macOS) or `brew install uv` (macOS via Homebrew), or use pip instead:
+
+```bash
+pip install -e .                   # reads pyproject.toml
 python clawbio.py run pharmgx --demo
 ```
 
@@ -47,7 +54,7 @@ Or install as a [Claude Code](https://claude.ai/claude-code) plugin: `/plugin ma
 
 ## What ClawBio Does Today
 
-**55 skills + 8,000 Galaxy tools + 1,356 tests + benchmark validation. Local-first. No cloud. No guessing.**
+**75 skills (27 production-ready) + 8,000 Galaxy tools + 2,027 tests + benchmark validation. Local-first. No cloud. No guessing.**
 
 > **v0.5.0 released** (4 Apr 2026): Validation and Benchmark Infrastructure. AD ground truth benchmark, mock API server for offline testing, swappable fine-mapping pipeline (SuSiE vs ABF), 74 benchmark tests, red/green TDD mandate. [Release notes](https://github.com/ClawBio/ClawBio/releases/tag/v0.5.0). DOI: [10.5281/zenodo.19420648](https://doi.org/10.5281/zenodo.19420648).
 
@@ -62,7 +69,7 @@ Snap a photo of a medication in Telegram. ClawBio identifies the drug from the p
 
 Or take any genetic variant (identified by its rsID — a unique label like [rs9923231](https://www.ncbi.nlm.nih.gov/snp/rs9923231)) and search nine genomic databases at once to find every known disease association, tissue-specific effect, and population frequency. Or estimate your genetic predisposition to conditions like type 2 diabetes by combining thousands of small-effect variants into a single polygenic risk score. Or explore the [UK Biobank](https://www.ukbiobank.ac.uk/) — a half-million-person research dataset — by asking in plain English what fields measure blood pressure, grip strength, or depression, and get back the exact field IDs, descriptions, and linked publications you need.
 
-Every result ships with a reproducibility bundle: `commands.sh`, `environment.yml`, and SHA-256 checksums. A reviewer can reproduce your Figure 3 in 30 seconds without emailing you.
+Many ClawBio analyses write a `reproducibility/` bundle with replay commands, environment metadata, and output checksums. The exact files can vary by skill, and some replays still require the original external inputs to be present. See [docs/reproducibility.md](docs/reproducibility.md).
 
 ---
 
@@ -99,7 +106,7 @@ python tests/benchmark/benchmark_scorer.py --genes "APP,BIN1,CLU,TREM2,GAPDH"
 python tests/benchmark/mock_api_server.py &
 ```
 
-**74 benchmark tests**, all green. See [CHANGELOG.md](CHANGELOG.md) for full details.
+**74 benchmark tests** at v0.5.0 baseline, all green. The public leaderboard now tracks **168 / 182 tests passing (92.3%)** across 10 audited skills, up from 80 / 140 (57.1%) at the original audit. See [benchmarks.html](https://clawbio.ai/benchmarks.html) for the live leaderboard and [CHANGELOG.md](CHANGELOG.md) for full details.
 
 ---
 
@@ -118,11 +125,11 @@ You read a paper. You want to reproduce Figure 3. So you:
 Now imagine the same paper published a **skill**:
 
 ```bash
-python ancestry_pca.py --demo --output fig3
-# Figure 3 reproduced. Identical. SHA-256 verified. 30 seconds.
+python skills/claw-ancestry-pca/ancestry_pca.py --demo --output fig3
+# Example demo output regenerated. Verify bundled checksums where provided.
 ```
 
-**That's ClawBio.** Every figure in your paper should be one command away from reproduction.
+**That's ClawBio.** The goal is to make replayable bioinformatics workflows straightforward when a skill ships demo data and helper-backed reproducibility outputs.
 
 ---
 
@@ -130,7 +137,7 @@ python ancestry_pca.py --demo --output fig3
 
 Current agentic bioinformatics systems address either the **reasoning layer** (constraining LLM outputs with knowledge graphs or fine-tuning) or the **connectivity layer** (wrapping tools as MCP servers). Neither addresses the **specification layer**: the encoding of a domain expert's analytical decisions into a machine-readable contract that constrains agent behaviour. Without this layer, the agent must reconstruct expert knowledge from its training distribution, a stochastic, unversioned process.
 
-A **skill** is a self-contained directory comprising a declarative specification (`SKILL.md`), validated Python code, demo data, and a reproducibility bundle (`commands.sh`, `environment.yml`, SHA-256 checksums). The specification is a contract, not a prompt: it encodes the domain expert's analytical decisions so the LLM orchestrates but does not improvise.
+A **skill** is a self-contained directory comprising a declarative specification (`SKILL.md`), validated Python code, demo data, and reproducibility support. In many skills, that includes a `reproducibility/` bundle with `commands.sh`, `environment.yml`, and SHA-256 checksums, sometimes with extra lock metadata such as `runtime-lock.json`. The specification is a contract, not a prompt: it encodes the domain expert's analytical decisions so the LLM orchestrates but does not improvise.
 
 ```
 Ad-hoc LLM code generation  = stochastic, unversioned, unverifiable
@@ -140,7 +147,7 @@ ClawBio skill                = specification-constrained, versioned, reproducibl
 - **Specification-first**: Domain expertise resides in `SKILL.md`, not in model weights. Specifications are versioned, human-readable, peer-reviewable, and trivially updatable.
 - **Agent-agnostic**: Skills execute identically whether invoked by Claude, ChatGPT, or a locally hosted model via Ollama. Reproducibility is decoupled from any specific AI vendor.
 - **Local-first**: Your genomic data never leaves your laptop. No cloud uploads, no data exfiltration.
-- **Reproducible**: Every analysis exports `commands.sh`, `environment.yml`, and SHA-256 checksums. Anyone can reproduce it without the agent.
+- **Reproducible**: Many skills export replay metadata such as `commands.sh`, `environment.yml`, and SHA-256 checksums so runs can be rechecked without the original agent session.
 - **MIT licensed**: Open-source, free, community-driven.
 
 ## Why Not Just Use an LLM?
@@ -153,73 +160,52 @@ An LLM should not be improvising these from training data. ClawBio encodes the c
 
 ## Provenance and Reproducibility
 
-Every ClawBio analysis ships with a **reproducibility bundle** — not as an afterthought, but as part of the output:
+ClawBio's current reproducibility contract centers on a **`reproducibility/` bundle** written inside the output directory for skills that use the shared reproducibility helpers:
 
 ```
 report/
 ├── report.md              # Full analysis with figures and tables
 ├── figures/               # Publication-quality PNGs
 ├── tables/                # CSV data tables
-├── commands.sh            # Exact commands to reproduce
-├── environment.yml        # Conda environment snapshot
-└── checksums.sha256       # SHA-256 of every input and output file
+├── reproducibility/
+│   ├── commands.sh        # Replay command for this run
+│   ├── environment.yml    # Suggested Conda environment snapshot
+│   ├── checksums.sha256   # SHA-256 for selected output files
+│   └── runtime-lock.json  # Optional extra lock metadata when supported
 ```
 
-**Why this matters**: a reviewer can re-run your analysis in 30 seconds. A collaborator can reproduce your Figure 3 without emailing you. Future-you can regenerate results two years later from the same bundle.
+The exact contents can vary by skill, and some replays also require the original external inputs or tools to be available locally. For a user-facing walkthrough, including a truthful `multiqc-reporter` example based on direct script invocation, see [docs/reproducibility.md](docs/reproducibility.md).
 
 ---
 
 ## Skills
 
-| Skill | Status | Description |
-|-------|--------|-------------|
-| [Bio Orchestrator](skills/bio-orchestrator/) | **MVP** | Routes requests to the right skill automatically |
-| [PharmGx Reporter](skills/pharmgx-reporter/) | **MVP** | 12 genes, 51 drugs, CPIC guidelines from consumer genetic data |
-| [Drug Photo](skills/drug-photo/) | **MVP** | Snap a medication photo → personalised dosage card from your genotype |
-| [ClinPGx](skills/clinpgx/) | **MVP** | Gene-drug lookup from ClinPGx, PharmGKB, CPIC, and FDA drug labels |
-| [GWAS Lookup](skills/gwas-lookup/) | **MVP** | Federated variant query across 9 genomic databases |
-| [GWAS PRS](skills/gwas-prs/) | **MVP** | Polygenic risk scores from the PGS Catalog for 6+ traits |
-| [Profile Report](skills/profile-report/) | **MVP** | Unified personal genomic report: PGx + ancestry + PRS + nutrigenomics |
-| [UKB Navigator](skills/ukb-navigator/) | **MVP** | Semantic search across the UK Biobank schema |
-| [Equity Scorer](skills/equity-scorer/) | **MVP** | HEIM diversity metrics from VCF or ancestry CSV |
-| [NutriGx Advisor](skills/nutrigx_advisor/) | **MVP** *(community)* | Personalised nutrigenomics — 40 SNPs, 13 dietary domains |
-| [Metagenomics Profiler](skills/claw-metagenomics/) | **MVP** | Kraken2 / RGI / HUMAnN3 taxonomy, resistome, and functional profiles |
-| [Ancestry PCA](skills/claw-ancestry-pca/) | **MVP** | PCA vs SGDP (345 samples, 164 populations) with confidence ellipses |
-| [Semantic Similarity](skills/claw-semantic-sim/) | **MVP** | Semantic Isolation Index from 13.1M PubMed abstracts |
-| [Genome Comparator](skills/genome-compare/) | **MVP** | Pairwise IBS vs George Church (PGP-1) + ancestry estimation |
-| [Galaxy Bridge](skills/galaxy-bridge/) | **MVP** | Search, run, and chain 8,000+ Galaxy bioinformatics tools |
-| [RNA-seq DE](skills/rnaseq-de/) | **MVP** | Bulk/pseudo-bulk differential expression with QC + PCA + contrasts |
-| [Methylation Clock](skills/methylation-clock/) | **MVP** | Epigenetic age from methylation arrays with PyAging clocks |
-| [scRNA Embedding](skills/scrna-embedding/) | **MVP** | scVI/scANVI latent embedding, batch integration, and stable `integrated.h5ad` export for downstream latent analysis |
-| [scRNA Orchestrator](skills/scrna-orchestrator/) | **MVP** | Scanpy automation: QC, optional doublet detection, clustering, markers, annotation, latent downstream mode, contrastive markers |
-| [Diff Visualizer](skills/diff-visualizer/) | **MVP** | Rich downstream visualisation for bulk RNA-seq DE and scRNA marker/contrast outputs |
-| [Proteomics DE](skills/proteomics-de/) | **MVP** | Differential expression for label-free quantitative (LFQ) intensity data (MaxQuant, DIA-NN) |
-| [Variant Annotation](skills/variant-annotation/) | **MVP** | Annotate VCF variants with Ensembl VEP REST, ClinVar significance, gnomAD frequencies |
-| [Bioconductor Bridge](skills/bioconductor-bridge/) | **MVP** | Bioconductor package discovery, workflow recommendation, and starter code generation |
-| [Clinical Trial Finder](skills/clinical-trial-finder/) | **MVP** | Find clinical trials for a gene, variant, or condition from ClinicalTrials.gov + EUCTR |
-| [Data Extractor](skills/data-extractor/) | **MVP** | Extract numerical data from scientific figure images using Claude vision + OpenCV calibration |
-| [Illumina Bridge](skills/illumina-bridge/) | **MVP** | Import DRAGEN-exported Illumina result bundles for local tertiary analysis |
-| [Protocols.io](skills/protocols-io/) | **MVP** | Search, browse, and retrieve scientific protocols from protocols.io via REST API |
-| [PubMed Summariser](skills/pubmed-summariser/) | **MVP** | PubMed search with structured research briefings of top recent papers |
-| [Omics Target Evidence Mapper](skills/omics-target-evidence-mapper/) | **MVP** | Aggregate public target-level evidence across omics and translational sources |
-| [Target Validation Scorer](skills/target-validation-scorer/) | **MVP** | Evidence-grounded target validation scoring with GO/NO-GO decisions for drug discovery |
-| [Soul2DNA](skills/soul2dna/) | **MVP** | Compile SOUL.md character profiles into synthetic diploid genomes |
-| [GenomeMatch](skills/genome-match/) | **MVP** | Score genetic compatibility across all M x F pairings per generation |
-| [Recombinator](skills/recombinator/) | **MVP** | Produce offspring via meiotic recombination, mutation, and clinical eval |
-| [Fine-Mapping](skills/fine-mapping/) | **MVP** | SuSiE/ABF credible sets with posterior inclusion probabilities from GWAS summary stats |
-| [Clinical Variant Reporter](skills/clinical-variant-reporter/) | **MVP** | ACMG-guided clinical variant classification from VCF with GiAB validation |
-| [WES Clinical Report](skills/wes-clinical-report-es/) | **MVP** | Whole-exome sequencing clinical report generation |
-| [LLM Biobank Bench](skills/llm-biobank-bench/) | **MVP** | Benchmark LLMs on biobank knowledge retrieval and coverage scoring |
-| [VCF Annotator](skills/vcf-annotator/) | Planned | Legacy VCF annotation pipeline (see Variant Annotation for the active skill) |
-| [Lit Synthesizer](skills/lit-synthesizer/) | Planned | PubMed/bioRxiv search with LLM summarisation and citation graphs |
-| [Struct Predictor](skills/struct-predictor/) | Planned | AlphaFold/Boltz local structure prediction |
-| [Repro Enforcer](skills/repro-enforcer/) | Planned | Export any analysis as Conda env + Singularity + Nextflow pipeline |
-| [Labstep](skills/labstep/) | Planned | Labstep electronic lab notebook API integration |
-| [Seq Wrangler](skills/seq-wrangler/) | Planned | Sequence QC, alignment, and BAM processing (FastQC, BWA, SAMtools) |
+A curated cross-section of ClawBio's 75 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
+
+| Skill | Scale | Description |
+|-------|-------|-------------|
+| [Bio Orchestrator](skills/bio-orchestrator/) | Infrastructure | Routes free-text or file inputs to the right skill automatically |
+| [PharmGx Reporter](skills/pharmgx-reporter/) | Personal | 12 genes, 51 drugs, CPIC guidelines from consumer genetic data |
+| [Drug Photo](skills/drug-photo/) | Personal | Snap a medication photo, get a personalised dosage card from your genotype |
+| [GWAS Lookup](skills/gwas-lookup/) | Population | Federated variant query across 9 genomic databases (gnomAD, ClinVar, Open Targets, GTEx, LDlink, ...) |
+| [GWAS PRS](skills/gwas-prs/) | Population | Polygenic risk scores from the PGS Catalog for 6+ traits |
+| [Ancestry PCA](skills/claw-ancestry-pca/) | Population | PCA vs SGDP (345 samples, 164 populations) with confidence ellipses |
+| [Fine-Mapping](skills/fine-mapping/) | Population | SuSiE / ABF credible sets with posterior inclusion probabilities from GWAS summary stats |
+| [UKB Navigator](skills/ukb-navigator/) | Research | Semantic search across the UK Biobank schema (22,000+ fields) |
+| [Galaxy Bridge](skills/galaxy-bridge/) | Research | Search, run, and chain 8,000+ Galaxy bioinformatics tools |
+| [Variant Annotation](skills/variant-annotation/) | Clinical | Annotate VCF variants with Ensembl VEP REST, ClinVar significance, gnomAD frequencies |
+| [Clinical Variant Reporter](skills/clinical-variant-reporter/) | Clinical | ACMG-guided clinical variant classification from VCF with GiAB validation |
+| [nf-core scRNA Wrapper](skills/nfcore-scrnaseq-wrapper/) | Single-cell | Upstream FASTQ → h5ad preprocessing via nf-core/scrnaseq (simpleaf, STARsolo, kallisto, CellRanger) with strict preflight and reproducibility bundle |
+| [nf-core RNA-seq Wrapper](skills/nfcore-rnaseq-wrapper/) | Bulk RNA-seq | Upstream FASTQ/BAM → count matrices via nf-core/rnaseq with strict preflight and reproducibility bundle |
+| [scRNA Orchestrator](skills/scrna-orchestrator/) | Single-cell | Scanpy automation: QC, optional doublet detection, clustering, markers, annotation |
+| [Equity Scorer](skills/equity-scorer/) | Systemic | HEIM diversity metrics from VCF or ancestry CSV |
+| [DnaSP](skills/dnasp/) | Population *(community)* | Python reimplementation of DnaSP 6: 16 population-genetics analyses (Pi, Tajima's D, Fst, Ka/Ks, McDonald-Kreitman) |
+
+For the complete list including pharmacogenomics extensions, single-cell tooling, proteomics, methylation, metagenomics, structure prediction, clinical reporting, and meta-skills, see [`skills/catalog.json`](skills/catalog.json) or run `python clawbio.py list`.
 
 ### Contributing a Skill
 
-Wrap your bioinformatics pipeline as a skill and submit a PR. One community-contributed skill (NutriGx Advisor) is already in production; eight more have specifications authored and are awaiting implementation.
+Wrap your bioinformatics pipeline as a skill and submit a PR. Several community-contributed skills are now in production (NutriGx Advisor, analyze-fasta, WGS-PRS, DnaSP, ClawPathy Autoresearch, and others). See [skills/catalog.json](skills/catalog.json) for the full list with status flags.
 
 ```bash
 cp templates/SKILL-TEMPLATE.md skills/<your-skill-name>/SKILL.md
@@ -391,11 +377,11 @@ To experience that orchestration layer conversationally, ClawBio can be used thr
 
 ```bash
 git clone https://github.com/ClawBio/ClawBio.git && cd ClawBio
-pip install -r requirements.txt
-python clawbio.py run pharmgx --demo
+uv sync                                  # or: pip install -e .
+uv run python clawbio.py run pharmgx --demo
 ```
 
-PharmGx demo runs in <2 seconds. Only needs Python 3.10+.
+PharmGx demo runs in <2 seconds. Only needs Python 3.10+. Dependencies and the locked dependency graph live in `pyproject.toml` and `uv.lock`.
 
 > **Note:** ClawBio is currently installed by cloning the repository. There is no `pip install clawbio` package yet (planned for a future release).
 
@@ -424,6 +410,17 @@ Inside [Claude Code](https://claude.ai/claude-code):
 ```
 
 All skills are then available as agent-routable commands. Alternatively, clone the repo and open it as your working directory in Claude Code; the `CLAUDE.md` at the repo root teaches Claude how to route requests to skills automatically.
+
+### Slash Commands
+
+The repository also ships reusable slash commands in [`commands/`](commands/) for Claude Code and compatible agents:
+
+| Command | Purpose |
+|---------|---------|
+| `/analyse` | Analyse a file or input with the appropriate ClawBio skill |
+| `/new-skill` | Scaffold a new skill from the official template |
+| `/list-skills` | List available skills from `skills/catalog.json` |
+| `/run-demo` | Run a skill demo with built-in sample data |
 
 ### Try all skills
 
@@ -461,13 +458,14 @@ python clawbio.py run methylation --geo-id GSE139307 --output results_methylatio
 ### Run tests
 
 ```bash
-pip install pytest
-python -m pytest
+uv run pytest                # or: pip install pytest && python -m pytest
 ```
 
 ### Dependencies
 
-Core dependencies (`requirements.txt`): biopython, pandas, numpy, scikit-learn, matplotlib, openai, pydeseq2. Most skills run with just these.
+Core dependencies are declared in [`pyproject.toml`](pyproject.toml) and pinned in [`uv.lock`](uv.lock): biopython, pandas, numpy, scikit-learn, matplotlib, openai, pydeseq2, google-cloud-bigquery, google-auth, conda-lock, rocrate. Most skills run with just these.
+
+`uv sync` installs everything in a reproducible virtual environment. To add or update a dependency, run `uv add <package>` (or edit `pyproject.toml` and re-run `uv sync`); commit the resulting `uv.lock` change.
 
 Some skills have additional requirements:
 

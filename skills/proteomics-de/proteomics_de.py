@@ -3,13 +3,21 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from clawbio.common.reproducibility import (  # noqa: E402
+    ReproCommand,
+    ReproPath,
+    write_checksums,
+    write_environment_yml,
+    write_portable_commands_sh,
+    write_ro_crate,
+)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -305,10 +313,9 @@ def s0_based_FDR_correction(fc_pvalue_df: pd.DataFrame, degree_of_freedom: int, 
     conditions = [
         (fc_pvalue_df[fc_col] > ta * s0) & (fc_pvalue_df['-log10(pvalue)'] >= fc_pvalue_df['s0_corrected_-log10(pvalue)']),
         (fc_pvalue_df[fc_col] < -ta * s0) & (fc_pvalue_df['-log10(pvalue)'] >= fc_pvalue_df['s0_corrected_-log10(pvalue)']),
-        True
     ]
-    choices = ['upregulated', 'downregulated', 'non significant']
-    fc_pvalue_df['regulation'] = np.select(conditions, choices)
+    choices = ['upregulated', 'downregulated']
+    fc_pvalue_df['regulation'] = np.select(conditions, choices, default='non significant')
 
     return fc_pvalue_df
 
@@ -358,9 +365,6 @@ def run_differential_expression(
 
     # Apply FDR correction with s0
     result = s0_based_FDR_correction(result, degree_of_freedom=ttest_df, fdr=fdr, s0=s0)
-
-    # Remove padj column
-    result = result.drop(columns=["padj"])
 
     return result
 
@@ -455,12 +459,35 @@ def plot_volcano(de_results: pd.DataFrame, outpath: Path, s0: float = 0.1, fdr: 
     plt.close()
 
 
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk)
-    return h.hexdigest()
+def repro_command_for_bundle(
+    output_dir: Path,
+    input_path: Path,
+    input_type: str,
+    metadata_path: Path,
+    contrast: str,
+    s0: float,
+    fdr: float,
+    ttest_df: int,
+    imputation_shift: float,
+    imputation_scale: float,
+) -> ReproCommand:
+    """Build the structured ReproCommand for the proteomics-de reproducibility bundle."""
+    return ReproCommand(
+        script_path=Path("skills/proteomics-de/proteomics_de.py"),
+        args=[
+            "--input", ReproPath(input_path, anchor="auto"),
+            "--input-type", input_type,
+            "--metadata", ReproPath(metadata_path, anchor="auto"),
+            "--contrast", contrast,
+            "--s0", str(s0),
+            "--fdr", str(fdr),
+            "--ttest-df", str(ttest_df),
+            "--imputation-shift", str(imputation_shift),
+            "--imputation-scale", str(imputation_scale),
+            "--output", ReproPath(output_dir, anchor="output_dir"),
+        ],
+        comment="Replay this ClawBio proteomics-de run",
+    )
 
 
 def write_repro_files(
@@ -476,46 +503,27 @@ def write_repro_files(
     imputation_scale: float,
 ) -> None:
     """Write reproducibility files (commands, environment, checksums)"""
-    repro_dir = output_dir / "reproducibility"
-    repro_dir.mkdir(parents=True, exist_ok=True)
-
-    commands = (
-        "python proteomics_de.py "
-        f"--input {input_path} "
-        f"--input-type {input_type} "
-        f"--metadata {metadata_path} "
-        f"--contrast \"{contrast}\" "
-        f"--s0 {s0} "
-        f"--fdr {fdr} "
-        f"--ttest-df {ttest_df} "
-        f"--imputation-shift {imputation_shift} "
-        f"--imputation-scale {imputation_scale} "
-        f"--output {output_dir}\n"
+    write_portable_commands_sh(
+        output_dir,
+        repro_command_for_bundle(
+            output_dir, input_path, input_type, metadata_path,
+            contrast, s0, fdr, ttest_df, imputation_shift, imputation_scale,
+        ),
+        repo_root=_PROJECT_ROOT,
     )
-    (repro_dir / "commands.sh").write_text(commands)
 
-    env = """name: clawbio-proteomics-de
-channels:
-  - conda-forge
-dependencies:
-  - python>=3.10
-  - pandas
-  - numpy
-  - matplotlib
-  - scikit-learn
-  - scipy
-  - seaborn
-"""
-    (repro_dir / "environment.yml").write_text(env)
+    write_environment_yml(
+        output_dir,
+        env_name="clawbio-proteomics-de",
+        pip_deps=["pandas", "numpy", "matplotlib", "scikit-learn", "scipy", "seaborn"],
+        python_version="3.10",
+    )
 
-    checksums = []
-    for path in [input_path, metadata_path]:
-        checksums.append(f"{_sha256(path)}  {path.name}")
-    for path in sorted((output_dir / "tables").glob("*.csv")):
-        checksums.append(f"{_sha256(path)}  tables/{path.name}")
-    for path in sorted((output_dir / "figures").glob("*.png")):
-        checksums.append(f"{_sha256(path)}  figures/{path.name}")
-    (repro_dir / "checksums.sha256").write_text("\n".join(checksums) + "\n")
+    checksum_paths = [
+        *sorted((output_dir / "tables").glob("*.csv")),
+        *sorted((output_dir / "figures").glob("*.png")),
+    ]
+    write_checksums(checksum_paths, output_dir, anchor=output_dir)
 
 
 def run_analysis(
@@ -657,6 +665,7 @@ def run_analysis(
 - Commands: `reproducibility/commands.sh`
 - Environment: `reproducibility/environment.yml`
 - Checksums: `reproducibility/checksums.sha256`
+- Provenance: `ro-crate-metadata.json`
 
 ## Disclaimer
 {DISCLAIMER}
@@ -733,6 +742,24 @@ def main() -> None:
         ttest_df=args.ttest_df,
         imputation_shift=args.imputation_shift,
         imputation_scale=args.imputation_scale,
+    )
+
+    write_ro_crate(
+        Path(args.output),
+        skill_name="proteomics-de",
+        skill_version="0.1.0",
+        script_path="skills/proteomics-de/proteomics_de.py",
+        description="Proteomics differential expression from LFQ or DIA-NN data",
+        params={
+            "input_type": args.input_type,
+            "contrast": args.contrast,
+            "s0": args.s0,
+            "fdr": args.fdr,
+            "ttest_df": args.ttest_df,
+            "imputation_shift": args.imputation_shift,
+            "imputation_scale": args.imputation_scale,
+            "demo": args.demo,
+        },
     )
 
     print(pd.Series(result).to_json(indent=2))

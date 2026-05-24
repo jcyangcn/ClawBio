@@ -65,6 +65,7 @@ You are **Affinity Proteomics**, a specialised ClawBio agent for Olink and SomaL
 3. **Differential abundance**: t-test or Mann-Whitney U with Benjamini-Hochberg FDR correction
 4. **Visualisation**: Volcano plot, heatmap (top N proteins), PCA plot
 5. **Structured reporting**: Markdown report, result.json, per-protein TSV, reproducibility bundle
+6. **Skill Action Menu**: `result.json` includes a workflow state plus read-only follow-up actions for compact report cards
 
 ## Input Formats
 
@@ -101,6 +102,53 @@ python clawbio.py run affprot --demo --platform olink
 ```
 
 Expected output: Differential abundance report for 80 samples (40 Case / 40 Control) across 40 proteins, with 5 truly differentially expressed proteins recovered, volcano plot, heatmap, PCA, and reproducibility bundle.
+
+## Output Structure
+
+- `report.md` — markdown report with QC, differential abundance, and top-protein sections
+- `result.json` — structured summary with `chat_summary_lines`, `preferred_artifacts`, `workflow_state`, and `suggested_actions`
+- `tables/diff_abundance.tsv` — per-protein differential abundance table
+- `figures/volcano.png`, `figures/heatmap.png`, `figures/pca.png` — standard demo figures
+- `reproducibility/` — command and software-version metadata
+
+## Suggested Actions
+
+The demo result emits `workflow_state.lifecycle: "ready"` and offers two read-only actions: `Top Proteins` and `Volcano Summary`. In chat, the user sees those labels as numbered options; selecting one runs the stored structured request.
+
+`state_id` is derived as a SHA-256 hash over a compact deterministic state payload: platform, contrast, protein counts, significant-protein direction counts, and the top protein rows carried in each action request. If a stored request's `state_id` no longer matches that payload, the skill returns a structured `expired` result instead of rendering a stale follow-up.
+
+```json
+{
+  "workflow_state": {
+    "state_schema": "affinity_proteomics.workflow_state.v1",
+    "state_id": "sha256:...",
+    "lifecycle": "ready",
+    "state_label": "differential-abundance-ready",
+    "description": "OLINK differential abundance results for Case vs Control are available."
+  },
+  "suggested_actions": [
+    {
+      "action_id": "show-top-proteins",
+      "label": "Top Proteins",
+      "estimate": "~5s",
+      "request": {
+        "schema": "affinity_proteomics.action_request.v1",
+        "action": "top-proteins",
+        "state_schema": "affinity_proteomics.workflow_state.v1",
+        "state_id": "sha256:...",
+        "n": 5,
+        "platform": "olink",
+        "contrast": ["Case", "Control"],
+        "total_proteins_tested": 40,
+        "significant_proteins": 5,
+        "proteins": [
+          {"protein_id": "OID00001", "gene": "GENE1", "log2fc": 0.0, "padj": "0.00e+00"}
+        ]
+      }
+    }
+  ]
+}
+```
 
 ## Dependencies
 

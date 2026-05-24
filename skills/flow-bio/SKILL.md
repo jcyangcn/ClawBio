@@ -64,7 +64,7 @@ metadata:
     emoji: 🌊
     homepage: https://flow.bio
     os:
-    - macos
+    - darwin
     - linux
     install:
     - kind: pip

@@ -76,7 +76,7 @@ python data_extractor.py --demo
 
 ### API (importable)
 ```python
-from api import run
+from data_extractor_api import run
 result = run(options={"image_path": "figure.png", "output_dir": "results/"})
 ```
 
