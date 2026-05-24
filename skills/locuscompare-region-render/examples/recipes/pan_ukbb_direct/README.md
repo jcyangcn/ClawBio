@@ -56,7 +56,7 @@ bash skills/locuscompare-region-render/examples/recipes/pan_ukbb_direct/harmonis
 - **Ancestry-matched LD reference**: If using EUR sumstats, use 1000G EUR for LD
   (matches locuscompare's default). For AFR/EAS/etc., use the matching 1000G
   super-pop or a dedicated reference. Pan-UKBB ships LD scores for each
-  super-pop; locuscompare currently uses 1000G via plink2.
+  super-pop; locuscompare currently uses 1000G via plink 1.9.
 - **`pval = NA`**: Pan-UKBB writes `NA` for variants where the test failed
   (Saige convergence issues). Recipe drops these rows.
 - **`af = 0` or `af = 1`**: monomorphic in this ancestry — recipe drops.

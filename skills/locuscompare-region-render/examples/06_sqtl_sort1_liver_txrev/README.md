@@ -86,8 +86,8 @@ No auth required; both exposure (eQTL Catalogue) and outcome
 
 Expected output (committed at `expected_output/`): `manifest.yaml` plus
 `1_109274968_G_T_full_locuscompare.png`. Captured 2026-05-15 with
-`n_pairs=2648, n_palindromic_excluded=349` (no plink2 on the dev box,
-so the run uses the documented `ld_panel: none` fallback; install plink2
+`n_pairs=2648, n_palindromic_excluded=349` (no plink on the dev box,
+so the run uses the documented `ld_panel: none` fallback; install plink 1.9
 for LD-coloured points).
 
 ## Caveats

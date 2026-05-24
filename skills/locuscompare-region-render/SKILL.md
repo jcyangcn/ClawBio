@@ -41,7 +41,7 @@ metadata:
       description: 4-panel regional LocusCompare PNG (exposure Manhattan + outcome Manhattan + gene track + cross-trait scatter)
     - name: manifest
       type: file
-      description: Reproducibility manifest (YAML) with source releases, LD panel id, plink2 version, n_pairs, palindromic-exclusion count
+      description: Reproducibility manifest (YAML) with source releases, LD panel id, plink version, n_pairs, palindromic-exclusion count
   dependencies:
     - python>=3.10
     - numpy>=1.24
@@ -65,7 +65,7 @@ metadata:
       bins:
         - python3
         - tabix
-        - plink2
+        - plink
       env: []
       config: []
     always: false
@@ -74,7 +74,7 @@ metadata:
     os: [darwin, linux]
     install: |
       pip install numpy scipy pandas matplotlib pysam pyyaml pydantic requests
-      # plus a system plink2 binary (brew install plink2 on macOS, apt-get install plink2 on Linux)
+      # plus a system plink 1.9 binary (brew install plink on macOS, apt-get install plink1.9 on Linux)
     trigger_keywords:
       - regional locuscompare
       - regional coloc plot
@@ -91,7 +91,7 @@ You are **LocusCompare Regional Diagnostic**, a specialised ClawBio agent for tw
 
 ## Overview
 
-This skill renders the canonical Liu 2019 *Nat Methods* 4-panel regional LocusCompare diagnostic for a single (lead variant, exposure study, outcome study) tuple. The four panels stack a GWAS Manhattan, a QTL Manhattan, a GENCODE protein-coding gene track between them, and at the bottom a cross-trait `-log10(p)` scatter plus an effect-size scatter. Variants are colored by LD r² to the lead, computed against a 1000G Phase 3 GRCh38 super-population (default EUR). Output is a publication-grade PNG plus a YAML manifest documenting source releases, LD panel id, plink2 version, palindromic-exclusion count, and provenance.
+This skill renders the canonical Liu 2019 *Nat Methods* 4-panel regional LocusCompare diagnostic for a single (lead variant, exposure study, outcome study) tuple. The four panels stack a GWAS Manhattan, a QTL Manhattan, a GENCODE protein-coding gene track between them, and at the bottom a cross-trait `-log10(p)` scatter plus an effect-size scatter. Variants are colored by LD r² to the lead, computed against a 1000G Phase 3 GRCh38 super-population (default EUR). Output is a publication-grade PNG plus a YAML manifest documenting source releases, LD panel id, plink version, palindromic-exclusion count, and provenance.
 
 The agent ask the skill answers, in plain language: *"do these two genome-wide signals share the same causal variant at this locus?"* The answer is visual and auditable. The skill does NOT compute coloc.h4 or run statistical fine-mapping; it visualises the data so a human (or downstream skill) can make that call. Pass `coloc.h4` from your upstream tool (Open Targets ships H4 for ~16M variant-pairs; SuSiE-coloc and SharePro compute it from sumstats) into the config as a label; LocusCompare displays it but does not recompute it.
 
@@ -122,7 +122,7 @@ The skill is independent of the source you discovered the candidate locus from. 
 
 ## Scope
 
-**One skill, one task.** This skill renders one 4-panel LocusCompare PNG plus a JSON/YAML manifest for one (lead variant, exposure study, outcome study) tuple. It harmonises the two pre-fetched (or bundle-fetched) sumstats slices on `variant_id`, applies palindromic exclusion + allele-flip handling, computes lead-vs-partner LD r² over a 1000G Phase 3 GRCh38 super-pop on demand, overlays a GENCODE protein-coding gene track on the regional Manhattans, and emits a reproducibility manifest with source releases, plink2 version, palindromic-exclusion list, and SHA-256 checksums of inputs and outputs.
+**One skill, one task.** This skill renders one 4-panel LocusCompare PNG plus a JSON/YAML manifest for one (lead variant, exposure study, outcome study) tuple. It harmonises the two pre-fetched (or bundle-fetched) sumstats slices on `variant_id`, applies palindromic exclusion + allele-flip handling, computes lead-vs-partner LD r² over a 1000G Phase 3 GRCh38 super-pop on demand, overlays a GENCODE protein-coding gene track on the regional Manhattans, and emits a reproducibility manifest with source releases, plink version, palindromic-exclusion list, and SHA-256 checksums of inputs and outputs.
 
 It does NOT compute coloc.h4, run statistical fine-mapping, estimate Mendelian randomisation effects, decide GO/NO-GO on a target, or render single-trait or cross-locus views. Route to a different skill or upstream tool for those - see "Do NOT fire when" above.
 
@@ -132,7 +132,7 @@ When an agent asks for a regional LocusCompare for a (lead, exposure, outcome) t
 
 1. **Validate**: parse the config (JSON or YAML); validate against the embedded pydantic schema; check input files exist and conform to `INPUT_SCHEMA.md`. The lead variant must be in `chr_pos_ref_alt` GRCh38 form; the window defaults to ±500 kb of lead.
 2. **Fetch (optional)**: for each side using a bundled fetcher (`source: eqtl_catalogue` or `source: gwas_catalog`), tabix-fetch the region from the source's FTP via the corresponding sibling skill (`eqtl-catalogue-region-fetch` or `gwas-catalog-region-fetch`). Cache to `~/.clawbio/locuscompare_cache/<source>/`.
-3. **LD compute (optional)**: pull the 1000G region VCF (~5-50 MB) via the `ld-1000g-region-compute` sibling skill; run `plink2 --r2-unphased` against the lead variant; cache to `~/.clawbio/locuscompare_cache/1000g/`. Falls back to grey coloring when the LD source is unavailable (caveat surfaced in manifest).
+3. **LD compute (optional)**: pull the 1000G region VCF (~5-50 MB) via the `ld-1000g-region-compute` sibling skill; run `plink --r2` (plink 1.9) against the lead variant; cache to `~/.clawbio/locuscompare_cache/1000g/`. Falls back to grey coloring when the LD source is unavailable (caveat surfaced in manifest).
 4. **Gene track (optional)**: fetch the locus's GENCODE GTF region via Ensembl REST; parse exon / intron / strand for protein-coding genes (default; configurable via `gene_track.biotypes`). Cache to `~/.clawbio/locuscompare_cache/gencode/`.
 5. **Harmonise + render + emit**: join exposure × outcome on `variant_id`; flip `beta_outcome` for swapped alleles; exclude palindromic A/T or G/C variants from the scatter (count surfaced in manifest; configurable). Render the 4-panel matplotlib PNG. Emit `manifest.yaml` with full provenance, `report.md` human-readable summary, `tables/pairs.tsv` with all joined pairs, `tables/palindromic_excluded.tsv`, and a `reproducibility/` subdir with `commands.sh`, `environment.yml`, `input_config.yaml` (resolved defaults), and `checksums.sha256`.
 
@@ -278,11 +278,11 @@ Output directory layout:
 
 5. **Effect-allele harmonisation across the four inputs is the renderer's input contract, not its job.** The two sumstats slices and the LD panel must arrive in the canonical (chr, pos, ref, alt) GRCh38 ALT-effect form - this is what the bundled fetchers (`eqtl-catalogue-region-fetch`, `gwas-catalog-region-fetch`) emit. User-supplied TSVs not in this form should be normalised upstream (`bcftools norm` for indels). The renderer's harmonisation step is for cross-trait flip / palindromic handling, not for single-trait normalisation.
 
-6. **Render time is bounded by tabix fetches and plink2 LD compute.** Cold-cache (first render of a region): typically 10-50 s. Warm-cache (region already fetched and LD computed): sub-second. Surface the timing to the user when relevant (multi-render comparisons, demo loops).
+6. **Render time is bounded by tabix fetches and plink LD compute.** Cold-cache (first render of a region): typically 10-50 s. Warm-cache (region already fetched and LD computed): sub-second. Surface the timing to the user when relevant (multi-render comparisons, demo loops).
 
 7. **Visual diagonal-vs-two-cluster interpretation is informative but not definitive.** A clean diagonal SUPPORTS H4 (single shared causal variant) but does not prove it; two distinct causal variants in tight LD can produce a visually diagonal pattern. The agent must always cite the formal coloc PP-H4 (and PP-H3) alongside the visual interpretation.
 
-8. **Wide windows (> 2 Mb) bloat memory and obscure structure.** The default 1 Mb window is calibrated for typical cis-eQTL × GWAS coloc loci. Going wider rarely helps interpretation and slows the LD compute (plink2 scales with #variants²). For multi-locus views, render multiple plots and compose them.
+8. **Wide windows (> 2 Mb) bloat memory and obscure structure.** The default 1 Mb window is calibrated for typical cis-eQTL × GWAS coloc loci. Going wider rarely helps interpretation and slows the LD compute (plink scales with #variants²). For multi-locus views, render multiple plots and compose them.
 
 9. **`p = 0` on rare extremely-significant variants.** Some sources emit `p = 0` when the actual value is below floating-point precision. The renderer substitutes the underflow floor (`5e-324`) before plotting on `-log10`. The reported `-log10(p)` for such variants is ~323, not their true magnitude.
 

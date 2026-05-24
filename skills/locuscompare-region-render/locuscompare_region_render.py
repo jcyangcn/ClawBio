@@ -1,7 +1,7 @@
 """Tier-2 LocusCompare orchestrator.
 
 Wires the three execution skills (eQTL Catalogue, GWAS Catalog harmonised, LD
-reference via plink2 + 1000G) + the wald_ratio harmoniser + the
+reference via plink + 1000G) + the wald_ratio harmoniser + the
 render_full_locuscompare renderer + the manifest block builder, all driven by
 a small per-row StudyIdMapping that resolves OT studyIds to the
 upstream-source identifiers each fetcher needs.
@@ -17,7 +17,7 @@ Outputs:
 - a `regional_locuscompare` manifest block documenting the four input
   panels, the lead variant, and the LD reference panel.
 
-If `ld_client` is None (e.g. plink2 not installed in the current environment),
+If `ld_client` is None (e.g. plink not installed in the current environment),
 the renderer still produces all four panels but with r² coloring substituted
 by a uniform grey; the manifest block records `ld_panel: "none"` and a caveat
 in the caveats list.
@@ -250,7 +250,7 @@ def render_locuscompare_for_lead(
     Steps:
     1. Fetch exposure region (eQTL Catalogue or UKB-PPP, per `spec.exposure_kind`).
     2. Fetch outcome region from GWAS Catalog harmonised.
-    3. Compute r² between the lead and every harmonised partner via plink2.
+    3. Compute r² between the lead and every harmonised partner via plink.
     4. Join + harmonise per skills.knowledge.wald_ratio.harmonise_regions_for_locuscompare.
     5. Render the 4-panel figure.
     6. Build the manifest block.

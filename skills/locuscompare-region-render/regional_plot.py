@@ -97,7 +97,7 @@ class RegionalLocusCompareInput:
     chromosome: str
     window_bp: int
     # Caption fields surfaced on the rendered plot:
-    ld_panel_label: str          # "1000G Phase 3 v5b GRCh38 (EUR); plink2 2.00a5LM"
+    ld_panel_label: str          # "1000G Phase 3 v5b GRCh38 (EUR); plink 1.90b6.27"
     window_label: str            # "+/-500 kb of lead 2_36910110_C_T (intersected; PIP_L=0.42 x PIP_R=0.18)"
     exposure_label: str          # "eQTL Catalogue v7.0; study quach_2016_ge_monocyte_iav_ensg00000115808"
     outcome_label: str           # "GWAS Catalog harmonised (snapshot 2026-04-15); study FINNGEN_R12_I9_HEARTFAIL"
@@ -918,7 +918,7 @@ def render_diagnostic_plot(
             "No intersected variants between the two credible sets.",
             transform=ax.transAxes, ha="center", va="center",
         )
-        fig.suptitle(title or "Wald-ratio diagnostic — no intersection")
+        fig.suptitle(title or "Wald-ratio diagnostic: no intersection")
         fig.savefig(out_path, dpi=160, bbox_inches="tight")
         plt.close(fig)
         return out_path
@@ -1210,7 +1210,7 @@ def render_regional_locuscompare(
     ax_lc.set_xlabel(left_track_label)
     ax_lc.set_ylabel(right_track_label)
     ax_lc.set_title(
-        "LocusCompare panel — clean diagonal ⇒ H4; two clusters ⇒ H3",
+        "LocusCompare panel: clean diagonal ⇒ H4; two clusters ⇒ H3",
         fontsize=9,
     )
     ax_lc.legend(loc="upper left", fontsize=7, frameon=True)

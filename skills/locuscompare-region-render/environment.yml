@@ -12,7 +12,9 @@ dependencies:
   - pyyaml>=6.0
   - pydantic>=2.0
   - requests>=2.28
-  # plink2 is optional (LD coloring); if installed, locuscompare uses it via
-  # subprocess. plink2 is GPL-3 (subprocess only; no GPL contamination of the
-  # MIT-licensed skill code).
-  - plink2>=2.0
+  # plink (1.9, NOT 2.x) is optional (LD coloring); if installed, locuscompare
+  # uses it via subprocess. The bundled `ld-1000g-region-compute` sibling pins
+  # plink 1.9 because plink 2's `--r2-unphased` semantics + ID conventions
+  # diverge from the 1000G Phase 3 GRCh38 panel we ship against. plink is
+  # GPL-3 (subprocess only; no GPL contamination of the MIT-licensed skill code).
+  - plink=1.9
