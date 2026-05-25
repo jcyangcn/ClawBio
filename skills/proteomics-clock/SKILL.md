@@ -47,6 +47,7 @@ metadata:
       bins:
       - python3
     always: false
+    emoji: 🕰️
     homepage: https://github.com/ClawBio/ClawBio
     os:
     - darwin
@@ -278,4 +279,3 @@ This skill computes organ ages for a single timepoint. For longitudinal or treat
 - [Goeminne et al. (2025)](https://doi.org/10.1016/j.cmet.2024.10.005) Cell Metabolism 37(1):205-222.e6 — organ-specific proteomic aging clocks
 - [organAging GitHub](https://github.com/ludgergoeminne/organAging) — model coefficients and example scripts
 - [Olink Proteomics](https://olink.com) — Proximity Extension Assay platform
-i

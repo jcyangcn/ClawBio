@@ -18,7 +18,7 @@ metadata:
       bins:
       - python3
     always: false
-    emoji: 🧪
+    emoji: 🕰️
     homepage: https://github.com/ClawBio/ClawBio
     os:
     - darwin
