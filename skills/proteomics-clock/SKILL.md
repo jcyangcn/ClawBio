@@ -12,8 +12,8 @@ metadata:
   - aging
   - olink
   - organ-clock
-  - biological-age
-  - goeminne
+  - biological age
+  - Goeminne
   inputs:
   - name: input_file
     type: file
@@ -155,7 +155,7 @@ python skills/proteomics-clock/proteomics_clock.py \
 python skills/proteomics-clock/proteomics_clock.py --demo --output /tmp/proteomics_demo
 ```
 
-Expected output: predictions for 20 synthetic samples across Heart, Brain, Kidney (and more) organ clocks, with distribution boxplots, correlation heatmap, and sample-organ heatmap.
+Expected output: Predictions for 20 synthetic samples across heart, brain, kidney (and more) organ clocks, with distribution boxplots, correlation heatmap, and sample-organ heatmap.
 
 ## Algorithm / Methodology
 

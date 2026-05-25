@@ -36,9 +36,9 @@ metadata:
     - epigenetic age
     - methylation clock
     - pyaging
-    - horvath
-    - grimage
-    - dunedinpace
+    - Horvath
+    - GrimAge
+    - DunedinPACE
     - GEO
     - GSE
 ---
