@@ -50,6 +50,14 @@ def test_run_skill_promotes_structured_result_fields(monkeypatch, tmp_path: Path
                         "lifecycle": "ready",
                         "state_label": "demo-ready",
                     },
+                    "contract_alerts": [
+                        {
+                            "severity": "warning",
+                            "kind": "skill.state_mismatch",
+                            "message": "A stored follow-up did not match the current state.",
+                            "blocking": True,
+                        }
+                    ],
                     "suggested_actions": [
                         {
                             "action_id": "show-demo-report",
@@ -88,5 +96,15 @@ def test_run_skill_promotes_structured_result_fields(monkeypatch, tmp_path: Path
     assert result["chat_summary_lines"] == ["The skill prepared a structured response."]
     assert result["preferred_artifacts"] == ["report.md", "result.json"]
     assert result["workflow_state"]["state_id"] == "sha256:abc"
+    assert result["contract_alerts"][0]["schema"] == "clawbio.contract_alert.v1"
+    assert result["contract_alerts"][0]["kind"] == "skill.state_mismatch"
     assert result["suggested_actions"][0]["action_id"] == "show-demo-report"
     assert result["skill_result_json"]["schema"] == "example.skill_result.v1"
+
+    log_path = output_dir / "contract_alerts.jsonl"
+    assert log_path.exists()
+    record = json.loads(log_path.read_text(encoding="utf-8"))
+    assert record["schema"] == "clawbio.contract_alert_log.v1"
+    assert record["run_id"] == "runner_out"
+    assert record["skill"] == "example-actions"
+    assert record["alert"]["kind"] == "skill.state_mismatch"

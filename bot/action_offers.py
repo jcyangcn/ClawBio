@@ -16,6 +16,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
+from clawbio.contract_alerts import normalise_contract_alerts, render_contract_alerts
+
 DEFAULT_PENDING_ACTION_TTL_SECONDS = 30 * 60
 
 # These are stand-alone confirmation/navigation phrases. They are intentionally
@@ -140,16 +142,22 @@ def load_bundle_fields(output_dir: str | Path | None) -> dict[str, Any]:
             # - preferred_artifacts: files the UI should prioritize displaying
             # - suggested_actions: deterministic follow-up requests to offer
             # - workflow_state: skill-emitted state identity/lifecycle metadata
+            # - contract_alerts: structured contract/path discrepancy alerts
             # - report_md: full markdown report embedded in result.json
             for key in (
                 "chat_summary_lines",
                 "preferred_artifacts",
                 "suggested_actions",
                 "workflow_state",
+                "contract_alerts",
                 "report_md",
             ):
                 if key in payload:
-                    fields[key] = payload[key]
+                    fields[key] = (
+                        normalise_contract_alerts(payload[key])
+                        if key == "contract_alerts"
+                        else payload[key]
+                    )
 
     if "report_md" not in fields:
         for pattern in ("report.md", "*_report.md", "*.md"):

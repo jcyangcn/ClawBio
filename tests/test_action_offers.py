@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from clawbio.contract_alerts import render_contract_alerts as render_contract_alerts_core
 from bot.action_offers import (
     execute_stored_action,
     extract_action_offer,
@@ -11,6 +12,7 @@ from bot.action_offers import (
     make_pending_action_entry,
     parse_action_reply,
     render_action_offer,
+    render_contract_alerts,
     render_workflow_state_header,
 )
 
@@ -71,6 +73,32 @@ def test_render_action_offer_adds_state_header_and_estimate():
 def test_render_workflow_state_header_requires_explicit_lifecycle():
     assert render_workflow_state_header({"state_label": "implicit-ready"}) == ""
     assert render_workflow_state_header({"lifecycle": "expired"}) == "State: expired"
+
+
+def test_render_contract_alerts_uses_shared_helper_for_adapter_parity():
+    alerts = [
+        {
+            "severity": "warning",
+            "kind": "planner.missing_required_slot",
+            "message": "Missing gene symbol.",
+            "expected": "all required route slots",
+            "observed": "missing route slot",
+            "remedies": [{"label": "Provide a gene symbol", "action": "ask-for-gene"}],
+        },
+        {
+            "severity": "error",
+            "kind": "skill.state_mismatch",
+            "message": "The selected follow-up is stale.",
+            "blocking": True,
+        },
+    ]
+
+    rendered = render_contract_alerts(alerts)
+
+    assert rendered == render_contract_alerts_core(alerts)
+    assert rendered.splitlines()[0] == "Error: state mismatch"
+    assert "Warning: missing required slot" in rendered
+    assert "Remedies: Provide a gene symbol" in rendered
 
 
 def test_render_action_offer_can_render_state_without_actions():
@@ -197,6 +225,13 @@ def test_load_bundle_fields_promotes_structured_chat_fields(tmp_path: Path):
             "lifecycle": "ready",
             "state_label": "demo-ready",
         },
+        "contract_alerts": [
+            {
+                "severity": "warning",
+                "kind": "planner.missing_required_slot",
+                "message": "Need a gene symbol.",
+            }
+        ],
         "preferred_artifacts": [{"path": "generated/demo.png"}],
         "report_md": "# Embedded report\n",
     }
@@ -212,5 +247,7 @@ def test_load_bundle_fields_promotes_structured_chat_fields(tmp_path: Path):
     assert fields["chat_summary_lines"] == ["The skill found one follow-up action."]
     assert fields["suggested_actions"] == _demo_actions()
     assert fields["workflow_state"]["state_id"] == "sha256:abc"
+    assert fields["contract_alerts"][0]["schema"] == "clawbio.contract_alert.v1"
+    assert fields["contract_alerts"][0]["kind"] == "planner.missing_required_slot"
     assert fields["preferred_artifacts"] == [{"path": "generated/demo.png"}]
     assert fields["report_md"] == "# Embedded report\n"
