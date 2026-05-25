@@ -34,5 +34,8 @@ bot = [
     "python-dotenv>=1.0",
 ]
 
+[tool.uv]
+exclude-newer = "7 days"
+
 [tool.uv.build-backend]
 module-root = ""
