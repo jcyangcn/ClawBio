@@ -76,7 +76,7 @@ region-fetch skill's SKILL.md.
 
 ```bash
 python skills/locuscompare-region-render/cli.py \
-    --input skills/locuscompare-region-render/examples/06_sqtl_sort1_liver_txrev/config.yaml \
+    --input skills/locuscompare-region-render/examples/05_sqtl_sort1_liver_txrev/config.yaml \
     --output runs/sqtl_sort1_liver_txrev/
 ```
 

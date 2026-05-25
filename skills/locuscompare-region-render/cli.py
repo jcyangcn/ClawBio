@@ -106,7 +106,7 @@ def _list_demos() -> list[Path]:
     if not base.is_dir():
         return out
     for d in sorted(base.iterdir()):
-        if not d.is_dir() or d.name in {"recipes"}:
+        if not d.is_dir() or d.name in {"recipes", "chains"}:
             continue
         for cand in ("config.yaml", "config.yml", "config.json"):
             p = d / cand

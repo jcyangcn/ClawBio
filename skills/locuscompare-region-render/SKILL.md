@@ -95,7 +95,7 @@ This skill renders the canonical Liu 2019 *Nat Methods* 4-panel regional LocusCo
 
 The agent ask the skill answers, in plain language: *"do these two genome-wide signals share the same causal variant at this locus?"* The answer is visual and auditable. The skill does NOT compute coloc.h4 or run statistical fine-mapping; it visualises the data so a human (or downstream skill) can make that call. Pass `coloc.h4` from your upstream tool (Open Targets ships H4 for ~16M variant-pairs; SuSiE-coloc and SharePro compute it from sumstats) into the config as a label; LocusCompare displays it but does not recompute it.
 
-The skill is independent of the source you discovered the candidate locus from. Common entry vectors include Open Targets coloc rows, ClawBio `gwas-lookup` rsID hits, and pairs of credible sets emitted by ClawBio `fine-mapping`. The config schema is identical across entry vectors; the five bundled `examples/` walk through each.
+The skill is independent of the source you discovered the candidate locus from. Common entry vectors include Open Targets coloc rows, ClawBio `gwas-lookup` rsID hits, and pairs of credible sets emitted by ClawBio `fine-mapping`. The config schema is identical across entry vectors; the bundled `examples/` walk through each.
 
 ## Trigger
 
@@ -195,13 +195,17 @@ Mix-and-match (one side pre-fetched, other side via fetcher) is supported. See `
 
 Optional `lead.rs_id: "rsXXXXXX"` (string) propagates into the emitted manifest + report alongside the canonical `variant_id`. Upstream agents (e.g. ai_scientist `coloc_with_mr` workflow) resolve and populate this automatically from OT / dbSNP; manual configs may set it for human readability. The orchestrator joins on `variant_id` (chr_pos_ref_alt), not rs_id; the rs_id is human-readability metadata only.
 
-Bundled examples in `examples/`:
+Bundled examples in `examples/` (each runnable via `--demo <NAME>` once any required upstream data is in place):
 
 - `01_synthetic_demo/` - offline 200-variant synthetic locus; no network required
 - `02_eqtl_catalogue_x_gwas_catalog/` - SORT1 × cholesterol-VLDL canonical demo (Musunuru 2010)
 - `03_open_targets_followup/` - entry from an OT coloc row
-- `04_finemapping_chain/` - entry from per-trait credible sets
-- `05_gwas_lookup_followup/` - entry from a `gwas-lookup` rsID hit
+- `04_gwas_lookup_followup/` - entry from a `gwas-lookup` rsID hit
+- `05_sqtl_sort1_liver_txrev/` - SORT1 sQTL in GTEx liver (txrev quant method)
+- `06_sceqtl_sort1_onek1k_cd14_mono/` - SORT1 sceQTL in OneK1K CD14+ monocytes
+- `07_pqtl_sort1_ukbppp_eur/` - SORT1 plasma sortilin via UKB-PPP (pQTL dispatch path)
+
+The `examples/chains/` and `examples/recipes/` subdirectories are documentation patterns, not numbered demos: `chains/finemapping_chain/` documents the `fine-mapping` skill -> locuscompare chain (requires `fine-mapping` to have run first; not in `--list-demos`); `recipes/` ships harmonisation scripts that convert FinnGen / Pan-UKBB / UKB-PPP / GTEx v10 native formats into the canonical INPUT_SCHEMA TSV for use via `sumstats_path:`.
 
 ## Example Output
 

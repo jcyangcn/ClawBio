@@ -46,7 +46,7 @@ dual-modality pair (eQTL + pQTL × LDL-C) that anchors v1.3.
 
 ```bash
 python skills/locuscompare-region-render/cli.py \
-    --input skills/locuscompare-region-render/examples/08_pqtl_sort1_ukbppp_eur/config.yaml \
+    --input skills/locuscompare-region-render/examples/07_pqtl_sort1_ukbppp_eur/config.yaml \
     --output runs/pqtl_sort1_ukbppp/
 ```
 

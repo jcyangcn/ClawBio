@@ -38,7 +38,7 @@ needs no new code path; only a new YAML mapping row.
 
 ```bash
 python skills/locuscompare-region-render/cli.py \
-    --input skills/locuscompare-region-render/examples/07_sceqtl_sort1_onek1k_cd14_mono/config.yaml \
+    --input skills/locuscompare-region-render/examples/06_sceqtl_sort1_onek1k_cd14_mono/config.yaml \
     --output runs/sceqtl_sort1_onek1k/
 ```
 
