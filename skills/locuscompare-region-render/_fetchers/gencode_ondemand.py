@@ -3,7 +3,9 @@
 Avoids the multi-GB local-GTF dependency by HTTP-fetching against Ensembl's
 `overlap/region` endpoint. Caches results to
 `~/.clawbio/locuscompare_cache/gencode/<chr>_<start>_<end>.json` so repeated
-runs over the same region are offline.
+runs over the same region are offline. Set `LOCUSCOMPARE_CACHE_DIR` to redirect
+the cache root for CI / sandboxed environments; the env var is read at call
+time so per-invocation overrides work.
 
 Returns the same `RegionGenesResult` shape that the in-repo GTF parser produces,
 so the renderer's gene-track code is source-agnostic.
@@ -21,13 +23,20 @@ from typing import Iterable
 import requests
 
 ENSEMBL_REST_BASE = "https://rest.ensembl.org"
-DEFAULT_CACHE_DIR = Path(
-    os.environ.get(
-        "LOCUSCOMPARE_CACHE_DIR",
-        Path.home() / ".clawbio" / "locuscompare_cache",
-    )
-) / "gencode"
 DEFAULT_RELEASE_LABEL = "Ensembl REST (GRCh38)"
+
+
+def _default_cache_dir() -> Path:
+    """Resolve the gencode cache directory at call time.
+
+    Honours `LOCUSCOMPARE_CACHE_DIR` per invocation (so CI / sandboxed runs can
+    redirect without restarting the interpreter); falls back to
+    `~/.clawbio/locuscompare_cache/` when unset.
+    """
+    override = os.environ.get("LOCUSCOMPARE_CACHE_DIR")
+    if override:
+        return Path(override) / "gencode"
+    return Path.home() / ".clawbio" / "locuscompare_cache" / "gencode"
 
 
 # Self-contained Gene + Exon dataclasses (no upstream skill required for the
@@ -69,7 +78,7 @@ def fetch_region_genes_remote(
     in-repo dependency.
     """
     chrom_bare = chromosome.removeprefix("chr") if chromosome.startswith("chr") else chromosome
-    cache_dir = (cache_dir or DEFAULT_CACHE_DIR).expanduser()
+    cache_dir = (cache_dir or _default_cache_dir()).expanduser()
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_key = f"{chrom_bare}_{start_bp}_{end_bp}.json"
     cache_path = cache_dir / cache_key

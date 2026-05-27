@@ -73,8 +73,10 @@ metadata:
     homepage: https://github.com/ClawBio/ClawBio
     os: [darwin, linux]
     install: |
-      pip install numpy scipy pandas matplotlib pysam pyyaml pydantic requests
+      pip install 'numpy>=1.24' 'scipy>=1.10' 'pandas>=2.0' 'matplotlib>=3.7' \
+                  'pysam>=0.22' 'pyyaml>=6.0' 'pydantic>=2.0' 'requests>=2.28'
       # plus a system plink 1.9 binary (brew install plink on macOS, apt-get install plink1.9 on Linux)
+      # Pins mirror the `dependencies:` block above; keep both in sync.
     trigger_keywords:
       - regional locuscompare
       - regional coloc plot
@@ -301,7 +303,7 @@ Output directory layout:
 
 **Visual interpretation of LocusCompare patterns is informative but not definitive.** Coloc PP-H4 from a formal Bayesian colocalisation analysis (COLOC, COLOC+SuSiE, SharePro, eCAVIAR) and supporting checks (`n_colocalising_variants` ≥ 5, credible-set width < 200 kb, ancestry match between exposure and outcome) should always be cited alongside the visual.
 
-**Local-first; no data upload.** All computation runs locally. Input sumstats stay on the user's machine. Outbound network calls hit only public-domain databases (eQTL Cat FTP, GWAS Cat FTP, 1000G FTP, Ensembl REST for GENCODE). Cache stored at `~/.clawbio/locuscompare_cache/` (override via `LOCUSCOMPARE_CACHE_DIR` env var).
+**Local-first; no data upload.** All computation runs locally. Input sumstats stay on the user's machine. Outbound network calls hit only public-domain databases (eQTL Cat FTP, GWAS Cat FTP, 1000G FTP, Ensembl REST for GENCODE). Cache stored at `~/.clawbio/locuscompare_cache/`; the on-demand GENCODE gene-track cache reads `LOCUSCOMPARE_CACHE_DIR` at call time, so CI / sandboxed environments can redirect with `LOCUSCOMPARE_CACHE_DIR=/path/to/cache` per invocation.
 
 **Reproducibility.** Every run emits a SHA-256 checksum manifest covering inputs and outputs. Failed LD compute or missing gene track is surfaced in the manifest's caveats list, not silently degraded.
 

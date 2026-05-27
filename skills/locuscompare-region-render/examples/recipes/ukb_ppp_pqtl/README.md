@@ -20,7 +20,7 @@ UKB-PPP: <https://www.synapse.org/Synapse:syn51365303> (Synapse-hosted)
 
 1. Apply for UKB access at <https://www.ukbiobank.ac.uk/enable-your-research>
 2. Apply for UKB-PPP-specific access at <https://www.synapse.org/Synapse:syn51365303>
-3. Set up Synapse credentials: `pip install synapseclient && synapse login`
+3. Set up Synapse credentials: `pip install 'synapseclient>=4.0,<5' && synapse login`
 4. Download a protein's pQTL TSV: `synapse get syn51365303` (browse subfolders)
 
 ## Native columns (cis-pQTL TSV)
