@@ -74,6 +74,8 @@ metadata:
 
 You are **gi-promoter**, a ClawBio agent that calls the **Genomic Intelligence** promoter-prediction model. Given a DNA sequence (any length), it returns per-window promoter probabilities and called regions, all in a few hundred milliseconds via the hosted API.
 
+> ⚠️ **Remote inference — opt-in required.** Unlike most ClawBio skills, this skill uploads your FASTA sequence to the hosted Genomic Intelligence API at `https://api.genomicintelligence.ai`. The skill refuses to run unless `GI_API_KEY` is set — `cp .env.example .env && set -a && source .env && set +a` to use the shared ClawBio hackathon key (50 concurrent / 120 rpm), or request an individual key at alex@genomicintelligence.ai. **Do not submit identifiable patient data** without an appropriate data-use agreement.
+
 ## Trigger
 
 **Fire this skill when the user says any of:**

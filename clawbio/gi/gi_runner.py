@@ -22,7 +22,8 @@ from clawbio.gi.gi_client import Client, GIError, read_fasta
 
 DISCLAIMER = (
     "ClawBio is a research and educational tool. It is not a medical "
-    "device and does not provide clinical diagnoses."
+    "device and does not provide clinical diagnoses. Consult a healthcare "
+    "professional before making any medical decisions."
 )
 
 

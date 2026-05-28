@@ -6,10 +6,12 @@ Shared across `gi-promoter`, `gi-splice`, `gi-enhancer`, `gi-chromatin`,
 Auth resolution order:
 1. Explicit ``api_key=`` constructor arg.
 2. ``GI_API_KEY`` environment variable.
-3. ``HACKATHON_FALLBACK_KEY`` (a shared partner key bundled for the
-   ClawBio hackathon). Capped at concurrent=50, rpm=120; treat as a
-   first-touch demo key. Heavy/serious use should request an individual
-   key (alex@genomicintelligence.ai) and set ``GI_API_KEY``.
+
+If neither is supplied, ``resolve_api_key`` raises ``RuntimeError`` with
+instructions. A shared hackathon-tier key is documented in ``.env.example``
+at the repo root — ``cp .env.example .env && source .env`` puts it on the
+environment. Heavier / production use: request an individual key at
+alex@genomicintelligence.ai and ``export GI_API_KEY=gi_…``.
 
 Base URL: ``GI_BASE_URL`` env, default ``https://api.genomicintelligence.ai``.
 
@@ -25,8 +27,18 @@ from typing import Any, Dict, Optional
 import requests
 
 
-HACKATHON_FALLBACK_KEY = "gi_cCtc4FLFXnh3f3NwTPUMcKIqLH7Y679L"
 DEFAULT_BASE_URL = "https://api.genomicintelligence.ai"
+
+MISSING_KEY_MESSAGE = (
+    "GI_API_KEY is not set. The gi-* skills call the hosted Genomic "
+    "Intelligence API (https://api.genomicintelligence.ai) and require a "
+    "partner bearer key.\n\n"
+    "Quick start (ClawBio hackathon): copy the shared key from .env.example:\n"
+    "    cp .env.example .env && set -a && source .env && set +a\n\n"
+    "For heavier / production use, request an individual key at "
+    "alex@genomicintelligence.ai, then:\n"
+    "    export GI_API_KEY=gi_yourkeyhere"
+)
 
 
 class GIError(RuntimeError):
@@ -45,13 +57,16 @@ class GIError(RuntimeError):
 
 
 def resolve_api_key(explicit: Optional[str] = None) -> str:
-    """Apply the auth resolution order documented at module top."""
+    """Apply the auth resolution order documented at module top.
+
+    Raises ``RuntimeError`` with onboarding instructions if no key is found.
+    """
     if explicit:
         return explicit
     env = os.environ.get("GI_API_KEY")
     if env:
         return env
-    return HACKATHON_FALLBACK_KEY
+    raise RuntimeError(MISSING_KEY_MESSAGE)
 
 
 class Client:
