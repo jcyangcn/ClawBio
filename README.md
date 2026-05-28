@@ -203,6 +203,12 @@ A curated cross-section of ClawBio's 76 skills. The full machine-readable catalo
 
 For the complete list including pharmacogenomics extensions, single-cell tooling, proteomics, methylation, metagenomics, structure prediction, clinical reporting, and meta-skills, see [`skills/catalog.json`](skills/catalog.json) or run `python clawbio.py list`.
 
+### Hosted inference — Genomic Intelligence
+
+Six skills (`gi-promoter`, `gi-splice`, `gi-enhancer`, `gi-chromatin`, `gi-expression`, `gi-annotation`) wrap [Genomic Intelligence](https://genomicintelligence.ai) — a DNA language-model platform providing transformer-based inference for promoter, splice-site, enhancer, chromatin-accessibility, expression, and annotation prediction. Unlike most ClawBio skills these call a hosted API (`api.genomicintelligence.ai`); a shared hackathon key ships in `.env.example` (50 concurrent / 120 rpm, opt-in only).
+
+You can also run the same models interactively at <https://genomicintelligence.ai> — a browser UI with gene search and IGV/JBrowse viewers, no setup required. API reference: <https://docs.genomicintelligence.ai>. Questions, errors, or production-tier keys: **contact@genomicintelligence.ai**.
+
 ### Contributing a Skill
 
 Wrap your bioinformatics pipeline as a skill and submit a PR. Several community-contributed skills are now in production (NutriGx Advisor, analyze-fasta, WGS-PRS, DnaSP, ClawPathy Autoresearch, and others). See [skills/catalog.json](skills/catalog.json) for the full list with status flags.

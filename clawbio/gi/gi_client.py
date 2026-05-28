@@ -11,7 +11,7 @@ If neither is supplied, ``resolve_api_key`` raises ``RuntimeError`` with
 instructions. A shared hackathon-tier key is documented in ``.env.example``
 at the repo root — ``cp .env.example .env && source .env`` puts it on the
 environment. Heavier / production use: request an individual key at
-alex@genomicintelligence.ai and ``export GI_API_KEY=gi_…``.
+contact@genomicintelligence.ai and ``export GI_API_KEY=gi_…``.
 
 Base URL: ``GI_BASE_URL`` env, default ``https://api.genomicintelligence.ai``.
 
@@ -36,7 +36,7 @@ MISSING_KEY_MESSAGE = (
     "Quick start (ClawBio hackathon): copy the shared key from .env.example:\n"
     "    cp .env.example .env && set -a && source .env && set +a\n\n"
     "For heavier / production use, request an individual key at "
-    "alex@genomicintelligence.ai, then:\n"
+    "contact@genomicintelligence.ai, then:\n"
     "    export GI_API_KEY=gi_yourkeyhere"
 )
 

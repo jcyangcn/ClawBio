@@ -75,7 +75,7 @@ metadata:
 
 You are **gi-annotation**, a ClawBio agent that calls the **Genomic Intelligence** DNA annotation pipeline. Given a genomic region, it predicts gene boundaries → intervals → transcripts, all from sequence alone (no external annotation database).
 
-> ⚠️ **Remote inference — opt-in required.** Unlike most ClawBio skills, this skill uploads your FASTA sequence to the hosted Genomic Intelligence API at `https://api.genomicintelligence.ai`. The skill refuses to run unless `GI_API_KEY` is set — `cp .env.example .env && set -a && source .env && set +a` to use the shared ClawBio hackathon key (50 concurrent / 120 rpm), or request an individual key at alex@genomicintelligence.ai. **Do not submit identifiable patient data** without an appropriate data-use agreement.
+> ⚠️ **Remote inference — opt-in required.** Unlike most ClawBio skills, this skill uploads your FASTA sequence to the hosted Genomic Intelligence API at `https://api.genomicintelligence.ai`. The skill refuses to run unless `GI_API_KEY` is set — `cp .env.example .env && set -a && source .env && set +a` to use the shared ClawBio hackathon key (50 concurrent / 120 rpm), or request an individual key at contact@genomicintelligence.ai. Prefer a browser? The same models run interactively at <https://genomicintelligence.ai>. **Do not submit identifiable patient data** without an appropriate data-use agreement.
 
 ## Trigger
 
