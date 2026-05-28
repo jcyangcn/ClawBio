@@ -41,3 +41,6 @@ def test_demo_mode_end_to_end(tmp_path):
     body = json.loads((tmp_path / "result.json").read_text())
     assert body["summary"]["task"] == "splice"
     assert "g0-splice" in (body["summary"]["model"] or "")
+    # Headline number must be populated (regression guard for runner ↔ API key drift).
+    assert (body["summary"].get("sites_found") or 0) >= 1, body["summary"]
+    assert "**None**" not in (tmp_path / "report.md").read_text()

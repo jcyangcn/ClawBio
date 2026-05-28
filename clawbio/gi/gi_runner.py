@@ -61,13 +61,16 @@ def _summarize(task: str, body: Dict[str, Any]) -> Dict[str, Any]:
         out["total_windows"] = summary.get("total_windows")
         out["regions"] = data.get("regions") or []
     elif task == "splice":
-        out["sites_found"] = summary.get("sites_found")
+        out["sites_found"] = summary.get("total_sites", summary.get("sites_found"))
+        out["donor_sites"] = summary.get("donor_sites")
+        out["acceptor_sites"] = summary.get("acceptor_sites")
         out["sites"] = data.get("sites") or []
     elif task == "enhancer":
-        out["windows_processed"] = summary.get("windows_processed")
-        out["max_activity"] = summary.get("max_activity")
+        out["windows_processed"] = summary.get("total_windows", summary.get("windows_processed"))
+        out["dev_score_max"] = summary.get("dev_score_max")
+        out["hk_score_max"] = summary.get("hk_score_max")
     elif task == "chromatin":
-        out["windows_processed"] = summary.get("windows_processed")
+        out["windows_processed"] = summary.get("total_windows", summary.get("windows_processed"))
         out["total_annotations"] = summary.get("total_annotations")
     elif task == "expression":
         pred = data.get("prediction") or {}
@@ -109,7 +112,7 @@ def _write_report(task: str, summary: Dict[str, Any], body: Dict[str, Any], outp
             for r in regions[:20]:
                 lines.append(f"| {r.get('window_index','-')} | {r.get('start','-')} | {r.get('end','-')} | {r.get('probability','-'):.3f} |" if isinstance(r.get('probability'), (int, float)) else f"| {r.get('window_index','-')} | {r.get('start','-')} | {r.get('end','-')} | {r.get('probability','-')} |")
     elif task == "splice":
-        lines.append(f"- Splice sites found: **{summary.get('sites_found', 0)}**")
+        lines.append(f"- Splice sites found: **{summary.get('sites_found') or 0}** ({summary.get('donor_sites') or 0} donor + {summary.get('acceptor_sites') or 0} acceptor)")
         sites = (summary.get("sites") or [])[:20]
         if sites:
             lines.append("")
@@ -118,12 +121,15 @@ def _write_report(task: str, summary: Dict[str, Any], body: Dict[str, Any], outp
             for s in sites:
                 lines.append(f"| {s.get('position','-')} | {s.get('kind','-')} | {s.get('strand','-')} | {s.get('probability','-')} |")
     elif task == "enhancer":
-        lines.append(f"- Windows processed: **{summary.get('windows_processed', 0)}**")
-        if summary.get("max_activity") is not None:
-            lines.append(f"- Max predicted activity: **{summary['max_activity']}**")
+        lines.append(f"- Windows processed: **{summary.get('windows_processed') or 0}**")
+        dev = summary.get("dev_score_max"); hk = summary.get("hk_score_max")
+        if dev is not None:
+            lines.append(f"- Max developmental-enhancer score: **{dev:.3f}**" if isinstance(dev, (int, float)) else f"- Max developmental-enhancer score: **{dev}**")
+        if hk is not None:
+            lines.append(f"- Max housekeeping-enhancer score: **{hk:.3f}**" if isinstance(hk, (int, float)) else f"- Max housekeeping-enhancer score: **{hk}**")
     elif task == "chromatin":
-        lines.append(f"- Windows processed: **{summary.get('windows_processed', 0)}**")
-        lines.append(f"- Total annotations across all tracks: **{summary.get('total_annotations', 0)}**")
+        lines.append(f"- Windows processed: **{summary.get('windows_processed') or 0}**")
+        lines.append(f"- Total annotations across all tracks: **{summary.get('total_annotations') or 0}**")
     elif task == "expression":
         log_tpm = summary.get("log_tpm")
         tpm = summary.get("tpm")

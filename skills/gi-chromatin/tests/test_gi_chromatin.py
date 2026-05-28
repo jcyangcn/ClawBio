@@ -38,4 +38,6 @@ def test_demo_mode_end_to_end(tmp_path):
     assert result.returncode == 0, f"stderr: {result.stderr}"
     body = json.loads((tmp_path / "result.json").read_text())
     assert body["summary"]["task"] == "chromatin"
-    assert body["summary"]["raw_summary"].get("total_annotations", 0) >= 0
+    assert (body["summary"].get("windows_processed") or 0) >= 1, body["summary"]
+    assert (body["summary"].get("total_annotations") or 0) >= 1, body["summary"]
+    assert "**None**" not in (tmp_path / "report.md").read_text()
