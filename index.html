@@ -120,7 +120,7 @@
   </nav>
   <a href="/benchmarks.html" style="display:block;background:linear-gradient(90deg,#238636,#1f6feb);color:#fff;text-align:center;padding:0.7rem 1rem;font-size:0.95rem;font-weight:600;text-decoration:none;">📊 Public Benchmark Leaderboard | 168/182 passing (92.3%) | Up from 80/140 (57.1%) at original audit | Every failure documented &rarr;</a>
   <section class="hero">
-    <div class="hero-badge">📊 Publicly benchmarked · 877 stars · 76 skills · 27 contributors · 2,027 tests</div>
+    <div class="hero-badge">📊 Publicly benchmarked · 881 stars · 76 skills · 27 contributors · 2,027 tests</div>
     <h1>The first <em>bioinformatics-native</em><br>AI agent skill library</h1>
     <p>ClawBio is where biological AI gets its skills: a curated, reproducible, open repository any agent can call.</p>
     <div class="hero-ctas">
@@ -288,7 +288,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr style="border-bottom:1px solid var(--border);background:rgba(63,185,80,0.05);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/ClawBio/ClawBio" target="_blank" style="color:var(--accent);">ClawBio</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">877</td><td style="padding:0.6rem 1rem;text-align:right;">176</td><td style="padding:0.6rem 1rem;text-align:right;">76</td></tr>
+            <tr style="border-bottom:1px solid var(--border);background:rgba(63,185,80,0.05);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/ClawBio/ClawBio" target="_blank" style="color:var(--accent);">ClawBio</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">881</td><td style="padding:0.6rem 1rem;text-align:right;">178</td><td style="padding:0.6rem 1rem;text-align:right;">76</td></tr>
             <tr style="border-bottom:1px solid var(--border);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/FreedomIntelligence/OpenClaw-Medical-Skills" target="_blank" style="color:var(--accent2);">OpenClaw-Medical-Skills</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">1,037</td><td style="padding:0.6rem 1rem;text-align:right;">123</td><td style="padding:0.6rem 1rem;text-align:right;">869</td></tr>
             <tr style="border-bottom:1px solid var(--border);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/GPTomics/bioSkills" target="_blank" style="color:var(--accent2);">bioSkills</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">331</td><td style="padding:0.6rem 1rem;text-align:right;">52</td><td style="padding:0.6rem 1rem;text-align:right;">425</td></tr>
             <tr style="border-bottom:1px solid var(--border);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/wu-yc/LabClaw" target="_blank" style="color:var(--accent2);">LabClaw</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">317</td><td style="padding:0.6rem 1rem;text-align:right;">54</td><td style="padding:0.6rem 1rem;text-align:right;">211</td></tr>
@@ -352,6 +352,27 @@
           <div>
             <div style="font-weight:600;font-size:0.95rem;">New skill: <strong>article-data-fetcher</strong> (MVP) — download genomics data files from GEO, ENA, Zenodo, Dryad and more given an article DOI, PMID, or PMCID. Find, fetch, and stage raw data files for any published genomics study. Contributed by Andreia Rodrigues (@andreiarog).</div>
             <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.15rem;">PR #194 · merged · 23 May 2026</div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
+          <span style="font-size:1.5rem;flex-shrink:0;">🗺️</span>
+          <div>
+            <div style="font-weight:600;font-size:0.95rem;">New skill: <strong>marker-dominance-mapper</strong> (MVP) — deterministic marker-based spot region mapping from spatial count CSVs. Assigns the dominant cell-type label per spot, generates an SVG region map, and writes a reproducibility bundle. Ideal for annotating tumour core, immune edge, and stromal zones in spatial transcriptomics data.</div>
+            <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.15rem;">PR #254 · merged · 23 May 2026</div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
+          <span style="font-size:1.5rem;flex-shrink:0;">🔬</span>
+          <div>
+            <div style="font-weight:600;font-size:0.95rem;">New skill: <strong>crispr-screen-triage</strong> (MVP) — deterministic CRISPR screen hit ranking from guide-level count tables. Computes fold-change and depletion z-score per guide, aggregates to gene level, and outputs a prioritised hit report with a reproducibility bundle. Accepts any pooled knockout screen count matrix as input.</div>
+            <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.15rem;">PR #253 · merged · 23 May 2026</div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
+          <span style="font-size:1.5rem;flex-shrink:0;">🧫</span>
+          <div>
+            <div style="font-weight:600;font-size:0.95rem;">New skill: <strong>sample-qc-triage</strong> (MVP) — deterministic multi-sample QC outlier detection for sequencing runs. Flags samples with sex mismatches, identity discordance, contamination signals, batch shifts, or low-complexity issues; outputs a ranked audit report with rerun candidates highlighted and a reproducibility bundle.</div>
+            <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.15rem;">PR #252 · merged · 23 May 2026</div>
           </div>
         </div>
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
