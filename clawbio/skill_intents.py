@@ -19,6 +19,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from clawbio.contract_alerts import make_contract_alert
+
 
 SCHEMA = "clawbio.skill_intents.v1"
 DESCRIPTOR_FILENAMES = ("INTENTS.json", "skill_intents.json")
@@ -125,9 +127,14 @@ class SkillExecutionPlan:
     requested_mode: str | None = None
     descriptor_path: str | None = None
     warnings: list[str] = field(default_factory=list)
+    contract_alerts: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+def _contract_alert(kind: str, message: str, **kwargs: Any) -> dict[str, Any]:
+    return make_contract_alert(kind=kind, message=message, **kwargs)
 
 
 def load_default_skill_registry(project_root: str | Path | None = None) -> dict[str, dict[str, Any]]:
@@ -667,6 +674,7 @@ def _plan_descriptor_route(
     skill_dir = Path(str(descriptor["_skill_dir"]))
     executions: list[SkillIntentExecution] = []
     warnings: list[str] = []
+    contract_alerts: list[dict[str, Any]] = []
     missing_skills: set[str] = set()
     missing_slots: set[str] = set()
 
@@ -679,7 +687,17 @@ def _plan_descriptor_route(
             continue
         step_demo = bool(step.get("demo", False))
         if step_demo and not explicit_demo:
-            warnings.append(f"Skipped demo step {index}; user did not request a demo.")
+            message = f"Skipped demo step {index}; user did not request a demo."
+            warnings.append(message)
+            contract_alerts.append(
+                _contract_alert(
+                    "planner.demo_requires_explicit_request",
+                    message,
+                    expected="explicit demo request",
+                    observed="no explicit demo request",
+                    blocking=False,
+                )
+            )
             continue
         step_skill = str(step.get("skill") or descriptor_skill)
         if step_skill not in skill_registry:
@@ -699,7 +717,17 @@ def _plan_descriptor_route(
             try:
                 input_path = _resolve_descriptor_input(step.get("input"), skill_dir)
             except DescriptorError as err:
-                warnings.append(f"Skipped unsafe input path at step {index}: {err}")
+                message = f"Skipped unsafe input path at step {index}: {err}"
+                warnings.append(message)
+                contract_alerts.append(
+                    _contract_alert(
+                        "runner.descriptor_security_skip",
+                        message,
+                        expected="safe descriptor input path",
+                        observed="unsafe descriptor input path",
+                        blocking=False,
+                    )
+                )
                 continue
         if step_demo:
             argv.append("--demo")
@@ -707,13 +735,33 @@ def _plan_descriptor_route(
             argv.extend(["--input", str(input_path)])
         safe_args, arg_warnings = _safe_argv_list(step.get("args"), step_skill, skill_registry)
         warnings.extend(arg_warnings)
+        contract_alerts.extend(
+            _contract_alert(
+                "runner.descriptor_security_skip",
+                warning,
+                expected="allowlisted descriptor argument",
+                observed="skipped descriptor argument",
+                blocking=False,
+            )
+            for warning in arg_warnings
+        )
         argv.extend(safe_args)
         output_dir = None
         if step.get("output"):
             try:
                 output_dir = str(_resolve_descriptor_input(step.get("output"), skill_dir))
             except DescriptorError as err:
-                warnings.append(f"Skipped unsafe output path at step {index}: {err}")
+                message = f"Skipped unsafe output path at step {index}: {err}"
+                warnings.append(message)
+                contract_alerts.append(
+                    _contract_alert(
+                        "runner.descriptor_security_skip",
+                        message,
+                        expected="safe descriptor output path",
+                        observed="unsafe descriptor output path",
+                        blocking=False,
+                    )
+                )
                 continue
             argv.extend(["--output", output_dir])
         confirmation = step.get("confirmation") or {}
@@ -742,6 +790,7 @@ def _plan_descriptor_route(
 
     if missing_skills:
         missing = ", ".join(sorted(missing_skills))
+        missing_warning = f"Register {missing} before exposing it for execution."
         return SkillExecutionPlan(
             status="needs_registration",
             raw_user_text=text,
@@ -764,11 +813,23 @@ def _plan_descriptor_route(
             requested_skill=requested_skill,
             requested_mode=requested_mode,
             descriptor_path=descriptor.get("_descriptor_path"),
-            warnings=[*warnings, f"Register {missing} before exposing it for execution."],
+            warnings=[*warnings, missing_warning],
+            contract_alerts=[
+                *contract_alerts,
+                _contract_alert(
+                    "planner.unregistered_skill",
+                    missing_warning,
+                    expected="registered skill alias",
+                    observed="unregistered skill alias",
+                    blocking=True,
+                    evidence=[f"skill: {missing}"],
+                ),
+            ],
         )
 
     if missing_slots:
         missing = ", ".join(sorted(missing_slots))
+        missing_warning = f"Missing required slot(s): {missing}."
         return SkillExecutionPlan(
             status="needs_input",
             raw_user_text=text,
@@ -788,7 +849,18 @@ def _plan_descriptor_route(
             requested_skill=requested_skill,
             requested_mode=requested_mode,
             descriptor_path=descriptor.get("_descriptor_path"),
-            warnings=[*warnings, f"Missing required slot(s): {missing}."],
+            warnings=[*warnings, missing_warning],
+            contract_alerts=[
+                *contract_alerts,
+                _contract_alert(
+                    "planner.missing_required_slot",
+                    missing_warning,
+                    expected="all required route slots",
+                    observed="missing route slot",
+                    blocking=True,
+                    evidence=[f"slot: {item}" for item in sorted(missing_slots)],
+                ),
+            ],
         )
 
     status = "planned"
@@ -816,6 +888,7 @@ def _plan_descriptor_route(
         requested_mode=requested_mode,
         descriptor_path=descriptor.get("_descriptor_path"),
         warnings=warnings,
+        contract_alerts=contract_alerts,
     )
 
 
@@ -866,6 +939,7 @@ def _plan_legacy_fallback(
         pass
     elif skill != "auto":
         # Deterministic fallback: do not silently switch to demo for weak tool calls.
+        warning = "Demo mode is only planned when the user explicitly asks for a demo."
         return SkillExecutionPlan(
             status="needs_input",
             raw_user_text=text,
@@ -876,7 +950,16 @@ def _plan_legacy_fallback(
             reason="No intent descriptor matched and no input/profile was available.",
             requested_skill=requested_skill,
             requested_mode=requested_mode,
-            warnings=["Demo mode is only planned when the user explicitly asks for a demo."],
+            warnings=[warning],
+            contract_alerts=[
+                _contract_alert(
+                    "planner.demo_requires_explicit_request",
+                    warning,
+                    expected="explicit demo request or input file",
+                    observed="no input and no explicit demo request",
+                    blocking=True,
+                )
+            ],
         )
     argv.extend(extra_args)
     return SkillExecutionPlan(
@@ -901,6 +984,15 @@ def _plan_legacy_fallback(
         requested_mode=requested_mode,
         warnings=[] if accepted_demo or requested_mode != "demo" else [
             "Ignored weak demo mode because the user text did not explicitly request a demo."
+        ],
+        contract_alerts=[] if accepted_demo or requested_mode != "demo" else [
+            _contract_alert(
+                "planner.demo_requires_explicit_request",
+                "Ignored weak demo mode because the user text did not explicitly request a demo.",
+                expected="explicit demo request",
+                observed="weak demo mode hint",
+                blocking=False,
+            )
         ],
     )
 

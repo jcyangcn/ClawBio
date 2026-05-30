@@ -28,6 +28,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from clawbio.contract_alerts import append_contract_alert_log, normalise_contract_alerts
+
 # --------------------------------------------------------------------------- #
 # Paths
 # --------------------------------------------------------------------------- #
@@ -1088,16 +1090,30 @@ def _promote_structured_result_fields(result: dict, out_dir: Path | None) -> Non
         # - preferred_artifacts: generated files the UI should surface first
         # - suggested_actions: deterministic next-step requests to offer later
         # - workflow_state: skill-emitted state identity/lifecycle metadata
+        # - contract_alerts: structured contract/path discrepancy alerts
         # - report_md: full markdown report text embedded in result.json
         for field in (
             "chat_summary_lines",
             "preferred_artifacts",
             "suggested_actions",
             "workflow_state",
+            "contract_alerts",
             "report_md",
         ):
             if field in payload:
-                result[field] = payload[field]
+                result[field] = (
+                    normalise_contract_alerts(payload[field])
+                    if field == "contract_alerts"
+                    else payload[field]
+                )
+
+        if out_dir is not None and result.get("contract_alerts"):
+            append_contract_alert_log(
+                out_dir / "contract_alerts.jsonl",
+                result["contract_alerts"],
+                run_id=out_dir.name,
+                skill=result.get("skill") or None,
+            )
 
     if "report_md" not in result:
         report_md = _load_report_markdown(out_dir)

@@ -54,6 +54,7 @@ from clawbio.skill_intents import (
     skill_intent_tool_summary,
     skill_names_for_tool_schema,
 )
+from clawbio.contract_alerts import append_contract_alert_log
 from bot.tool_loop_utils import (
     execute_tool_calls_safely,
     repair_tool_call_history,
@@ -74,6 +75,7 @@ try:  # Allow running as `python bot/roboterri.py` and as a package import.
         make_pending_action_entry,
         parse_action_reply,
         render_action_offer,
+        render_contract_alerts,
         render_workflow_state_header,
     )
 except ImportError:  # pragma: no cover - package import fallback
@@ -89,6 +91,7 @@ except ImportError:  # pragma: no cover - package import fallback
         make_pending_action_entry,
         parse_action_reply,
         render_action_offer,
+        render_contract_alerts,
         render_workflow_state_header,
     )
 
@@ -598,9 +601,14 @@ def _render_skill_result(chat_id: int, skill_key: str, result: dict) -> str:
     actions = extract_action_offer(result)
     workflow_state = result.get("workflow_state")
     state_header = render_workflow_state_header(workflow_state)
+    alert_text = render_contract_alerts(result.get("contract_alerts"))
 
     if actions:
         reply_parts: list[str] = []
+        if state_header:
+            reply_parts.append(state_header)
+        if alert_text:
+            reply_parts.append(alert_text)
         if summary_lines:
             reply_parts.append("\n".join(summary_lines))
         elif report_text:
@@ -609,7 +617,7 @@ def _render_skill_result(chat_id: int, skill_key: str, result: dict) -> str:
             reply_parts.append(raw_output)
         else:
             reply_parts.append(f"{skill_key} completed.")
-        reply_parts.append(render_action_offer(actions, workflow_state=workflow_state))
+        reply_parts.append(render_action_offer(actions))
         rendered = "\n\n".join(part for part in reply_parts if part).strip()
         _pending_actions[chat_id] = make_pending_action_entry(
             skill=skill_key,
@@ -631,19 +639,18 @@ def _render_skill_result(chat_id: int, skill_key: str, result: dict) -> str:
 
     if skill_key in ("compare", "drugphoto", "profile"):
         rendered = raw_output or report_text or f"{skill_key} completed."
-        if state_header:
-            rendered = "\n\n".join([state_header, rendered])
+        rendered = "\n\n".join(part for part in (state_header, alert_text, rendered) if part)
         if rendered:
             _pending_text.setdefault(chat_id, []).append(rendered)
         return "Result sent directly to chat. Do not repeat or paraphrase it."
 
     if summary_lines:
-        return "\n\n".join(part for part in (state_header, "\n".join(summary_lines)) if part)
+        return "\n\n".join(part for part in (state_header, alert_text, "\n".join(summary_lines)) if part)
     if report_text:
         rendered_report = _trim_report_for_chat(report_text)
-        return "\n\n".join(part for part in (state_header, rendered_report) if part)
+        return "\n\n".join(part for part in (state_header, alert_text, rendered_report) if part)
     rendered_output = raw_output if raw_output else f"{skill_key} completed. Output: {output_dir}"
-    return "\n\n".join(part for part in (state_header, rendered_output) if part)
+    return "\n\n".join(part for part in (state_header, alert_text, rendered_output) if part)
 
 
 async def execute_clawbio(args: dict) -> str:
@@ -796,7 +803,15 @@ async def execute_clawbio(args: dict) -> str:
         selected_intent=plan.intent_id,
         matched_route=plan.matched_route,
         commands=[item.argv for item in plan.executions],
+        contract_alerts=plan.contract_alerts,
     )
+    if plan.contract_alerts:
+        append_contract_alert_log(
+            OUTPUT_DIR / "contract_alerts.jsonl",
+            plan.contract_alerts,
+            skill=plan.skill,
+            intent_id=plan.intent_id,
+        )
     logger.info(
         "Skill intent plan: skill=%s intent=%s status=%s reason=%s",
         plan.skill, plan.intent_id, plan.status, plan.reason,
@@ -807,6 +822,7 @@ async def execute_clawbio(args: dict) -> str:
             selected_skill=plan.skill,
             selected_intent=plan.intent_id,
             matched_route=plan.matched_route,
+            contract_alerts=plan.contract_alerts,
         )
     if plan.status == "needs_input" or not plan.executions:
         return _error(
@@ -815,6 +831,7 @@ async def execute_clawbio(args: dict) -> str:
             selected_skill=plan.skill,
             selected_intent=plan.intent_id,
             matched_route=plan.matched_route,
+            contract_alerts=plan.contract_alerts,
         )
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")

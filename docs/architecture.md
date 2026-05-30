@@ -83,10 +83,12 @@ Optional Reproducibility Export (helper-backed commands, environment, checksums)
 ```
 
 The same run may also expose UI-facing fields from `result.json`, including
-`chat_summary_lines`, `preferred_artifacts`, `workflow_state`, and
-`suggested_actions`. These fields let chat or GUI frontends render compact
-summaries and offer deterministic next steps without inventing follow-up
-commands.
+`chat_summary_lines`, `preferred_artifacts`, `workflow_state`,
+`suggested_actions`, and `contract_alerts`. These fields let chat or GUI
+frontends render compact summaries, offer deterministic next steps, and surface
+contract/path mismatches without inventing follow-up commands. See
+[docs/skill-action-contract.md](skill-action-contract.md) for the canonical
+schema reference.
 
 ## Structured Next Steps
 

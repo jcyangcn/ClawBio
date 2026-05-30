@@ -55,6 +55,7 @@ The chat-facing fields currently understood by the runner and adapters are:
 | `preferred_artifacts` | Output files the UI should surface first.            |
 | `workflow_state`      | Optional state identity and lifecycle metadata.      |
 | `suggested_actions`   | Stored follow-up actions the user may choose.        |
+| `contract_alerts`     | Structured alerts when intent, data, policy, or state contracts diverge. |
 | `report_md`           | Full markdown report text embedded in `result.json`. |
 
 These fields are additive. A skill can continue to emit only a normal report,
@@ -102,6 +103,7 @@ workflow_state.lifecycle      -> generic UI condition
 workflow_state.state_id       -> skill-specific snapshot identity
 suggested_actions[]           -> valid transitions or follow-up views
 preferred_artifacts[]         -> useful resources from this state
+contract_alerts[]             -> exceptions to the coherent contract path
 ```
 
 Examples:
@@ -247,6 +249,144 @@ suffix remains:
 ```text
 1. Top Results (safe refresh)
 ```
+
+## Contract Alerts
+
+`contract_alerts` is an optional sibling of `workflow_state` and
+`suggested_actions` in `result.json`. It is for contract/path discrepancies,
+not biomedical findings. In the happy path, the field should be absent.
+
+Use it when the route, input data, workflow state, policy, or schema version no
+longer matches what the selected path expected:
+
+```json
+{
+  "contract_alerts": [
+    {
+      "schema": "clawbio.contract_alert.v1",
+      "severity": "warning",
+      "kind": "planner.intent_input_mismatch",
+      "message": "The requested route expects genotype data, but the input looks like a proteomics table.",
+      "expected": "genotype-style input",
+      "observed": "proteomics-style table",
+      "evidence": ["filename extension: .csv", "detected assay columns"],
+      "remedies": [
+        {"label": "Use affinity-proteomics", "skill": "affprot"},
+        {"label": "Show compatible skills", "action": "list-compatible-skills"}
+      ],
+      "blocking": false
+    }
+  ]
+}
+```
+
+Field meanings:
+
+| Field | Meaning |
+|-------|---------|
+| `schema` | Must be `clawbio.contract_alert.v1`. |
+| `severity` | One of `error`, `warning`, or `info`. |
+| `kind` | Namespaced alert kind from the vocabulary below. |
+| `message` | Short human-readable explanation. |
+| `expected` | Optional human-readable label for what the route/state expected. |
+| `observed` | Optional human-readable label for what was observed instead. |
+| `evidence` | Optional sanitised clues; never raw user data or secrets. |
+| `remedies` | Optional non-executed hints for getting unstuck. |
+| `blocking` | Whether the component that emitted the alert blocked progress. |
+
+`expected` and `observed` are labels, not necessarily raw values. If raw values
+aid debugging, place them in `evidence` only after sanitisation.
+
+Each `remedies[]` item carries a required `label` and exactly one of:
+
+- `skill`: a suggested ClawBio skill alias to switch to,
+- `action`: a non-executed hint/action identifier.
+
+Other remedy fields are reserved for future use. In v1, remedies are displayed
+as hints only; the action-offer machinery does not execute them.
+
+Initial alert kinds are:
+
+| Kind | Use |
+|------|-----|
+| `planner.intent_input_mismatch` | The intended route and detected input type disagree. |
+| `planner.missing_required_slot` | A descriptor route matched, but required slot extraction failed. |
+| `planner.demo_requires_explicit_request` | Demo mode was requested only weakly or implicitly. |
+| `planner.unregistered_skill` | A descriptor route points to an unregistered skill alias. |
+| `runner.descriptor_security_skip` | Descriptor metadata was skipped by runner safety checks. |
+| `runner.input_contract_mismatch` | Runner-level input checks disagree with the selected contract. |
+| `skill.state_mismatch` | A state-aware action request no longer validates. |
+| `skill.version_drift` | A request or state schema version is not recognised. |
+| `skill.missing_required_input` | A skill received a structured request missing required fields. |
+| `policy.remote_execution_requires_consent` | A selected path would use remote execution without consent. |
+| `other` | Escape hatch; include a short `detail` field. |
+
+New kinds should be added by PR to this document. This keeps the alert stream
+aggregatable instead of collecting many spellings of the same mismatch.
+Some initial kinds are reserved for future emitters, so absence from today's
+code paths does not mean the kind is orphaned.
+
+Rendering order in chat adapters is:
+
+1. lifecycle header,
+2. `contract_alerts`, sorted by severity: `error`, `warning`, `info`,
+3. `chat_summary_lines`,
+4. report or raw output,
+5. action menu.
+
+Adapters do not implement special gating for `blocking: true`. They render the
+alert. The skill or planner enforces blocking by returning no executable
+action, returning `workflow_state.lifecycle: "expired"`, or not producing a run
+plan.
+
+In v1, planners may emit both unstructured `warnings` and structured
+`contract_alerts`. A future contract version may deprecate `warnings` after
+consumers migrate.
+
+### Local Discrepancy Log
+
+ClawBio may persist sanitised copies of contract alerts locally as append-only
+JSONL. This is not telemetry and is never uploaded by this contract.
+
+Preferred locations:
+
+- `<output_dir>/contract_alerts.jsonl` when a run output directory exists,
+- `output/contract_alerts.jsonl` for planner or pre-run alerts where no run
+  directory exists.
+
+Each line wraps one alert:
+
+```json
+{
+  "schema": "clawbio.contract_alert_log.v1",
+  "timestamp": "2026-05-25T14:12:00+00:00",
+  "run_id": "affprot_20260525_141200",
+  "skill": "affprot",
+  "intent_id": "optional-route-id",
+  "alert": {
+    "schema": "clawbio.contract_alert.v1",
+    "severity": "warning",
+    "kind": "skill.state_mismatch",
+    "message": "The selected action no longer matches the analysis state that produced it.",
+    "expected": "request state_id",
+    "observed": "recomputed state_id",
+    "blocking": true
+  }
+}
+```
+
+`timestamp`, `schema`, and `alert` are required. `run_id`, `skill`, and
+`intent_id` may be absent for pre-run alerts. `intent_id` is the routing intent
+identifier when an `INTENTS.json` planner picked the route; it is omitted for
+direct CLI/API invocation.
+
+Only already-normalised and sanitised alerts should be logged. Do not log raw
+user text, file contents, genomic or proteomic values, full absolute paths, API
+keys, tokens, or unredacted request payloads. Alert logging is best-effort and
+must never fail a skill run. v1 does not rotate or deduplicate logs; run-local
+logs are bounded by output-directory retention, while operators may archive the
+global fallback log manually. Analysers can aggregate by `kind` or `(kind,
+run_id)` if needed.
 
 ## Receiving an Action Request
 
