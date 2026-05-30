@@ -99,6 +99,9 @@ jobs:
       - name: Run RNA-seq DE tests
         run: uv run pytest skills/rnaseq-de/tests/test_rnaseq_de.py -v
 
+      - name: Run nf-core Sarek Wrapper tests
+        run: uv run pytest skills/nfcore-sarek-wrapper/tests/ -v
+
       - name: Run Skill Builder tests
         run: uv run pytest skills/skill-builder/tests/test_skill_builder.py -v
 

@@ -54,7 +54,7 @@ Or install as a [Claude Code](https://claude.ai/claude-code) plugin: `/plugin ma
 
 ## What ClawBio Does Today
 
-**77 skills (27 production-ready) + 8,000 Galaxy tools + 2,027 tests + benchmark validation. Local-first. No cloud. No guessing.**
+**78 skills (28 production-ready) + 8,000 Galaxy tools + 2,318 tests + benchmark validation. Local-first. No cloud. No guessing.**
 
 > **v0.5.0 released** (4 Apr 2026): Validation and Benchmark Infrastructure. AD ground truth benchmark, mock API server for offline testing, swappable fine-mapping pipeline (SuSiE vs ABF), 74 benchmark tests, red/green TDD mandate. [Release notes](https://github.com/ClawBio/ClawBio/releases/tag/v0.5.0). DOI: [10.5281/zenodo.19420648](https://doi.org/10.5281/zenodo.19420648).
 
@@ -197,6 +197,7 @@ A curated cross-section of ClawBio's 77 skills. The full machine-readable catalo
 | [Clinical Variant Reporter](skills/clinical-variant-reporter/) | Clinical | ACMG-guided clinical variant classification from VCF with GiAB validation |
 | [nf-core scRNA Wrapper](skills/nfcore-scrnaseq-wrapper/) | Single-cell | Upstream FASTQ → h5ad preprocessing via nf-core/scrnaseq (simpleaf, STARsolo, kallisto, CellRanger) with strict preflight and reproducibility bundle |
 | [nf-core RNA-seq Wrapper](skills/nfcore-rnaseq-wrapper/) | Bulk RNA-seq | Upstream FASTQ/BAM → count matrices via nf-core/rnaseq with strict preflight and reproducibility bundle |
+| [nf-core Sarek Wrapper](skills/nfcore-sarek-wrapper/) | Variant calling | Upstream FASTQ/BAM/CRAM → VCF via nf-core/sarek (germline, tumor-only, somatic; Strelka/Mutect2/HaplotypeCaller, VEP/snpEff) with strict preflight and reproducibility bundle |
 | [scRNA Orchestrator](skills/scrna-orchestrator/) | Single-cell | Scanpy automation: QC, optional doublet detection, clustering, markers, annotation |
 | [Equity Scorer](skills/equity-scorer/) | Systemic | HEIM diversity metrics from VCF or ancestry CSV |
 | [DnaSP](skills/dnasp/) | Population *(community)* | Python reimplementation of DnaSP 6: 16 population-genetics analyses (Pi, Tajima's D, Fst, Ka/Ks, McDonald-Kreitman) |

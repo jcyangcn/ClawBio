@@ -36,15 +36,15 @@ ClawBio addresses this by combining local execution, versioned skill specificati
 As documented in `README.md`, ClawBio is currently presented as:
 
 - **v0.5.0** of the project
-- **55 skills** in the broader platform framing
+- **78 skills** in the broader platform framing
 - **8,000+ Galaxy tools**
-- **1,401 tests + benchmark validation**
+- **2,318 tests + benchmark validation**
 - a local-first bioinformatics stack with privacy and reproducibility as core constraints
 
-The current public skills table in `README.md` lists **43 named skills**, comprising:
+The current public skills table in `README.md` lists **78 named skills**, comprising:
 
-- **37 MVP skills**
-- **6 planned skills**
+- **28 MVP skills**
+- **50 planned skills**
 
 This is a substantial expansion from the older brief, which described the project as having 7 production skills and 6 planned skills.
 
