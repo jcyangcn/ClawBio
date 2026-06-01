@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 85,
+  "skill_count": 86,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -2060,6 +2060,21 @@
         "omics evidence",
         "gene disease mapper"
       ],
+      "chaining_partners": []
+    },
+    {
+      "name": "pathway-enricher",
+      "cli_alias": null,
+      "description": "Gene-set pathway enrichment analysis using Enrichr — queries KEGG, GO (BP/MF/CC), Reactome, WikiPathways, MSigDB, and Disease Ontology. Produces ranked pathway tables, interactive bubble charts, and a reproducible Markdown report.",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/pathway-enricher/pathway_enricher.py --demo",
+      "dependencies": [],
+      "tags": [],
+      "trigger_keywords": [],
       "chaining_partners": []
     },
     {
