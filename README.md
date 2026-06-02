@@ -647,7 +647,7 @@ ClawBio follows [Semantic Versioning](https://semver.org/). The current release 
 
 ### What is ClawBio?
 
-ClawBio is the **first bioinformatics-native AI agent skill library**. Built on OpenClaw (180k+ GitHub stars), it provides 76 skills (27 production-ready) for genomics analysis, pharmacogenomics, ancestry profiling, and more. Local-first, privacy-focused, and reproducible.
+ClawBio is the **first bioinformatics-native AI agent skill library**. Built on OpenClaw (180k+ GitHub stars), it provides 77 skills (27 production-ready) for genomics analysis, pharmacogenomics, ancestry profiling, and more. Local-first, privacy-focused, and reproducible.
 
 ### What are ClawBio skills?
 
