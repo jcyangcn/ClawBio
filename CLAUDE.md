@@ -69,6 +69,7 @@ When the user asks a question, match it to a skill and act:
 | Galaxy, usegalaxy, tool shed, bioblend, "run on galaxy", galaxy tool, galaxy workflow, NGS pipeline | `skills/galaxy-bridge/` | Run `galaxy_bridge.py` |
 | Flow.bio, flow pipeline, flow sample, flow execution, flow project, "run on flow", "upload to flow", flow search | `skills/flow-bio/` | Run `flow_bio.py` |
 | Upstream bulk RNA-seq pipeline, run nf-core/rnaseq, FASTQ to count matrix, STAR Salmon, STAR RSEM, HISAT2 RNA-seq, Bowtie2 Salmon, preprocess bulk RNA-seq FASTQs | `skills/nfcore-rnaseq-wrapper/` | Run `nfcore_rnaseq_wrapper.py` |
+| Upstream variant calling pipeline, run nf-core/sarek, germline variant calling, somatic/tumor-normal variant calling, tumor-only variant calling, Mutect2, Strelka, HaplotypeCaller, ASCAT, ControlFREEC, Manta, WES/WGS variant calling, VEP/SnpEff annotation, FASTQ/BAM/CRAM to VCF | `skills/nfcore-sarek-wrapper/` | Run `nfcore_sarek_wrapper.py` (alias `sarek-pipeline`) |
 | Bulk RNA-seq, pseudo-bulk, differential expression, DESeq2, PyDESeq2, contrast, volcano plot | `skills/rnaseq-de/` | Run `rnaseq_de.py` |
 | protocols.io, protocol search, lab protocol, scientific methods, protocol DOI, protocol steps | `skills/protocols-io/` | Run `protocols_io.py` |
 | Soul to genome, compile soul, synthetic genome, Genomebook compile, character genome | `skills/soul2dna/` | Run `soul2dna.py` |
@@ -89,7 +90,7 @@ When the user asks a question, match it to a skill and act:
 
 ## How to Use a Skill
 
-### Skills with Python scripts (pharmgx-reporter, equity-scorer, nutrigx_advisor, claw-metagenomics, genome-compare, bio-orchestrator, variant-annotation, bioconductor-bridge, clinical-trial-finder, data-extractor, illumina-bridge, pubmed-summariser, omics-target-evidence-mapper, target-validation-scorer, scrna-orchestrator, scrna-embedding, diff-visualizer, proteomics-de, struct-predictor, clinical-variant-reporter, multiqc-reporter, labstep, clinpgx, gwas-prs, gwas-lookup, methylation-clock, profile-report, ukb-navigator, galaxy-bridge, flow-bio, rnaseq-de, protocols-io, soul2dna, genome-match, recombinator, fine-mapping, cell-detection, wes-clinical-report-en, wes-clinical-report-es, proteomics-clock, sample-qc-triage, crispr-screen-triage, marker-dominance-mapper, busco-assessor, fastreer)
+### Skills with Python scripts (pharmgx-reporter, equity-scorer, nutrigx_advisor, claw-metagenomics, genome-compare, bio-orchestrator, variant-annotation, bioconductor-bridge, clinical-trial-finder, data-extractor, illumina-bridge, pubmed-summariser, omics-target-evidence-mapper, target-validation-scorer, scrna-orchestrator, scrna-embedding, diff-visualizer, proteomics-de, struct-predictor, clinical-variant-reporter, multiqc-reporter, labstep, clinpgx, gwas-prs, gwas-lookup, methylation-clock, profile-report, ukb-navigator, galaxy-bridge, flow-bio, rnaseq-de, protocols-io, soul2dna, genome-match, recombinator, fine-mapping, cell-detection, wes-clinical-report-en, wes-clinical-report-es, proteomics-clock, sample-qc-triage, crispr-screen-triage, marker-dominance-mapper, busco-assessor, fastreer, nfcore-sarek-wrapper)
 1. Read the skill's `SKILL.md` for domain context
 2. Run the Python script with correct CLI arguments (see below)
 3. Show the user the output — open any generated figures and explain results
@@ -197,6 +198,14 @@ python clawbio.py run rnaseq-pipeline \
   --input samplesheet.csv --output <report_dir> --aligner star_salmon --genome GRCh38
 python clawbio.py run rnaseq-pipeline --check --demo --output /tmp/rnaseq_pipeline_check
 python clawbio.py run rnaseq-pipeline --demo --output /tmp/rnaseq_pipeline_demo
+
+# Upstream variant calling — nf-core/sarek 3.8.1 (germline / tumor-only / somatic)
+python clawbio.py run sarek-pipeline \
+  --input samplesheet.csv --output <report_dir> --genome GATK.GRCh38 --tools haplotypecaller,vep
+python clawbio.py run sarek-pipeline --check \
+  --input samplesheet.csv --output /tmp/sarek_check --genome GATK.GRCh38 --tools haplotypecaller
+python clawbio.py run sarek-pipeline --demo --output /tmp/sarek_demo
+# Full 173-flag surface (154 Sarek passthrough + 19 wrapper controls): python skills/nfcore-sarek-wrapper/nfcore_sarek_wrapper.py --help
 
 python skills/rnaseq-de/rnaseq_de.py \
   --counts <counts_csv_or_tsv> --metadata <metadata_csv_or_tsv> \
@@ -362,6 +371,7 @@ For instant demos when the user has no data:
 | CRISPR screen demo counts (12 synthetic guides, 6 genes) | `skills/crispr-screen-triage/demo_screen_counts.csv` | crispr-screen-triage |
 | Marker dominance demo counts (6 synthetic spots) | `skills/marker-dominance-mapper/demo_marker_counts.csv` | marker-dominance-mapper |
 | Flow.bio demo (live API + offline cache) | `--demo` flag / `skills/flow-bio/data/demo_cache.json` | flow-bio |
+| Sarek demo (upstream nf-core/sarek `-profile test` dataset, no local files) | `--demo` flag | nfcore-sarek-wrapper |
 
 ### Demo Commands
 
@@ -463,6 +473,9 @@ python skills/flow-bio/flow_bio.py --demo --output /tmp/flow_demo
 
 # Flow.bio search (requires FLOW_USERNAME + FLOW_PASSWORD)
 python skills/flow-bio/flow_bio.py --search "RNA-seq" --output /tmp/flow_search
+
+# Sarek upstream variant calling demo (upstream -profile test dataset)
+python clawbio.py run sarek-pipeline --demo --output /tmp/sarek_demo
 
 # Sample QC triage demo
 python skills/sample-qc-triage/sample_qc_triage.py --demo --output /tmp/sample_qc_demo

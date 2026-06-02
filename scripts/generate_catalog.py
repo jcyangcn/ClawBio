@@ -209,6 +209,7 @@ FOLDER_TO_ALIAS = {
     "bioconductor-bridge": "bioc",
     "nfcore-scrnaseq-wrapper": "scrnaseq-pipeline",
     "nfcore-rnaseq-wrapper": "rnaseq-pipeline",
+    "nfcore-sarek-wrapper": "sarek-pipeline",
     "rnaseq-de": "rnaseq",
     "diff-visualizer": "diffviz",
     "sample-qc-triage": "sample-qc",
@@ -223,7 +224,7 @@ EXCLUDED_FOLDERS = {"pr-audit", "wes-clinical-report-es"}
 # Skills that are MVP (have working Python + are in SKILLS dict or are bio-orchestrator)
 MVP_FOLDERS = {
     "pharmgx-reporter", "equity-scorer", "nutrigx_advisor", "claw-metagenomics",
-    "nfcore-scrnaseq-wrapper", "nfcore-rnaseq-wrapper", "scrna-orchestrator", "scrna-embedding",
+    "nfcore-scrnaseq-wrapper", "nfcore-rnaseq-wrapper", "nfcore-sarek-wrapper", "scrna-orchestrator", "scrna-embedding",
     "genome-compare", "drug-photo", "gwas-prs", "clinpgx", "gwas-lookup",
     "bigquery-public",
     "profile-report", "bio-orchestrator", "claw-ancestry-pca", "claw-semantic-sim",
@@ -250,6 +251,7 @@ TRIGGER_KEYWORDS: dict[str, list[str]] = {
     "nutrigx_advisor": ["nutrition", "nutrigenomics", "diet genetics", "MTHFR", "caffeine", "lactose"],
     "nfcore-scrnaseq-wrapper": ["scrnaseq", "nf-core scrnaseq", "single-cell preprocessing", "10x fastq", "generate h5ad from fastq"],
     "nfcore-rnaseq-wrapper": ["bulk RNA-seq preprocessing", "nf-core rnaseq", "run rnaseq from fastq", "FASTQ to count matrix", "STAR Salmon RNA-seq pipeline"],
+    "nfcore-sarek-wrapper": ["sarek", "germline variant calling", "somatic variant calling", "tumor-normal pair", "mutect2", "strelka", "haplotypecaller", "ascat", "WES variant calling", "WGS variant calling", "VEP annotation", "nf-core sarek", "tumor-only variant calling", "ControlFREEC", "Manta"],
     "scrna-orchestrator": ["single-cell", "scrna", "h5ad", "mtx", "10x", "scanpy", "umap", "leiden"],
     "scrna-embedding": ["scvi", "scanvi", "latent", "embedding", "integration", "batch correction", "10x"],
     "rnaseq-de": ["differential expression", "bulk rna", "rna-seq", "count matrix", "deseq2", "pydeseq2"],
@@ -282,6 +284,7 @@ CHAINING: dict[str, list[str]] = {
     "nutrigx_advisor": ["profile-report", "pharmgx-reporter"],
     "nfcore-scrnaseq-wrapper": ["scrna-orchestrator", "scrna-embedding", "bio-orchestrator"],
     "nfcore-rnaseq-wrapper": ["rnaseq-de", "diff-visualizer", "bio-orchestrator"],
+    "nfcore-sarek-wrapper": ["variant-annotation", "clinical-variant-reporter", "bio-orchestrator"],
     "scrna-orchestrator": [],
     "scrna-embedding": ["scrna-orchestrator"],
     "rnaseq-de": ["diff-visualizer"],

@@ -770,6 +770,84 @@ SKILLS = {
         },
         "accepts_genotypes": False,
     },
+    "sarek-pipeline": {
+        "script": SKILLS_DIR / "nfcore-sarek-wrapper" / "nfcore_sarek_wrapper.py",
+        "demo_args": ["--demo"],
+        "description": "Wrapper de variant calling germinal y somático vía nf-core/sarek 3.8.1",
+        "default_timeout_seconds": 60 * 60 * 12 + 10 * 60,
+        "max_output_files_listed": 50,
+        # Keep this allowlist aligned with nfcore_sarek_wrapper.build_parser().
+        "allowed_extra_flags": set("""
+            --check --resume --arm --gpu --spark-profile --mutect-profile
+            --run-downstream --downstream-skill --profile --nextflow-config
+            --pipeline-version --pipeline-local --params-file --no-banner
+            --verbose --extra-param --step --tools --skip-tools --aligner
+            --no-intervals --wes --joint-germline --joint-mutect2
+            --only-paired-variant-calling --ignore-soft-clipped-bases
+            --filter-vcfs --normalize-vcfs --snv-consensus-calling
+            --concatenate-vcfs --build-only-index --download-cache
+            --use-gatk-spark --seq-platform --seq-center --email
+            --email-on-fail --publish-dir-mode --outdir-cache --multiqc-title
+            --multiqc-config --multiqc-logo --multiqc-methods-description
+            --hook-url --trace-report-suffix --max-multiqc-email-size
+            --input-restart --trim-fastq --trim-nextseq --clip-r1 --clip-r2
+            --three-prime-clip-r1 --three-prime-clip-r2 --length-required
+            --split-fastq --save-split-fastqs --save-trimmed
+            --umi-read-structure --group-by-umi-strategy --umi-location
+            --umi-tag --umi-length --umi-base-skip --umi-in-read-header
+            --sentieon-consensus --save-mapped --save-output-as-bam
+            --markduplicates-pixel-distance --nucleotides-per-second
+            --ascat-min-base-qual --ascat-min-counts --ascat-min-map-qual
+            --ascat-ploidy --ascat-purity --ascat-genome --cf-coeff
+            --cf-contamination --cf-contamination-adjustment --cf-minqual
+            --cf-mincov --cf-ploidy --cf-window --cf-chrom-len
+            --cnvkit-reference --freebayes-filter
+            --sentieon-haplotyper-emit-mode --sentieon-dnascope-emit-mode
+            --sentieon-dnascope-pcr-indel-model --gatk-pcr-indel-model
+            --varlociraptor-chunk-size --varlociraptor-scenario-tumor-only
+            --varlociraptor-scenario-somatic --varlociraptor-scenario-germline
+            --consensus-min-count --bcftools-filter-criteria --bcftools-columns
+            --bcftools-header-lines --snpeff-db --snpeff-cache --vep-cache
+            --vep-cache-version --vep-genome --vep-species --vep-version
+            --vep-out-format --vep-custom-args --vep-include-fasta
+            --vep-condel --vep-dbnsfp --vep-loftee --vep-mastermind
+            --vep-phenotypes --vep-spliceai --vep-spliceregion --dbnsfp
+            --dbnsfp-tbi --dbnsfp-consequence --dbnsfp-fields
+            --mastermind-file --mastermind-mutations --mastermind-var-iden
+            --mastermind-url --phenotypes-file --phenotypes-file-tbi
+            --phenotypes-include-types --spliceai-snv --spliceai-snv-tbi
+            --spliceai-indel --spliceai-indel-tbi --bcftools-annotations
+            --bcftools-annotations-tbi --condel-config --snpsift-databases
+            --genome --igenomes-base --igenomes-ignore --fasta --fasta-fai
+            --dict --bwa --bwamem2 --dragmap --dbsnp --dbsnp-tbi
+            --dbsnp-vqsr --known-indels --known-indels-tbi
+            --known-indels-vqsr --known-snps --known-snps-tbi
+            --known-snps-vqsr --germline-resource --germline-resource-tbi
+            --pon --pon-tbi --intervals --ascat-alleles --ascat-loci
+            --ascat-loci-gc --ascat-loci-rt --chr-dir --mappability
+            --msisensor2-models --msisensorpro-scan --ngscheckmate-bed
+            --sentieon-dnascope-model --bbsplit-fasta-list --bbsplit-index
+            --save-reference --save-bbsplit-reads
+        """.split()),
+        "allowed_extra_flags_without_values": set("""
+            --check --resume --arm --gpu --spark-profile --mutect-profile
+            --run-downstream --no-banner --verbose --no-intervals --wes
+            --joint-germline --joint-mutect2 --only-paired-variant-calling
+            --ignore-soft-clipped-bases --filter-vcfs --normalize-vcfs
+            --snv-consensus-calling --concatenate-vcfs --build-only-index
+            --download-cache --trim-fastq --trim-nextseq --save-split-fastqs
+            --save-trimmed --umi-in-read-header --sentieon-consensus
+            --save-mapped --save-output-as-bam --cf-contamination-adjustment
+            --vep-include-fasta --vep-condel --vep-dbnsfp --vep-loftee
+            --vep-mastermind --vep-phenotypes --vep-spliceai
+            --vep-spliceregion --mastermind-mutations --mastermind-var-iden
+            --mastermind-url --igenomes-ignore --save-reference
+            --save-bbsplit-reads
+        """.split()),
+        # The wrapper itself decides which native no-input modes are legal.
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
     "rdoutlier": {
         "script": SKILLS_DIR / "rare-disease-rnaseq" / "rare_disease_rnaseq.py",
         "demo_args": ["--demo"],
@@ -1182,6 +1260,11 @@ def run_skill(
 
     # If --profile is given, resolve the input file from the profile
     resolved_input = input_path
+    if resolved_input:
+        input_candidate = Path(resolved_input).expanduser()
+        if not input_candidate.is_absolute():
+            input_candidate = Path.cwd() / input_candidate
+        resolved_input = str(input_candidate.resolve())
     if profile_path and not input_path and not demo:
         if str(CLAWBIO_DIR) not in sys.path:
             sys.path.insert(0, str(CLAWBIO_DIR))
@@ -1485,6 +1568,16 @@ def _store_result_in_profile(profile_path: str, skill_name: str, out_dir: Path) 
 
 
 def main():
+    # Pipeline wrappers own large, schema-derived CLIs. Delegate their help so
+    # `clawbio.py run <pipeline> --help` cannot drift from the wrapper parser.
+    if (
+        len(sys.argv) >= 4
+        and sys.argv[1:3] == ["run", "sarek-pipeline"]
+        and any(arg in {"-h", "--help"} for arg in sys.argv[3:])
+    ):
+        subprocess.run([PYTHON, str(SKILLS["sarek-pipeline"]["script"]), "--help"], check=False)
+        return
+
     parser = argparse.ArgumentParser(
         description="ClawBio — Bioinformatics Skills Runner",
     )
@@ -1619,8 +1712,8 @@ def main():
     # appear in `python clawbio.py run rnaseq-pipeline --help` and parse with the
     # correct types instead of surviving only via parse_known_args + the registry
     # allowlist.
-    run_parser.add_argument("--pipeline-local", default=None, help="Local nf-core/rnaseq checkout for rnaseq-pipeline")
-    run_parser.add_argument("--aligner", default=None, help="Aligner for rnaseq-pipeline (star_salmon|star_rsem|hisat2|bowtie2_salmon)")
+    run_parser.add_argument("--pipeline-local", default=None, help="Local nf-core pipeline checkout for rnaseq-pipeline or sarek-pipeline")
+    run_parser.add_argument("--aligner", default=None, help="Aligner override for rnaseq-pipeline or sarek-pipeline")
     run_parser.add_argument("--pseudo-aligner", default=None, help="Pseudo-aligner for rnaseq-pipeline (salmon|kallisto)")
     run_parser.add_argument("--pseudo-aligner-kmer-size", type=int, default=None, help="K-mer size for pseudo-aligner index")
     run_parser.add_argument("--prokaryotic", action="store_true", help="Compose -profile prokaryotic for rnaseq-pipeline")
@@ -1711,7 +1804,7 @@ def main():
     run_parser.add_argument("--use-sentieon-star", action="store_true", help="Accelerate STAR with Sentieon for rnaseq-pipeline (requires SENTIEON_LICENSE_BASE64 secret)")
     run_parser.add_argument("--use-gpu-ribodetector", action="store_true", help="Use GPU acceleration for Ribodetector rRNA removal")
     # rnaseq-pipeline — references and index overrides not already covered above
-    run_parser.add_argument("--igenomes-base", default=None, help="iGenomes base path override (S3 URI or local mirror) for rnaseq-pipeline")
+    run_parser.add_argument("--igenomes-base", default=None, help="iGenomes base path override (S3 URI or local mirror) for pipeline skills")
     run_parser.add_argument("--sortmerna-index", default=None, help="Prebuilt SortMeRNA index for rnaseq-pipeline")
     run_parser.add_argument("--ribo-database-manifest", default=None, help="SortMeRNA rRNA database manifest for rnaseq-pipeline")
     run_parser.add_argument("--hisat2-build-memory", default=None, help="HISAT2 index build memory (e.g. '200.GB') for rnaseq-pipeline")
@@ -1907,7 +2000,7 @@ def main():
         if args.skill == "scrnaseq-pipeline" and getattr(args, "profile_path", None) in {"docker", "conda", "singularity", "apptainer"}:
             skill_backend_profile = args.profile_path
             args.profile_path = None
-        elif args.skill == "rnaseq-pipeline" and getattr(args, "profile_path", None) is not None:
+        elif args.skill in {"rnaseq-pipeline", "sarek-pipeline"} and getattr(args, "profile_path", None) is not None:
             skill_backend_profile = args.profile_path
             args.profile_path = None
 
@@ -2148,6 +2241,33 @@ def main():
                 extra.append("--deseq2-vst")
             # --nextflow-config uses action='append'; emit each entry so the wrapper
             # receives the full list (matching `-c <cfg>` Nextflow expectations).
+            for cfg in getattr(args, "nextflow_config", None) or []:
+                extra.extend(["--nextflow-config", cfg])
+        if args.skill == "sarek-pipeline":
+            for value_flag in (
+                ("pipeline_local", "--pipeline-local"),
+                ("aligner", "--aligner"),
+                ("seq_platform", "--seq-platform"),
+                ("email_on_fail", "--email-on-fail"),
+                ("multiqc_config", "--multiqc-config"),
+                ("multiqc_logo", "--multiqc-logo"),
+                ("multiqc_methods_description", "--multiqc-methods-description"),
+                ("igenomes_base", "--igenomes-base"),
+                ("bbsplit_fasta_list", "--bbsplit-fasta-list"),
+                ("bbsplit_index", "--bbsplit-index"),
+                ("publish_dir_mode", "--publish-dir-mode"),
+            ):
+                attr, flag = value_flag
+                value = getattr(args, attr, None)
+                if value:
+                    extra.extend([flag, value])
+            for attr, flag in (
+                ("arm", "--arm"),
+                ("save_trimmed", "--save-trimmed"),
+                ("save_bbsplit_reads", "--save-bbsplit-reads"),
+            ):
+                if getattr(args, attr, False):
+                    extra.append(flag)
             for cfg in getattr(args, "nextflow_config", None) or []:
                 extra.extend(["--nextflow-config", cfg])
         if getattr(args, "drug", None):

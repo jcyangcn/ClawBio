@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 83,
+  "skill_count": 84,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -1837,6 +1837,53 @@
       "chaining_partners": [
         "rnaseq-de",
         "diff-visualizer",
+        "bio-orchestrator"
+      ]
+    },
+    {
+      "name": "nfcore-sarek-wrapper",
+      "cli_alias": "sarek-pipeline",
+      "description": "ClawBio wrapper around nf-core/sarek 3.8.1 covering mapping through annotation for germline, tumor-only, and somatic paired analyses.",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run sarek-pipeline --demo",
+      "dependencies": [
+        "python>=3.11"
+      ],
+      "tags": [
+        "sarek",
+        "variant-calling",
+        "germline",
+        "somatic",
+        "tumor-only",
+        "wes",
+        "wgs",
+        "nextflow",
+        "nf-core"
+      ],
+      "trigger_keywords": [
+        "sarek",
+        "germline variant calling",
+        "somatic variant calling",
+        "tumor-normal pair",
+        "mutect2",
+        "strelka",
+        "haplotypecaller",
+        "ascat",
+        "WES variant calling",
+        "WGS variant calling",
+        "VEP annotation",
+        "SnpEff",
+        "GATK pipeline",
+        "nf-core",
+        "Nextflow"
+      ],
+      "chaining_partners": [
+        "variant-annotation",
+        "clinical-variant-reporter",
         "bio-orchestrator"
       ]
     },
