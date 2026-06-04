@@ -216,6 +216,7 @@ FOLDER_TO_ALIAS = {
     "crispr-screen-triage": "crispr-triage",
     "marker-dominance-mapper": "marker-map",
     "llm-biobank-bench": "llm-bench",
+    "phylogenetics-builder": "phylo",
 }
 
 # Skill folders excluded from the public catalog (local-only / gitignored)
@@ -235,6 +236,7 @@ MVP_FOLDERS = {
     "marker-dominance-mapper",
     "llm-biobank-bench",
     "analyze-fasta",
+    "phylogenetics-builder",
 }
 
 # Known trigger keywords for orchestrator routing
@@ -268,6 +270,7 @@ TRIGGER_KEYWORDS: dict[str, list[str]] = {
     "crispr-screen-triage": ["CRISPR screen", "guide counts", "rank CRISPR hits", "depleted genes", "knockout screen", "hit triage"],
     "marker-dominance-mapper": ["marker dominance", "map marker spots", "marker-based tissue regions", "tumor core", "immune edge"],
     "analyze-fasta": ["fasta", "analyze fasta", "gc content", "find orfs", "isoelectric point", "gravy index", "protein properties"],
+    "phylogenetics-builder": ["phylogeny", "phylogenetic tree", "iqtree", "maximum likelihood tree", "fasta alignment"],
 }
 
 # Known chaining partners
@@ -301,6 +304,7 @@ CHAINING: dict[str, list[str]] = {
     "crispr-screen-triage": ["target-validation-scorer", "omics-target-evidence-mapper"],
     "marker-dominance-mapper": ["scrna-orchestrator", "diff-visualizer"],
     "analyze-fasta": ["struct-predictor", "variant-annotation", "pubmed-summariser"],
+    "phylogenetics-builder": ["profile-report"],
 }
 
 
