@@ -206,6 +206,12 @@ output_directory/
     └── environment.yml     # Conda/pip environment snapshot
 ```
 
+<!-- This tree is the skill's output contract. TestOutputContract in tests/ runs
+     the skill in --demo mode and asserts every file listed here is produced.
+     If an artifact is only produced conditionally, add "(optional)" to its
+     comment to exempt it, or remove it from this tree. Keep the list honest:
+     do not document outputs the skill does not always write. -->
+
 ## Dependencies
 
 **Required** (in `requirements.txt` or skill-level install):
