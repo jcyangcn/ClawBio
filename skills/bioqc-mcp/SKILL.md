@@ -92,8 +92,7 @@ You are **BioQC Reporter**, a specialised ClawBio agent for executing automated 
 1. **Automated QC Execution**: Automatically finds FASTQ files, runs FastQC on threads, and aggregates results via MultiQC.
 2. **Quality Metric Extraction**: Parses FastQC `summary.txt` and `fastqc_data.txt` to extract exact base quality and GC content distributions.
 3. **Advanced Visualizations**: Generates 20+ publication-quality chart types (line, violin, bar, scatter, heatmaps, box plots) using Matplotlib and Seaborn.
-4. **Sandboxed Code Execution**: Run complex pipelines in a single call via a secure sandboxed executor, reducing token usage by up to 98%.
-5. **Dual CLI/MCP Interface**: Runs as a standard ClawBio CLI skill or starts an MCP stdio server to expose its 10 tools directly.
+4. **Dual CLI/MCP Interface**: Runs as a standard ClawBio CLI skill or starts an MCP stdio server to expose its tools directly to AI agents (Cursor, Claude Desktop).
 
 ## Scope
 
@@ -142,6 +141,34 @@ python clawbio.py run bioqc --demo
 ```
 Expected output: A parsed quality control report in `/tmp/bioqc_demo/report.md` covering 2 synthetic samples, custom base quality and GC content distribution plots in `/tmp/bioqc_demo/figures/`, and a standard ClawBio reproducibility bundle.
 
+## Example Output
+
+Running `python clawbio.py run bioqc --demo` produces:
+
+```
+output/bioqc-demo-<timestamp>/
+├── report.md                   # QC summary (per-sample pass/warn/fail table)
+├── figures/
+│   ├── base_quality.png        # Per-base sequence quality plot (Phred scores)
+│   └── gc_content.png          # GC content distribution across samples
+├── fastqc_output/              # Raw FastQC ZIP + HTML per sample
+├── multiqc_report.html         # Aggregated interactive MultiQC report
+└── reproducibility/
+    ├── commands.sh
+    └── checksums.sha256
+```
+
+Example `report.md` excerpt:
+
+```markdown
+## Quality Control Summary
+
+| Sample | Basic Statistics | Per Base Quality | GC Content | Adapter Content |
+|--------|-----------------|-----------------|------------|----------------|
+| SAMPLE_01 | PASS | PASS | PASS | PASS |
+| SAMPLE_02 | PASS | WARN | PASS | PASS |
+```
+
 ## Algorithm / Methodology
 
 1. **FastQC Execution**: Launches `fastqc` with `-o` and `-t` (threads) parameters on targeted files.
@@ -159,7 +186,7 @@ Expected output: A parsed quality control report in `/tmp/bioqc_demo/report.md` 
 ## Safety
 
 - **Local-first**: All FastQC and MultiQC processing is performed strictly locally. No genetic data is ever uploaded.
-- **Sandboxed Execution**: Code execution in pipeline mode uses a restricted, safe execution namespace preventing arbitrary system calls.
+- **No code execution**: All analysis is performed via explicit `subprocess.run` calls to `fastqc` and `multiqc` with no shell interpolation and no dynamic code evaluation.
 - **Disclaimer**: Every generated `report.md` includes the standard ClawBio bioinformatics research disclaimer.
 
 ## Agent Boundary

@@ -105,14 +105,3 @@ def test_generate_chart_from_data():
     assert res["success"] is True
     assert res["mime_type"] == "image/png"
     assert len(res["image_data"]) > 100
-
-
-def test_execute_qc_pipeline_sandboxing():
-    """execute_qc_pipeline operates in a sandboxed context preventing arbitrary builtins."""
-    res = bioqc_mcp.execute_qc_pipeline("import os; result = os.name")
-    assert res["success"] is False
-    assert "__import__ not found" in res["error"] or "Undefined" in res["error"] or "ImportError" in res["error"]
-
-    res = bioqc_mcp.execute_qc_pipeline("result = len([1, 2, 3])")
-    assert res["success"] is True
-    assert res["variables"]["result"] == 3

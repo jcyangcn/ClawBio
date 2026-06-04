@@ -285,18 +285,6 @@ def run_mcp_server():
                 },
                 "required": ["fastqc_dir"]
             }
-        ),
-        Tool(
-            name="run_qc_pipeline",
-            description="Execute a complete QC pipeline as Python code in a single call. Sandboxed namespace.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "code": {"type": "string", "description": "Python code to execute."},
-                    "timeout": {"type": "integer", "description": "Execution timeout", "default": 300}
-                },
-                "required": ["code"]
-            }
         )
     ]
 
@@ -385,12 +373,6 @@ def run_mcp_server():
                 for _chart_name, chart_data in result["charts"].items():
                     content_list.append(ImageContent(type="image", data=chart_data, mimeType="image/png"))
                 return content_list
-
-            elif name == "run_qc_pipeline":
-                code = arguments.get("code", "")
-                timeout = arguments.get("timeout", 300)
-                result = execute_qc_pipeline(code, timeout)
-                return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
             else:
                 return [TextContent(type="text", text=json.dumps({"error": f"Unknown tool: {name}"}))]
@@ -769,78 +751,6 @@ def extract_and_visualize_qc(fastqc_dir: str, metrics: list[str] = ["all"]) -> d
         return {"success": False, "error": str(e)}
 
 
-def execute_qc_pipeline(code: str, timeout: int = 300) -> dict[str, Any]:
-    """Execute sandboxed python code for complex QC analysis."""
-    import signal
-    from contextlib import redirect_stdout, redirect_stderr
-    import io
-
-    stdout_buf = io.StringIO()
-    stderr_buf = io.StringIO()
-
-    safe_builtins = {
-        'len': len, 'str': str, 'int': int, 'float': float, 'bool': bool,
-        'list': list, 'dict': dict, 'tuple': tuple, 'set': set, 'range': range,
-        'enumerate': enumerate, 'zip': zip, 'sum': sum, 'min': min, 'max': max,
-        'abs': abs, 'round': round, 'any': any, 'all': all, 'isinstance': isinstance,
-        'type': type, 'map': map, 'filter': filter, 'sorted': sorted, 'reversed': reversed
-    }
-
-    safe_globals = {
-        '__builtins__': safe_builtins,
-        'list_fastq_files': find_fastq_files,
-        'run_fastqc': run_fastqc_analysis,
-        'run_multiqc': run_multiqc_analysis,
-        'parse_fastqc_summary': parse_fastqc_data,
-        'generate_chart': generate_chart_from_data,
-        'read_html_file': read_html_file,
-        'analyze_html': analyze_html_structure,
-        'extract_plots': extract_plots_from_fastqc,
-        'visualize_qc': extract_and_visualize_qc,
-        'print': lambda *args, **kwargs: print(*args, **kwargs, file=stdout_buf),
-        'Path': Path, 'json': json
-    }
-    local_ns = {}
-
-    def handle_alarm(signum, frame):
-        raise TimeoutError("Execution timed out")
-
-    try:
-        if hasattr(signal, 'SIGALRM'):
-            signal.signal(signal.SIGALRM, handle_alarm)
-            signal.alarm(timeout)
-
-        with redirect_stdout(stdout_buf), redirect_stderr(stderr_buf):
-            exec(code, safe_globals, local_ns)
-
-        if hasattr(signal, 'SIGALRM'):
-            signal.alarm(0)
-
-        result_vars = {}
-        for k, v in local_ns.items():
-            if not k.startswith('_'):
-                try:
-                    json.dumps(v)
-                    result_vars[k] = v
-                except Exception:
-                    result_vars[k] = str(v)
-
-        return {
-            "success": True,
-            "stdout": stdout_buf.getvalue(),
-            "stderr": stderr_buf.getvalue(),
-            "variables": result_vars,
-            "result": local_ns.get("result") or local_ns.get("results")
-        }
-    except Exception as e:
-        if hasattr(signal, 'SIGALRM'):
-            signal.alarm(0)
-        return {
-            "success": False,
-            "error": str(e),
-            "stdout": stdout_buf.getvalue(),
-            "stderr": stderr_buf.getvalue()
-        }
 
 
 # --------------------------------------------------------------------------- #
