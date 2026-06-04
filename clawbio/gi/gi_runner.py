@@ -34,7 +34,7 @@ def _parse_args(task: str) -> argparse.Namespace:
     p.add_argument("--demo", action="store_true", help="Run with the bundled example FASTA")
     p.add_argument("--model", type=str, default=None, help="Override default model name")
     p.add_argument("--description", type=str, default=None, help="Cell type / assay context (required by gi-expression; ignored by other tasks)")
-    p.add_argument("--api-key", type=str, default=None, help="Override GI_API_KEY env (otherwise uses env or bundled hackathon key)")
+    p.add_argument("--api-key", type=str, default=None, help="Override GI_API_KEY env (otherwise uses env; raises if unset — see each SKILL.md Authentication section)")
     p.add_argument("--base-url", type=str, default=None, help="Override GI_BASE_URL (default: https://api.genomicintelligence.ai)")
     return p.parse_args()
 
