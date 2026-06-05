@@ -41,6 +41,7 @@ When the user asks a question, match it to a skill and act:
 | Cell segmentation, nucleus segmentation, microscopy, fluorescence microscopy, cellpose, cpsam, image segmentation, cell counting, segmentation mask | `skills/cell-detection/` | Run `cell_detection.py` |
 | WES clinical report English, exome PDF report, whole exome sequencing report, clinical exome PDF | `skills/wes-clinical-report-en/` | Run `wes_clinical_report_en.py` |
 | WES clinical report Spanish, informe clinico WES, exome PDF espanol, Predice, Inbiomedic, Novogene report | `skills/wes-clinical-report-es/` | Run `wes_clinical_report_es.py` |
+| Drug repurposing screen, viability screen, PRISM, compound panel analysis, context-selective compounds, selective killing biomarker | `skills/drug-repurposing-screen/` | Run `drug_repurposing_screen.py` or `clawbio.py run repurposing` |
 
 ## How to Use a Skill
 
@@ -207,6 +208,12 @@ python skills/wes-clinical-report-es/wes_clinical_report_es.py \
   --report-dir <reports_dir> --output-dir <pdf_dir> --samples Sample3
 python skills/wes-clinical-report-es/wes_clinical_report_es.py --demo
 
+# Drug Repurposing Screen — pooled viability QC, hits, selectivity, biomarkers, priority
+python skills/drug-repurposing-screen/drug_repurposing_screen.py --demo --output /tmp/drs_demo
+python skills/drug-repurposing-screen/drug_repurposing_screen.py \
+  --bundle <bundle_dir> --schema <schema.yaml> --objective <objective.yaml> --output <report_dir>
+python clawbio.py run repurposing --demo --output /tmp/drs_demo
+
 # MultiQC — aggregate QC reports across samples and tools
 python skills/multiqc-reporter/multiqc_reporter.py \
   --input <dir> [<dir2> ...] --output <report_dir>
@@ -246,6 +253,7 @@ For instant demos when the user has no data:
 | WES demo report (8 P/LP variants, 6 PGx, synthetic) | `skills/wes-clinical-report-en/examples/demo_WES_Report.md` | wes-clinical-report-en |
 | WES demo report (same, for Spanish output) | `skills/wes-clinical-report-es/examples/demo_WES_Report.md` | wes-clinical-report-es |
 | MultiQC demo (synthetic FastQC, 3 samples — SAMPLE_01/02/03) | `--demo` flag | multiqc-reporter |
+| Drug repurposing toy screen (10 samples × 20 compounds × 2 plates, 3 selective hits) | `--demo` flag | drug-repurposing-screen |
 | Corpas 30x chr20 SNPs + indels (WGS) | `corpas-30x/subsets/chr20_snps_indels.vcf.gz` | variant-annotation, equity-scorer |
 | Corpas 30x SV calls (WGS) | `corpas-30x/subsets/sv_calls.vcf.gz` | variant-annotation |
 | Corpas 30x CNV calls (WGS) | `corpas-30x/subsets/cnv_calls.vcf.gz` | variant-annotation |
@@ -275,6 +283,9 @@ python skills/nutrigx_advisor/nutrigx_advisor.py \
 
 # MultiQC demo
 python skills/multiqc-reporter/multiqc_reporter.py --demo --output /tmp/multiqc_demo
+
+# Drug repurposing screen demo
+python skills/drug-repurposing-screen/drug_repurposing_screen.py --demo --output /tmp/drs_demo
 
 # scRNA demo
 python skills/scrna-orchestrator/scrna_orchestrator.py --demo --output /tmp/scrna_demo

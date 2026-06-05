@@ -559,6 +559,14 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "repurposing": {
+        "script": SKILLS_DIR / "drug-repurposing-screen" / "drug_repurposing_screen.py",
+        "demo_args": ["--demo"],
+        "description": "Drug repurposing screen — pooled viability QC, hits, selectivity, biomarkers, priority table",
+        "allowed_extra_flags": {"--bundle", "--schema", "--objective", "--resume"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
 }
 
 # Skills that run in the full-profile pipeline (order matters)
