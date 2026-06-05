@@ -280,6 +280,39 @@
       ]
     },
     {
+      "name": "bioqc-mcp",
+      "cli_alias": null,
+      "description": "Automated sequencing quality control and advanced visualization wrapping FastQC, MultiQC, and custom chart generation. Exposes an MCP stdio server for live AI integration alongside a ClawBio CLI runner.",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/bioqc-mcp/bioqc_mcp.py --demo",
+      "dependencies": [
+        "python>=3.11"
+      ],
+      "tags": [
+        "qc",
+        "fastqc",
+        "multiqc",
+        "visualization",
+        "sequencing",
+        "mcp"
+      ],
+      "trigger_keywords": [
+        "bioqc",
+        "fastqc mcp",
+        "multiqc mcp",
+        "automated qc pipeline",
+        "mcp qc",
+        "fastq quality control",
+        "sequencing quality control",
+        "generate chart qc"
+      ],
+      "chaining_partners": []
+    },
+    {
       "name": "busco-assessor",
       "cli_alias": null,
       "description": "Genome, transcriptome, and protein completeness assessment via BUSCO v6. Agentic lineage routing from organism description, all three BUSCO modes, auto-lineage support, and full demo mode without the BUSCO binary.",

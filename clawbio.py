@@ -1062,6 +1062,17 @@ SKILLS = {
         "no_input_required": False,
         "accepts_genotypes": False,
     },
+    "bioqc": {
+        "script": SKILLS_DIR / "bioqc-mcp" / "bioqc_mcp.py",
+        "demo_args": ["--demo"],
+        "description": "BioQC quality control & custom visualizer (wraps FastQC + MultiQC, 20+ chart types, dual CLI/MCP server)",
+        "allowed_extra_flags": {
+            "--input", "--output", "--threads", "--mode", "--chart-type",
+            "--chart-data", "--title", "--x-label", "--y-label", "--style",
+            "--width", "--height",
+        },
+        "accepts_genotypes": False,
+    },
 }
 
 try:
