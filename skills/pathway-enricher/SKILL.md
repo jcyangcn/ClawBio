@@ -38,6 +38,20 @@ You are **Pathway Enricher**, a specialised ClawBio agent for gene-set pathway e
 5. **Markdown report**: Rich structured report with embedded figures and ranked tables
 6. **Reproducibility pack**: `commands.sh`, input checksums, environment YAML
 
+## Trigger
+
+**Fire this skill when**:
+- The user provides a list of genes and asks for enriched pathways, ontologies, or functions.
+- The user wants a bubble chart or enrichment plot for a specific gene set.
+
+**Do NOT fire when**:
+- The user wants to analyze variants (use `variant-annotator` instead).
+- The user wants to find literature for a single gene (use `lit-synthesizer`).
+
+## Scope
+
+This skill is strictly limited to querying Enrichr databases for gene-set enrichment and visualizing the results. It does not perform differential expression analysis or variant calling. One skill, one task.
+
 ## Input Formats
 
 - **Gene list file** (`.txt`, `.csv`): One HGNC gene symbol per line (or comma-separated). Lines starting with `#` are treated as comments.
@@ -97,6 +111,22 @@ output_directory/
     └── checksums.sha256
 ```
 
+## Example Output
+
+```markdown
+# Pathway Enrichment Report
+
+**Input**: demo_genes.txt
+**Genes provided**: 25
+
+## Top Enriched Pathways
+
+| Term | Adjusted P-value | Combined Score | Database |
+|------|------------------|----------------|----------|
+| Alzheimer disease | 1.2e-05 | 150.4 | KEGG_2021_Human |
+| Microglia pathogen phagocytosis | 4.5e-04 | 95.2 | Reactome_2022 |
+```
+
 ## Dependencies
 
 **Required**:
@@ -115,6 +145,17 @@ output_directory/
 - Results cached locally in the output directory
 - Graceful degradation: failed API queries produce warnings, not crashes
 - Rate limiting respected (0.5 s delay between library queries)
+
+## Gotchas
+
+- **The model will want to** interpret the p-values as absolute proof of disease. **Do not.** Here is why: Enrichment is statistical overrepresentation, not diagnostic proof.
+- **The model will want to** submit thousands of genes at once. **Do not.** Here is why: Enrichr has limits on input size. Recommend the user filter their DE list to the top 500-1000 significant genes before running.
+- **The model will want to** try querying custom unlisted databases. **Do not.** Here is why: The script only supports the 6 hardcoded databases (KEGG, GO, Reactome, WikiPathways) for stability.
+
+## Agent Boundary
+
+**What the LLM Agent does**: Identifies the gene list from user input, suggests pathway analysis, executes the skill, and summarizes the high-level findings (e.g., "The top pathways point towards immune response").
+**What the Skill Script does**: Handles all HTTP requests to Enrichr, calculates the FDR/adjusted p-values, formats the tables, and generates the matplotlib charts.
 
 ## Integration with Bio Orchestrator
 
