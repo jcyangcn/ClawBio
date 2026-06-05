@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Union
 
 from clawbio.common.checksums import sha256_file
+from clawbio.common.textio import write_text_lf
 
 
 @dataclass
@@ -121,7 +122,7 @@ def write_portable_commands_sh(
 
     content = "\n".join(lines) + "\n"
     path = repro_dir / "commands.sh"
-    path.write_text(content)
+    write_text_lf(path, content)
     path.chmod(path.stat().st_mode | 0o111)
     return path
 
@@ -161,7 +162,7 @@ def write_checksums(
         lines.append(f"{sha256_file(p)}  {label}")
 
     checksum_path = repro_dir / "checksums.sha256"
-    checksum_path.write_text("\n".join(lines) + ("\n" if lines else ""))
+    write_text_lf(checksum_path, "\n".join(lines) + ("\n" if lines else ""))
     return checksum_path
 
 
@@ -171,6 +172,7 @@ def write_environment_yml(
     pip_deps: list[str],
     conda_deps: list[str] | None = None,
     python_version: str = "3.10",
+    channels: list[str] | None = None,
 ) -> Path:
     """Write reproducibility/environment.yml for a ClawBio skill.
 
@@ -181,6 +183,10 @@ def write_environment_yml(
         conda_deps:     Extra conda packages beyond python (e.g. ['numpy', 'scipy']).
                         Do not include 'python=X.Y' here — use python_version instead.
         python_version: Python version string (default '3.10').
+        channels:       Conda channels in priority order (default ['conda-forge']).
+                        Pass e.g. ['conda-forge', 'bioconda'] when a conda_dep
+                        (such as nextflow) only lives on bioconda, otherwise the
+                        recipe cannot be installed.
 
     Returns the path of the written environment.yml file.
     """
@@ -200,15 +206,17 @@ def write_environment_yml(
     else:
         pip_block = ""
 
+    channel_lines = "\n".join(f"  - {ch}" for ch in (channels or ["conda-forge"]))
+
     content = f"""name: {env_name}
 channels:
-  - conda-forge
+{channel_lines}
 dependencies:
   - python={python_version}{conda_block}
   - pip
 {pip_block}"""
     path = repro_dir / "environment.yml"
-    path.write_text(content)
+    write_text_lf(path, content)
     return path
 
 
@@ -228,7 +236,7 @@ def write_commands_sh(output_dir: Path | str, command: str) -> Path:
 
     content = f"#!/usr/bin/env bash\n{command}\n"
     path = repro_dir / "commands.sh"
-    path.write_text(content)
+    write_text_lf(path, content)
     path.chmod(path.stat().st_mode | 0o111)
     return path
 

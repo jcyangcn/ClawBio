@@ -141,6 +141,24 @@ class TestWriteEnvironmentYml:
         text = (tmp_path / "reproducibility" / "environment.yml").read_text()
         assert "conda-forge" in text
 
+    def test_custom_channels_in_order(self, tmp_path):
+        """An explicit channels list is rendered in order (e.g. for bioconda deps)."""
+        import yaml
+        write_environment_yml(
+            tmp_path, "clawbio-test", pip_deps=[], conda_deps=["nextflow=24.10.1"],
+            channels=["conda-forge", "bioconda"],
+        )
+        text = (tmp_path / "reproducibility" / "environment.yml").read_text()
+        parsed = yaml.safe_load(text)
+        assert parsed["channels"] == ["conda-forge", "bioconda"]
+
+    def test_default_channels_unchanged_when_omitted(self, tmp_path):
+        """Omitting channels keeps the conda-forge default (backward compatible)."""
+        import yaml
+        write_environment_yml(tmp_path, "clawbio-test", ["numpy"])
+        parsed = yaml.safe_load((tmp_path / "reproducibility" / "environment.yml").read_text())
+        assert parsed["channels"] == ["conda-forge"]
+
     def test_conda_deps_separate_from_pip(self, tmp_path):
         """conda_deps kwarg lists packages outside the pip block."""
         write_environment_yml(tmp_path, "clawbio-test", ["cellpose>=4.0"],
