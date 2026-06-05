@@ -83,7 +83,7 @@ def build_sample_info() -> pd.DataFrame:
         }
         rows.append(row)
     df = pd.DataFrame(rows)
-    for compound_id in SELECTIVE:
+    for compound_id in sorted(SELECTIVE):
         sens = []
         for sid in SAMPLES:
             base = RNG.normal(0.8, 0.05)
