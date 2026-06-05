@@ -47,7 +47,7 @@ Before coding, plan your skill and ensure it adheres to these naming rules:
 
 ## 3. Step 2: Scaffolding the Skill
 
-ClawBio provides an automated scaffolding script, [scaffold_skill.py](file:///Users/jaan/Desktop/Bioclaw/scaffold_skill.py), which generates a benchmark-ready skill directory structure pre-populated with conformant boilerplate files.
+ClawBio provides an automated scaffolding script, [scaffold_skill.py](scaffold_skill.py), which generates a benchmark-ready skill directory structure pre-populated with conformant boilerplate files.
 
 Run the scaffolder from the project root:
 ```bash
@@ -75,9 +75,9 @@ skills/pathway-enrichment/
 
 ## 4. Step 3: Documenting the Skill Specification (SKILL.md)
 
-The `SKILL.md` file is the primary artifact. If a skill does not have a Python script, agents can still interpret `SKILL.md` to run the methodology. It must follow the exact structure defined in [templates/SKILL-TEMPLATE.md](file:///Users/jaan/Desktop/Bioclaw/templates/SKILL-TEMPLATE.md).
+The `SKILL.md` file is the primary artifact. If a skill does not have a Python script, agents can still interpret `SKILL.md` to run the methodology. It must follow the exact structure defined in [templates/SKILL-TEMPLATE.md](templates/SKILL-TEMPLATE.md).
 
-Every skill's `SKILL.md` must pass the 17-point conformance checklist audited by [scripts/lint_skills.py](file:///Users/jaan/Desktop/Bioclaw/scripts/lint_skills.py).
+Every skill's `SKILL.md` must pass the 17-point conformance checklist audited by [scripts/lint_skills.py](scripts/lint_skills.py).
 
 ### YAML Frontmatter Details
 Your YAML frontmatter at the top of `SKILL.md` must contain:
@@ -169,7 +169,7 @@ metadata:
 ClawBio mandates **Red/Green Test-Driven Development (TDD)** for all skill changes.
 
 ### 1. Register the Test Path
-Add the skill's test folder path to `testpaths` inside [pytest.ini](file:///Users/jaan/Desktop/Bioclaw/pytest.ini):
+Add the skill's test folder path to `testpaths` inside [pytest.ini](pytest.ini):
 ```ini
 testpaths =
     ...
@@ -223,7 +223,7 @@ python -m pytest skills/pathway-enrichment/tests/ -v
 
 ## 7. Step 6: Registering the Skill in ClawBio
 
-To hook your skill up to the CLI runner, you must register it in the `SKILLS` registry inside [clawbio.py](file:///Users/jaan/Desktop/Bioclaw/clawbio.py) around line 258:
+To hook your skill up to the CLI runner, you must register it in the `SKILLS` registry inside [clawbio.py](clawbio.py) around line 258:
 
 ```python
 SKILLS = {
@@ -255,7 +255,7 @@ python clawbio.py list
 
 To make the skill indexable by the platform, you must register its attributes and regenerate the machine-readable catalog.
 
-### 1. Update [scripts/generate_catalog.py](file:///Users/jaan/Desktop/Bioclaw/scripts/generate_catalog.py)
+### 1. Update [scripts/generate_catalog.py](scripts/generate_catalog.py)
 Open `scripts/generate_catalog.py` and add entries for your skill in:
 * **`FOLDER_TO_ALIAS`**: Map the folder to your `clawbio.py` CLI alias.
   ```python
@@ -302,7 +302,7 @@ python scripts/lint_skills.py
 
 ## 9. Step 8: Updating routing in CLAUDE.md
 
-Add your skill to the routing table and CLI guides inside [CLAUDE.md](file:///Users/jaan/Desktop/Bioclaw/CLAUDE.md) (which is the source of truth for routing tables and demo commands):
+Add your skill to the routing table and CLI guides inside [CLAUDE.md](CLAUDE.md) (which is the source of truth for routing tables and demo commands):
 * Add a row to the **Skill Routing Table** under the appropriate categories.
 * Add your CLI execution example to the **CLI Reference** section.
 * Add your demo input under the **Demo Data** table.
@@ -326,4 +326,4 @@ Add your skill to the routing table and CLI guides inside [CLAUDE.md](file:///Us
    git commit -m "Add pathway-enrichment skill with TDD, CLI, and registry registration"
    git push -u origin feat/add-pathway-enrichment
    ```
-4. Open a Pull Request. Use [.github/PULL_REQUEST_TEMPLATE.md](file:///Users/jaan/Desktop/Bioclaw/.github/PULL_REQUEST_TEMPLATE.md) for the description, filling out every section fully. Include demo output snippets to help reviewers.
+4. Open a Pull Request. Use [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md) for the description, filling out every section fully. Include demo output snippets to help reviewers.
