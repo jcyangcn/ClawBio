@@ -2095,6 +2095,35 @@
       ]
     },
     {
+      "name": "phylogenetics-builder",
+      "cli_alias": "phylo",
+      "description": "Build maximum-likelihood phylogenetic trees from aligned FASTA data using IQ-TREE 2.",
+      "version": "0.1.0",
+      "status": "mvp",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run phylo --demo",
+      "dependencies": [
+        "python>=3.10",
+        "pandas>=2.0",
+        "biopython>=1.80",
+        "matplotlib>=3.5"
+      ],
+      "tags": [],
+      "trigger_keywords": [
+        "phylogeny",
+        "phylogenetic tree",
+        "iqtree",
+        "maximum likelihood tree",
+        "fasta alignment",
+        "build tree"
+      ],
+      "chaining_partners": [
+        "profile-report"
+      ]
+    },
+    {
       "name": "profile-report",
       "cli_alias": "profile",
       "description": "Unified personal genomic profile report — reads a PatientProfile JSON and synthesizes all skill results into a single \"Your Genomic Profile\" document.",

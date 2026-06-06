@@ -316,6 +316,13 @@ SKILLS = {
         "allowed_extra_flags": set(),
         "accepts_genotypes": False,
     },
+    "phylo": {
+        "script": SKILLS_DIR / "phylogenetics-builder" / "phylogenetics_builder.py",
+        "demo_args": ["--demo"],
+        "description": "Build maximum-likelihood phylogenetic trees from aligned FASTA data using IQ-TREE 2",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
     "scrna": {
         "script": SKILLS_DIR / "scrna-orchestrator" / "scrna_orchestrator.py",
         "demo_args": ["--demo"],
