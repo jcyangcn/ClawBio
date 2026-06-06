@@ -1073,6 +1073,15 @@ SKILLS = {
         },
         "accepts_genotypes": False,
     },
+    "pathway-enricher": {
+        "script": SKILLS_DIR / "pathway-enricher" / "pathway_enricher.py",
+        "demo_args": ["--demo"],
+        "description": "Gene-set pathway enrichment via Enrichr (KEGG, GO BP/MF/CC, Reactome, WikiPathways) — bubble charts & ranked tables",
+        "allowed_extra_flags": {
+            "--input", "--output", "--databases", "--top-n",
+        },
+        "accepts_genotypes": False,
+    },
 }
 
 try:
