@@ -34,7 +34,7 @@ metadata:
         - json
       description: Machine-readable results
   dependencies:
-    python: ">=3.11"
+    python: ">=3.10"
     packages:
       - pandas>=2.0
   demo_data:
@@ -205,6 +205,12 @@ output_directory/
     ├── commands.sh         # Exact commands to reproduce
     └── environment.yml     # Conda/pip environment snapshot
 ```
+
+<!-- This tree is the skill's output contract. TestOutputContract in tests/ runs
+     the skill in --demo mode and asserts every file listed here is produced.
+     If an artifact is only produced conditionally, add "(optional)" to its
+     comment to exempt it, or remove it from this tree. Keep the list honest:
+     do not document outputs the skill does not always write. -->
 
 ## Dependencies
 

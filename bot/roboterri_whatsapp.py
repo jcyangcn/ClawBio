@@ -10,11 +10,11 @@ Works with any OpenAI-compatible provider: OpenAI, Anthropic (via proxy),
 Google, Mistral, Groq, Together, OpenRouter, Ollama, LM Studio, etc.
 
 Prerequisites:
-    pip3 install flask openai python-dotenv requests
+    uv sync --group bot
 
 Usage:
     # Set environment variables in .env (see bot/README.md)
-    python3 bot/roboterri_whatsapp.py
+    uv run python bot/roboterri_whatsapp.py
 
 Setup (Meta WhatsApp Cloud API):
     1. Go to https://developers.facebook.com and create an app (type: Business)

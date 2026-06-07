@@ -470,13 +470,84 @@ chr6\t32659879\tA\tC\t0/1
 """)
 
 
+# Appended verbatim to every generated test file. No per-skill substitution:
+# it reads the skill's own SKILL.md generically. Kept as a plain (non-f) string
+# so its braces and regex escapes pass through untouched.
+_OUTPUT_CONTRACT_BLOCK = '''
+
+def _parse_output_contract(skill_md):
+    """Extract files promised in the SKILL.md '## Output Structure' tree.
+
+    Returns output-relative file paths. Directory lines, and any entry whose
+    inline comment contains 'optional', are skipped. Returns [] when there is no
+    parseable section, so skills without the section are simply not gated.
+    """
+    if not skill_md.exists():
+        return []
+    text = skill_md.read_text()
+    m = re.search(r"##\\s*Output Structure\\s*\\n+```[^\\n]*\\n(.*?)\\n```", text, re.S)
+    if not m:
+        return []
+    files = []
+    parents = {}
+    for raw in m.group(1).splitlines():
+        if not raw.strip():
+            continue
+        parts = re.split(r"\\s+#", raw, maxsplit=1)
+        entry, comment = parts[0], (parts[1] if len(parts) > 1 else "")
+        mm = re.match(r"^([\\s│├└─]*)(.*)$", entry)
+        prefix, name = mm.group(1), mm.group(2).strip()
+        if not name:
+            continue
+        depth = len(prefix) // 4
+        if depth == 0:
+            continue  # the root output_directory/ line
+        if name.endswith("/"):
+            parents[depth] = name.rstrip("/")
+            for d in [k for k in parents if k > depth]:
+                del parents[d]
+            continue
+        if "optional" in comment.lower():
+            continue
+        rel = "/".join(parents[d] for d in sorted(parents) if d < depth)
+        files.append(rel + "/" + name if rel else name)
+    return files
+
+
+class TestOutputContract:
+    """Every artifact promised in SKILL.md '## Output Structure' must be produced.
+
+    Guards against doc/code drift: a skill documenting an output it never writes.
+    Mark conditional artifacts with '(optional)' in the tree comment to exempt them.
+    """
+
+    def test_documented_outputs_are_produced(self, tmp_path):
+        promised = _parse_output_contract(SKILL_DIR / "SKILL.md")
+        if not promised:
+            pytest.skip("No parseable '## Output Structure' section in SKILL.md")
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--demo", "--output", str(tmp_path)],
+            capture_output=True, text=True
+        )
+        assert result.returncode == 0, f"demo run failed: {result.stderr}"
+        missing = [p for p in promised if not (tmp_path / p).exists()]
+        assert not missing, (
+            "SKILL.md Output Structure promises artifacts the skill did not "
+            "produce: " + ", ".join(missing) + ". Write them, mark them "
+            "'(optional)' in the SKILL.md tree, or remove them from the "
+            "documented Output Structure."
+        )
+'''
+
+
 def generate_tests(name: str) -> str:
     """Generate test suite."""
     py_name = to_python_name(name)
-    return textwrap.dedent(f'''\
+    header = textwrap.dedent(f'''\
 """Tests for {name}. Red/green TDD: these should fail until implementation is complete."""
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -569,6 +640,7 @@ class TestDemoData:
         lines = [l for l in content.splitlines() if l.strip() and not l.startswith("#")]
         assert len(lines) > 0, "Demo input has no data lines"
 ''')
+    return header + _OUTPUT_CONTRACT_BLOCK
 
 
 def generate_bench_test_cases(name: str, description: str) -> dict[str, dict[str, str]]:

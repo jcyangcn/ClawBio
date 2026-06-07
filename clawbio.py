@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 clawbio.py — ClawBio Bioinformatics Skills Runner
-==================================================
 Standalone CLI and importable module for running ClawBio skills.
 
 Usage:
@@ -14,6 +13,7 @@ Usage:
     python clawbio.py run full-profile --profile profiles/PT001.json --output ./results
 
 Importable:
+    # With the repository checkout on sys.path:
     from clawbio import run_skill, list_skills, upload_profile
     result = run_skill("pharmgx", demo=True)
 """
@@ -27,6 +27,8 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+
+from clawbio.contract_alerts import append_contract_alert_log, normalise_contract_alerts
 
 # --------------------------------------------------------------------------- #
 # Paths
@@ -287,10 +289,37 @@ SKILLS = {
         "allowed_extra_flags": set(),
         "accepts_genotypes": True,
     },
+    "dnasp": {
+        "script": SKILLS_DIR / "dnasp" / "dnasp.py",
+        "demo_args": ["--demo"],
+        "description": "DnaSP 6 population genetics (Pi, Tajima's D, Fu & Li, Fay & Wu, MK, Ka/Ks, Fst, and more)",
+        "allowed_extra_flags": {
+            "--fasta", "--outgroup", "--pop-map", "--window", "--step",
+            "--all", "--pi", "--theta", "--tajima", "--fuliD", "--fuliF",
+            "--hka", "--mk", "--kaks", "--r2", "--fufs", "--sfs",
+            "--tstv", "--codon", "--faywu", "--fst",
+            "--n-sim", "--sim-seed",
+        },
+        "accepts_genotypes": False,
+    },
     "metagenomics": {
         "script": SKILLS_DIR / "claw-metagenomics" / "metagenomics_profiler.py",
         "demo_args": ["--demo"],
         "description": "Metagenomics profiler (Kraken2, RGI/CARD, HUMAnN3)",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
+    "analyze-fasta": {
+        "script": SKILLS_DIR / "analyze-fasta" / "analyze_fasta.py",
+        "demo_args": ["--demo"],
+        "description": "Single FASTA analyzer (auto-detect nucleotide/protein, GC, ORFs, MW, pI, GRAVY)",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
+    "phylo": {
+        "script": SKILLS_DIR / "phylogenetics-builder" / "phylogenetics_builder.py",
+        "demo_args": ["--demo"],
+        "description": "Build maximum-likelihood phylogenetic trees from aligned FASTA data using IQ-TREE 2",
         "allowed_extra_flags": set(),
         "accepts_genotypes": False,
     },
@@ -463,7 +492,7 @@ SKILLS = {
         "demo_args": ["--demo"],
         "description": "Extract numerical data from scientific figure images (Claude vision + OpenCV)",
         "allowed_extra_flags": {"--web", "--port", "--plot-type"},
-        "api_module": "skills.data-extractor.api",
+        "api_module": "skills.data-extractor.data_extractor_api",
         "accepts_genotypes": False,
     },
     "rnaseq": {
@@ -478,6 +507,366 @@ SKILLS = {
             "--backend",
             "--min-count",
             "--min-samples",
+        },
+    },
+    "scrnaseq-pipeline": {
+        "script": SKILLS_DIR / "nfcore-scrnaseq-wrapper" / "nfcore_scrnaseq_wrapper.py",
+        "demo_args": ["--demo"],
+        "description": "Wrapper de preprocessing scRNA FASTQ-to-h5ad vía scrnaseq/Nextflow",
+        # Keep the ClawBio runner timeout above the wrapper's internal Nextflow
+        # timeout so the wrapper can terminate the process group cleanly first.
+        "default_timeout_seconds": 60 * 60 * 12 + 10 * 60,
+        "max_output_files_listed": 50,
+        "allowed_extra_flags": {
+            "--check",
+            "--profile",
+            "--pipeline-version",
+            "--preset",
+            "--protocol",
+            "--email",
+            "--multiqc-title",
+            "--expected-cells",
+            "--resume",
+            "--genome",
+            "--save-reference",
+            "--save-align-intermeds",
+            "--skip-cellbender",
+            "--skip-fastqc",
+            "--skip-emptydrops",
+            "--skip-multiqc",
+            "--skip-cellranger-renaming",
+            "--skip-cellrangermulti-vdjref",
+            "--run-downstream",
+            "--skip-downstream",
+            "--fasta",
+            "--gtf",
+            "--transcript-fasta",
+            "--txp2gene",
+            "--simpleaf-index",
+            "--simpleaf-umi-resolution",
+            "--kallisto-index",
+            "--kb-workflow",
+            "--kb-t1c",
+            "--kb-t2c",
+            "--star-index",
+            "--star-feature",
+            "--star-ignore-sjdbgtf",
+            "--seq-center",
+            "--cellranger-index",
+            "--cellranger-vdj-index",
+            "--cellrangerarc-config",
+            "--cellrangerarc-reference",
+            "--barcode-whitelist",
+            "--motifs",
+            "--gex-frna-probe-set",
+            "--gex-target-panel",
+            "--gex-cmo-set",
+            "--fb-reference",
+            "--vdj-inner-enrichment-primers",
+            "--gex-barcode-sample-assignment",
+            "--cellranger-multi-barcodes",
+        },
+        "allowed_extra_flags_without_values": {
+            "--check",
+            "--resume",
+            "--skip-cellbender",
+            "--skip-fastqc",
+            "--skip-emptydrops",
+            "--skip-multiqc",
+            "--skip-cellranger-renaming",
+            "--skip-cellrangermulti-vdjref",
+            "--run-downstream",
+            "--skip-downstream",
+            "--save-reference",
+            "--save-align-intermeds",
+            "--star-ignore-sjdbgtf",
+        },
+        "accepts_genotypes": False,
+    },
+    "rnaseq-pipeline": {
+        "script": SKILLS_DIR / "nfcore-rnaseq-wrapper" / "nfcore_rnaseq_wrapper.py",
+        "demo_args": ["--demo"],
+        "description": "Wrapper de preprocessing bulk RNA-seq FASTQ-to-counts vía nf-core/rnaseq",
+        "default_timeout_seconds": 60 * 60 * 12 + 10 * 60,
+        "max_output_files_listed": 50,
+        "allowed_extra_flags": {
+            "--check",
+            "--profile",
+            "--pipeline-version",
+            "--pipeline-local",
+            "--resume",
+            "--aligner",
+            "--pseudo-aligner",
+            "--pseudo-aligner-kmer-size",
+            "--prokaryotic",
+            "--genome",
+            "--fasta",
+            "--gtf",
+            "--gff",
+            "--gene-bed",
+            "--transcript-fasta",
+            "--additional-fasta",
+            "--splicesites",
+            "--star-index",
+            "--hisat2-index",
+            "--rsem-index",
+            "--salmon-index",
+            "--kallisto-index",
+            "--bowtie2-index",
+            "--gencode",
+            "--trimmer",
+            "--extra-trimgalore-args",
+            "--extra-fastp-args",
+            "--min-trimmed-reads",
+            "--remove-ribo-rna",
+            "--ribo-removal-tool",
+            "--with-umi",
+            "--umi-dedup-tool",
+            "--umitools-extract-method",
+            "--umitools-bc-pattern",
+            "--umitools-bc-pattern2",
+            "--umitools-umi-separator",
+            "--umi-discard-read",
+            "--umitools-grouping-method",
+            "--skip-umi-extract",
+            "--seq-center",
+            "--seq-platform",
+            "--min-mapped-reads",
+            "--star-ignore-sjdbgtf",
+            "--salmon-quant-libtype",
+            "--extra-star-align-args",
+            "--extra-bowtie2-align-args",
+            "--extra-salmon-quant-args",
+            "--extra-kallisto-quant-args",
+            "--kallisto-quant-fraglen",
+            "--kallisto-quant-fraglen-sd",
+            "--bam-csi-index",
+            "--stringtie-ignore-gtf",
+            "--stranded-threshold",
+            "--unstranded-threshold",
+            "--contaminant-screening",
+            "--contaminant-screening-input",
+            "--kraken-db",
+            "--bracken-precision",
+            "--sylph-db",
+            "--sylph-taxonomy",
+            "--bbsplit-fasta-list",
+            "--bbsplit-index",
+            "--skip-bbsplit",
+            "--save-kraken-assignments",
+            "--save-kraken-unassigned",
+            "--featurecounts-group-type",
+            "--featurecounts-feature-type",
+            "--gtf-extra-attributes",
+            "--gtf-group-features",
+            "--deseq2-vst",
+            "--no-deseq2-vst",
+            "--rseqc-modules",
+            "--skip-trimming",
+            "--skip-alignment",
+            "--skip-pseudo-alignment",
+            "--skip-quantification-merge",
+            "--skip-markduplicates",
+            "--skip-bigwig",
+            "--skip-stringtie",
+            "--skip-fastqc",
+            "--skip-dupradar",
+            "--skip-qualimap",
+            "--skip-rseqc",
+            "--skip-biotype-qc",
+            "--skip-deseq2-qc",
+            "--skip-multiqc",
+            "--enable-preseq",
+            "--skip-qc",
+            "--save-reference",
+            "--save-trimmed",
+            "--save-align-intermeds",
+            "--save-unaligned",
+            "--save-merged-fastq",
+            "--save-non-ribo-reads",
+            "--save-umi-intermeds",
+            "--email",
+            "--email-on-fail",
+            "--multiqc-title",
+            "--multiqc-config",
+            "--multiqc-logo",
+            "--multiqc-methods-description",
+            "--rsem-extra-args",
+            "--run-downstream",
+            "--skip-downstream",
+            "--metadata",
+            "--formula",
+            "--contrast",
+            "--downstream-output",
+            "--igenomes-base",
+            "--sortmerna-index",
+            "--ribo-database-manifest",
+            "--hisat2-build-memory",
+            "--gpu-container-options",
+            "--extra-fqlint-args",
+            "--publish-dir-mode",
+            "--rapid-quant",
+            "--arm",
+            "--save-bbsplit-reads",
+            "--gffread-transcript-fasta",
+            "--use-rustqc",
+            "--use-parabricks-star",
+            "--use-sentieon-star",
+            "--use-gpu-ribodetector",
+            "--skip-linting",
+            "--skip-gtf-filter",
+            "--skip-gtf-transcript-filter",
+            "--umitools-dedup-stats",
+            "--umitools-dedup-primary-only",
+            "--nextflow-config",
+        },
+        "allowed_extra_flags_without_values": {
+            "--check",
+            "--resume",
+            "--prokaryotic",
+            "--rapid-quant",
+            "--arm",
+            "--gencode",
+            "--remove-ribo-rna",
+            "--with-umi",
+            "--skip-umi-extract",
+            "--umitools-dedup-stats",
+            "--umitools-dedup-primary-only",
+            "--star-ignore-sjdbgtf",
+            "--bam-csi-index",
+            "--stringtie-ignore-gtf",
+            "--gffread-transcript-fasta",
+            "--deseq2-vst",
+            "--no-deseq2-vst",
+            "--skip-trimming",
+            "--skip-alignment",
+            "--skip-pseudo-alignment",
+            "--skip-quantification-merge",
+            "--skip-markduplicates",
+            "--skip-bigwig",
+            "--skip-stringtie",
+            "--skip-fastqc",
+            "--skip-dupradar",
+            "--skip-qualimap",
+            "--skip-rseqc",
+            "--skip-biotype-qc",
+            "--skip-deseq2-qc",
+            "--skip-multiqc",
+            "--enable-preseq",
+            "--skip-qc",
+            "--skip-linting",
+            "--skip-gtf-filter",
+            "--skip-gtf-transcript-filter",
+            "--save-reference",
+            "--save-trimmed",
+            "--save-align-intermeds",
+            "--save-unaligned",
+            "--save-merged-fastq",
+            "--save-non-ribo-reads",
+            "--save-umi-intermeds",
+            "--save-bbsplit-reads",
+            "--skip-bbsplit",
+            "--save-kraken-assignments",
+            "--save-kraken-unassigned",
+            "--run-downstream",
+            "--skip-downstream",
+            "--use-rustqc",
+            "--use-parabricks-star",
+            "--use-sentieon-star",
+            "--use-gpu-ribodetector",
+        },
+        "accepts_genotypes": False,
+    },
+    "sarek-pipeline": {
+        "script": SKILLS_DIR / "nfcore-sarek-wrapper" / "nfcore_sarek_wrapper.py",
+        "demo_args": ["--demo"],
+        "description": "Wrapper de variant calling germinal y somático vía nf-core/sarek 3.8.1",
+        "default_timeout_seconds": 60 * 60 * 12 + 10 * 60,
+        "max_output_files_listed": 50,
+        # Keep this allowlist aligned with nfcore_sarek_wrapper.build_parser().
+        "allowed_extra_flags": set("""
+            --check --resume --arm --gpu --spark-profile --mutect-profile
+            --run-downstream --downstream-skill --profile --nextflow-config
+            --pipeline-version --pipeline-local --params-file --no-banner
+            --verbose --extra-param --step --tools --skip-tools --aligner
+            --no-intervals --wes --joint-germline --joint-mutect2
+            --only-paired-variant-calling --ignore-soft-clipped-bases
+            --filter-vcfs --normalize-vcfs --snv-consensus-calling
+            --concatenate-vcfs --build-only-index --download-cache
+            --use-gatk-spark --seq-platform --seq-center --email
+            --email-on-fail --publish-dir-mode --outdir-cache --multiqc-title
+            --multiqc-config --multiqc-logo --multiqc-methods-description
+            --hook-url --trace-report-suffix --max-multiqc-email-size
+            --input-restart --trim-fastq --trim-nextseq --clip-r1 --clip-r2
+            --three-prime-clip-r1 --three-prime-clip-r2 --length-required
+            --split-fastq --save-split-fastqs --save-trimmed
+            --umi-read-structure --group-by-umi-strategy --umi-location
+            --umi-tag --umi-length --umi-base-skip --umi-in-read-header
+            --sentieon-consensus --save-mapped --save-output-as-bam
+            --markduplicates-pixel-distance --nucleotides-per-second
+            --ascat-min-base-qual --ascat-min-counts --ascat-min-map-qual
+            --ascat-ploidy --ascat-purity --ascat-genome --cf-coeff
+            --cf-contamination --cf-contamination-adjustment --cf-minqual
+            --cf-mincov --cf-ploidy --cf-window --cf-chrom-len
+            --cnvkit-reference --freebayes-filter
+            --sentieon-haplotyper-emit-mode --sentieon-dnascope-emit-mode
+            --sentieon-dnascope-pcr-indel-model --gatk-pcr-indel-model
+            --varlociraptor-chunk-size --varlociraptor-scenario-tumor-only
+            --varlociraptor-scenario-somatic --varlociraptor-scenario-germline
+            --consensus-min-count --bcftools-filter-criteria --bcftools-columns
+            --bcftools-header-lines --snpeff-db --snpeff-cache --vep-cache
+            --vep-cache-version --vep-genome --vep-species --vep-version
+            --vep-out-format --vep-custom-args --vep-include-fasta
+            --vep-condel --vep-dbnsfp --vep-loftee --vep-mastermind
+            --vep-phenotypes --vep-spliceai --vep-spliceregion --dbnsfp
+            --dbnsfp-tbi --dbnsfp-consequence --dbnsfp-fields
+            --mastermind-file --mastermind-mutations --mastermind-var-iden
+            --mastermind-url --phenotypes-file --phenotypes-file-tbi
+            --phenotypes-include-types --spliceai-snv --spliceai-snv-tbi
+            --spliceai-indel --spliceai-indel-tbi --bcftools-annotations
+            --bcftools-annotations-tbi --condel-config --snpsift-databases
+            --genome --igenomes-base --igenomes-ignore --fasta --fasta-fai
+            --dict --bwa --bwamem2 --dragmap --dbsnp --dbsnp-tbi
+            --dbsnp-vqsr --known-indels --known-indels-tbi
+            --known-indels-vqsr --known-snps --known-snps-tbi
+            --known-snps-vqsr --germline-resource --germline-resource-tbi
+            --pon --pon-tbi --intervals --ascat-alleles --ascat-loci
+            --ascat-loci-gc --ascat-loci-rt --chr-dir --mappability
+            --msisensor2-models --msisensorpro-scan --ngscheckmate-bed
+            --sentieon-dnascope-model --bbsplit-fasta-list --bbsplit-index
+            --save-reference --save-bbsplit-reads
+        """.split()),
+        "allowed_extra_flags_without_values": set("""
+            --check --resume --arm --gpu --spark-profile --mutect-profile
+            --run-downstream --no-banner --verbose --no-intervals --wes
+            --joint-germline --joint-mutect2 --only-paired-variant-calling
+            --ignore-soft-clipped-bases --filter-vcfs --normalize-vcfs
+            --snv-consensus-calling --concatenate-vcfs --build-only-index
+            --download-cache --trim-fastq --trim-nextseq --save-split-fastqs
+            --save-trimmed --umi-in-read-header --sentieon-consensus
+            --save-mapped --save-output-as-bam --cf-contamination-adjustment
+            --vep-include-fasta --vep-condel --vep-dbnsfp --vep-loftee
+            --vep-mastermind --vep-phenotypes --vep-spliceai
+            --vep-spliceregion --mastermind-mutations --mastermind-var-iden
+            --mastermind-url --igenomes-ignore --save-reference
+            --save-bbsplit-reads
+        """.split()),
+        # The wrapper itself decides which native no-input modes are legal.
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
+    "rdoutlier": {
+        "script": SKILLS_DIR / "rare-disease-rnaseq" / "rare_disease_rnaseq.py",
+        "demo_args": ["--demo"],
+        "description": "Rare-disease blood RNA-seq outlier detection (NGRL-style: cases vs control panel + disease-gene filter)",
+        "allowed_extra_flags": {
+            "--counts",
+            "--cases",
+            "--controls",
+            "--panel",
+            "--z-threshold",
+            "--output",
+            "--seed",
         },
     },
     "methylation": {
@@ -559,6 +948,140 @@ SKILLS = {
         "no_input_required": True,
         "accepts_genotypes": False,
     },
+    "eqtl-region": {
+        "script": SKILLS_DIR / "eqtl-catalogue-region-fetch" / "eqtl_catalogue_region_fetch.py",
+        "demo_args": ["--demo"],
+        "description": "eQTL Catalogue region fetch — tabix-on-FTP cis-QTL summary stats per genomic window",
+        "allowed_extra_flags": {"--list-demos", "--no-cache"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
+    "gwas-region": {
+        "script": SKILLS_DIR / "gwas-catalog-region-fetch" / "gwas_catalog_region_fetch.py",
+        "demo_args": ["--demo"],
+        "description": "GWAS Catalog region fetch — tabix-on-FTP harmonised summary stats per genomic window",
+        "allowed_extra_flags": {"--list-demos", "--no-cache"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
+    "ld-region": {
+        "script": SKILLS_DIR / "ld-1000g-region-compute" / "ld_1000g_region_compute.py",
+        "demo_args": ["--demo"],
+        "description": "1000G LD region compute — plink 1.9 r² between a lead and partners in a region for one super-population",
+        "allowed_extra_flags": {"--list-demos", "--no-cache", "--super-pop", "--panel"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
+    "ukb-ppp-region": {
+        "script": SKILLS_DIR / "ukb-ppp-region-fetch" / "ukb_ppp_region_fetch.py",
+        "demo_args": ["--demo"],
+        "description": "UKB-PPP region fetch: per-variant plasma cis-pQTL summary stats per genomic window (Sun 2023, Synapse-backed)",
+        "allowed_extra_flags": {"--list-demos", "--no-cache"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
+    "locuscompare-region": {
+        "script": SKILLS_DIR / "locuscompare-region-render" / "cli.py",
+        "demo_args": ["--demo"],
+        "description": "LocusCompare regional diagnostic — 4-panel coloc visualisation (Liu 2019) for one (eqtl × gwas) pair",
+        "allowed_extra_flags": {"--list-demos", "--no-cache", "--super-pop"},
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
+    "affprot": {
+        "script": SKILLS_DIR / "affinity-proteomics" / "affinity_proteomics.py",
+        "demo_args": ["--demo", "--platform", "olink"],
+        "description": "Affinity proteomics — Olink NPX + SomaLogic SomaScan differential abundance",
+        "allowed_extra_flags": {
+            "--platform", "--meta", "--group-col", "--contrast",
+            "--fdr", "--fc", "--top-n", "--test",
+        },
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
+    "gwas-pipe": {
+        "script": SKILLS_DIR / "gwas-pipeline" / "gwas_pipeline.py",
+        "demo_args": ["--demo"],
+        "description": "GWAS pipeline — PLINK2 QC + REGENIE two-step association (Manhattan, QQ, lead variants)",
+        "allowed_extra_flags": {
+            "--bed", "--bgen", "--pheno", "--covar",
+            "--trait-type", "--trait",
+            "--geno", "--mind", "--maf", "--hwe",
+        },
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
+    "flow": {
+        "script": SKILLS_DIR / "flow-bio" / "flow_bio.py",
+        "demo_args": ["--demo"],
+        "description": "Flow.bio API bridge (pipelines, samples, projects, executions)",
+        "allowed_extra_flags": {
+            "--login", "--username", "--password", "--token", "--url",
+            "--pipelines", "--samples", "--projects", "--executions",
+            "--organisms", "--sample-types", "--data",
+            "--pipeline", "--sample", "--execution",
+            "--metadata-attributes",
+            "--pipeline-detail", "--sample-detail", "--execution-detail",
+            "--search", "--search-samples", "--upload-sample", "--name", "--sample-type",
+            "--reads1", "--reads2", "--organism", "--project",
+            "--run-pipeline", "--run-samples", "--run-data", "--run-params",
+            "--genome", "--json",
+        },
+        "no_input_required": True,
+        "accepts_genotypes": False,
+    },
+    "sample-qc": {
+        "script": SKILLS_DIR / "sample-qc-triage" / "sample_qc_triage.py",
+        "demo_args": ["--demo"],
+        "description": "Sample QC triage (identity, sex, contamination, batch-shift outlier triage)",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
+    "crispr-triage": {
+        "script": SKILLS_DIR / "crispr-screen-triage" / "crispr_screen_triage.py",
+        "demo_args": ["--demo"],
+        "description": "CRISPR screen triage (deterministic guide-level hit ranking)",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
+    "marker-map": {
+        "script": SKILLS_DIR / "marker-dominance-mapper" / "marker_dominance_mapper.py",
+        "demo_args": ["--demo"],
+        "description": "Marker dominance mapper (marker-based spot regions + SVG map)",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
+    "fastreer": {
+        "script": SKILLS_DIR / "fastreer" / "fastreer.py",
+        "demo_args": ["--demo"],
+        "description": "fastreer: phylogenetic trees and distance matrices from VCF/FASTA",
+        "allowed_extra_flags": {
+            "--command", "--threads", "--mem", "--bootstrap",
+            "--kmer", "--window-bp", "--window-variants", "--timeout", "--verbose",
+        },
+        "no_input_required": False,
+        "accepts_genotypes": False,
+    },
+    "bioqc": {
+        "script": SKILLS_DIR / "bioqc-mcp" / "bioqc_mcp.py",
+        "demo_args": ["--demo"],
+        "description": "BioQC quality control & custom visualizer (wraps FastQC + MultiQC, 20+ chart types, dual CLI/MCP server)",
+        "allowed_extra_flags": {
+            "--input", "--output", "--threads", "--mode", "--chart-type",
+            "--chart-data", "--title", "--x-label", "--y-label", "--style",
+            "--width", "--height",
+        },
+        "accepts_genotypes": False,
+    },
+    "pathway-enricher": {
+        "script": SKILLS_DIR / "pathway-enricher" / "pathway_enricher.py",
+        "demo_args": ["--demo"],
+        "description": "Gene-set pathway enrichment via Enrichr (KEGG, GO BP/MF/CC, Reactome, WikiPathways) — bubble charts & ranked tables",
+        "allowed_extra_flags": {
+            "--input", "--output", "--databases", "--top-n",
+        },
+        "accepts_genotypes": False,
+    },
     "repurposing": {
         "script": SKILLS_DIR / "drug-repurposing-screen" / "drug_repurposing_screen.py",
         "demo_args": ["--demo"],
@@ -568,6 +1091,15 @@ SKILLS = {
         "accepts_genotypes": False,
     },
 }
+
+try:
+    from clawbio.skill_intents import DescriptorError, augment_skill_registry_with_descriptors
+
+    SKILLS = augment_skill_registry_with_descriptors(SKILLS, CLAWBIO_DIR)
+except DescriptorError as exc:
+    # Descriptor routing is optional; keep the static registry usable if a
+    # descriptor is malformed or violates descriptor security constraints.
+    print(f"Warning: ignored invalid skill intent descriptor: {exc}", file=sys.stderr)
 
 # Skills that run in the full-profile pipeline (order matters)
 FULL_PROFILE_PIPELINE = ["pharmgx", "nutrigx", "prs", "compare"]
@@ -633,6 +1165,83 @@ def upload_profile(
 # --------------------------------------------------------------------------- #
 
 
+def _load_structured_skill_result(out_dir: Path | None) -> tuple[dict | None, Path | None]:
+    """Load a skill's result.json envelope when present and valid."""
+    if out_dir is None:
+        return None, None
+    result_json_path = out_dir / "result.json"
+    if not result_json_path.exists():
+        return None, None
+    try:
+        payload = json.loads(result_json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None, result_json_path
+    if not isinstance(payload, dict):
+        return None, result_json_path
+    return payload, result_json_path
+
+
+def _load_report_markdown(out_dir: Path | None) -> str | None:
+    """Read the primary markdown report from an output bundle when present."""
+    if out_dir is None or not out_dir.exists():
+        return None
+    for pattern in ("report.md", "*_report.md", "*.md"):
+        for md_file in sorted(out_dir.glob(pattern)):
+            if md_file.name.startswith("."):
+                continue
+            try:
+                return md_file.read_text(encoding="utf-8")
+            except OSError:
+                continue
+    return None
+
+
+def _promote_structured_result_fields(result: dict, out_dir: Path | None) -> None:
+    """Attach parsed result.json fields to the top-level run result."""
+    payload, result_json_path = _load_structured_skill_result(out_dir)
+    if payload is not None:
+        result["skill_result_json"] = payload
+    if result_json_path is not None:
+        result["result_json_path"] = str(result_json_path)
+
+    if isinstance(payload, dict):
+        # Structured result fields form the small skill-to-ClawBio display and
+        # action contract:
+        # - chat_summary_lines: concise, skill-authored text for chat UIs
+        # - preferred_artifacts: generated files the UI should surface first
+        # - suggested_actions: deterministic next-step requests to offer later
+        # - workflow_state: skill-emitted state identity/lifecycle metadata
+        # - contract_alerts: structured contract/path discrepancy alerts
+        # - report_md: full markdown report text embedded in result.json
+        for field in (
+            "chat_summary_lines",
+            "preferred_artifacts",
+            "suggested_actions",
+            "workflow_state",
+            "contract_alerts",
+            "report_md",
+        ):
+            if field in payload:
+                result[field] = (
+                    normalise_contract_alerts(payload[field])
+                    if field == "contract_alerts"
+                    else payload[field]
+                )
+
+        if out_dir is not None and result.get("contract_alerts"):
+            append_contract_alert_log(
+                out_dir / "contract_alerts.jsonl",
+                result["contract_alerts"],
+                run_id=out_dir.name,
+                skill=result.get("skill") or None,
+            )
+
+    if "report_md" not in result:
+        report_md = _load_report_markdown(out_dir)
+        if report_md is not None:
+            result["report_md"] = report_md
+
+
 def run_skill(
     skill_name: str,
     input_path: str | None = None,
@@ -686,6 +1295,11 @@ def run_skill(
 
     # If --profile is given, resolve the input file from the profile
     resolved_input = input_path
+    if resolved_input:
+        input_candidate = Path(resolved_input).expanduser()
+        if not input_candidate.is_absolute():
+            input_candidate = Path.cwd() / input_candidate
+        resolved_input = str(input_candidate.resolve())
     if profile_path and not input_path and not demo:
         if str(CLAWBIO_DIR) not in sys.path:
             sys.path.insert(0, str(CLAWBIO_DIR))
@@ -705,12 +1319,23 @@ def run_skill(
     if summary_mode:
         out_dir = None
     elif output_dir:
-        out_dir = Path(output_dir)
+        out_dir = Path(output_dir).expanduser().resolve()
     else:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         out_dir = DEFAULT_OUTPUT_ROOT / f"{skill_name}_{ts}"
     if out_dir:
-        out_dir.mkdir(parents=True, exist_ok=True)
+        output_error = _ensure_output_directory(out_dir)
+        if output_error:
+            return {
+                "skill": skill_name,
+                "success": False,
+                "exit_code": -1,
+                "output_dir": str(out_dir),
+                "files": [],
+                "stdout": "",
+                "stderr": json.dumps(output_error, indent=2),
+                "duration_seconds": 0,
+            }
 
     # Build command
     cmd = [PYTHON, str(script_path)]
@@ -798,9 +1423,11 @@ def run_skill(
 
     # Collect output files
     if out_dir and out_dir.exists():
-        output_files = sorted(
-            [f.name for f in out_dir.rglob("*") if f.is_file()],
-        )
+        max_files = int(skill_info.get("max_output_files_listed", 200))
+        all_output_files = sorted(f.name for f in out_dir.rglob("*") if f.is_file())
+        output_files = all_output_files[:max_files]
+        if len(all_output_files) > max_files:
+            output_files.append(f"... {len(all_output_files) - max_files} more files")
     else:
         output_files = []
 
@@ -815,11 +1442,38 @@ def run_skill(
         "duration_seconds": duration,
     }
 
+    if result["success"]:
+        _promote_structured_result_fields(result, out_dir)
+
     # If profile was used, store the result back into it
     if profile_path and result["success"] and out_dir:
         _store_result_in_profile(profile_path, skill_name, out_dir)
 
     return result
+
+
+def _ensure_output_directory(out_dir: Path) -> dict[str, object] | None:
+    if out_dir.exists() and not out_dir.is_dir():
+        return {
+            "ok": False,
+            "stage": "preflight",
+            "error_code": "OUTPUT_DIR_NOT_WRITABLE",
+            "message": "Output path exists but is not a directory.",
+            "fix": "Choose a directory path for --output, or remove/rename the existing file.",
+            "details": {"output": str(out_dir)},
+        }
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        return {
+            "ok": False,
+            "stage": "preflight",
+            "error_code": "OUTPUT_DIR_NOT_WRITABLE",
+            "message": "Output directory could not be created.",
+            "fix": "Choose a writable output location.",
+            "details": {"output": str(out_dir), "error": str(exc)},
+        }
+    return None
 
 
 # --------------------------------------------------------------------------- #
@@ -949,6 +1603,16 @@ def _store_result_in_profile(profile_path: str, skill_name: str, out_dir: Path) 
 
 
 def main():
+    # Pipeline wrappers own large, schema-derived CLIs. Delegate their help so
+    # `clawbio.py run <pipeline> --help` cannot drift from the wrapper parser.
+    if (
+        len(sys.argv) >= 4
+        and sys.argv[1:3] == ["run", "sarek-pipeline"]
+        and any(arg in {"-h", "--help"} for arg in sys.argv[3:])
+    ):
+        subprocess.run([PYTHON, str(SKILLS["sarek-pipeline"]["script"]), "--help"], check=False)
+        return
+
     parser = argparse.ArgumentParser(
         description="ClawBio — Bioinformatics Skills Runner",
     )
@@ -969,7 +1633,7 @@ def main():
     run_parser.add_argument("--demo", action="store_true", help="Run with demo data")
     run_parser.add_argument("--input", dest="input_path", help="Path to input file")
     run_parser.add_argument("--output", dest="output_dir", help="Output directory")
-    run_parser.add_argument("--profile", dest="profile_path", help="Path to patient profile JSON")
+    run_parser.add_argument("--profile", dest="profile_path", metavar="PROFILE", help="Execution backend profile (docker/conda/singularity/…) for pipeline skills, or path to patient profile JSON for genomics skills")
     run_parser.add_argument(
         "--timeout", type=int, default=300, help="Timeout in seconds (default: 300)"
     )
@@ -1027,6 +1691,172 @@ def main():
     run_parser.add_argument("--backend", default=None, help="Backend for rnaseq skill (auto|pydeseq2|simple)")
     run_parser.add_argument("--min-count", type=int, default=None, help="Minimum count threshold for rnaseq skill")
     run_parser.add_argument("--min-samples", type=int, default=None, help="Minimum samples threshold for rnaseq skill")
+    run_parser.add_argument("--check", action="store_true", help="Preflight-only mode for pipeline skills (scrnaseq-pipeline, rnaseq-pipeline)")
+    run_parser.add_argument("--pipeline-version", default=None, help="Pinned pipeline version/tag for pipeline skills")
+    run_parser.add_argument("--preset", default=None, help="Curated preset for pipeline skills")
+    run_parser.add_argument("--protocol", default=None, help="Protocol value for pipeline skills")
+    run_parser.add_argument("--email", default=None, help="Email address for pipeline completion notification")
+    run_parser.add_argument("--email-on-fail", default=None, help="Email address for failure notification only")
+    run_parser.add_argument("--multiqc-title", default=None, help="Custom MultiQC title for pipeline skills")
+    run_parser.add_argument("--expected-cells", type=int, default=None, help="expected_cells override for scrnaseq-pipeline")
+    run_parser.add_argument("--resume", action="store_true", help="Enable resume policy for pipeline skills")
+    run_parser.add_argument("--save-reference", action="store_true", help="Save built reference indexes for pipeline skills")
+    run_parser.add_argument("--save-align-intermeds", action="store_true", help="Save alignment intermediates for pipeline skills")
+    run_parser.add_argument("--skip-cellbender", action="store_true", help="Disable cellbender for scrnaseq-pipeline")
+    run_parser.add_argument("--skip-fastqc", action="store_true", help="Skip FastQC for pipeline skills")
+    run_parser.add_argument(
+        "--skip-emptydrops",
+        action="store_true",
+        help="Deprecated alias for --skip-cellbender in scrnaseq-pipeline",
+    )
+    run_parser.add_argument("--skip-multiqc", action="store_true", help="Skip MultiQC for pipeline skills")
+    run_parser.add_argument("--skip-cellranger-renaming", action="store_true", help="Skip CellRanger sample renaming")
+    run_parser.add_argument("--skip-cellrangermulti-vdjref", action="store_true", help="Skip CellRanger Multi VDJ reference build")
+    run_parser.add_argument("--run-downstream", action="store_true", help="Opt in to scrna_orchestrator handoff after scrnaseq-pipeline")
+    run_parser.add_argument("--skip-downstream", action="store_true", help="Compatibility flag for pipeline downstream handoff")
+    run_parser.add_argument("--fasta", default=None, help="Genome FASTA for pipeline skills")
+    run_parser.add_argument("--gtf", default=None, help="Annotation GTF for scrnaseq-pipeline")
+    run_parser.add_argument("--transcript-fasta", default=None, help="Transcript FASTA for scrnaseq-pipeline")
+    run_parser.add_argument("--txp2gene", default=None, help="Transcript-to-gene map for scrnaseq-pipeline")
+    run_parser.add_argument("--simpleaf-index", default=None, help="Prebuilt simpleaf index for scrnaseq-pipeline")
+    run_parser.add_argument("--simpleaf-umi-resolution", default=None, help="simpleaf UMI resolution strategy")
+    run_parser.add_argument("--kallisto-index", default=None, help="Prebuilt kallisto index for scrnaseq-pipeline")
+    run_parser.add_argument("--kb-workflow", default=None, help="Kallisto workflow for scrnaseq-pipeline")
+    run_parser.add_argument("--kb-t1c", default=None, help="Kallisto cDNA transcripts-to-capture file")
+    run_parser.add_argument("--kb-t2c", default=None, help="Kallisto intron transcripts-to-capture file")
+    run_parser.add_argument("--star-index", default=None, help="Prebuilt STAR index for scrnaseq-pipeline")
+    run_parser.add_argument("--star-feature", default=None, help="STARsolo feature type for scrnaseq-pipeline")
+    run_parser.add_argument("--star-ignore-sjdbgtf", action="store_true", help="Disable STAR SJDB GTF usage")
+    run_parser.add_argument("--seq-center", default=None, help="Sequencing center for scrnaseq-pipeline")
+    run_parser.add_argument("--cellranger-index", default=None, help="Prebuilt cellranger index for scrnaseq-pipeline")
+    run_parser.add_argument("--cellranger-vdj-index", default=None, help="Prebuilt CellRanger VDJ reference index")
+    run_parser.add_argument("--cellrangerarc-config", default=None, help="CellRanger ARC config file")
+    run_parser.add_argument("--cellrangerarc-reference", default=None, help="CellRanger ARC reference name")
+    run_parser.add_argument("--barcode-whitelist", default=None, help="Barcode whitelist override for scrnaseq-pipeline")
+    run_parser.add_argument("--motifs", default=None, help="Motif file for CellRanger ARC")
+    run_parser.add_argument("--gex-frna-probe-set", default=None, help="CellRanger Multi fixed RNA probe set")
+    run_parser.add_argument("--gex-target-panel", default=None, help="CellRanger Multi target panel")
+    run_parser.add_argument("--gex-cmo-set", default=None, help="CellRanger Multi CMO set")
+    run_parser.add_argument("--fb-reference", default=None, help="Feature barcoding reference CSV")
+    run_parser.add_argument("--vdj-inner-enrichment-primers", default=None, help="VDJ inner enrichment primers file")
+    run_parser.add_argument("--gex-barcode-sample-assignment", default=None, help="GEX barcode sample assignment CSV")
+    run_parser.add_argument("--cellranger-multi-barcodes", default=None, help="CellRanger Multi barcodes samplesheet")
+    run_parser.add_argument("--downstream-output", default=None, help="Output directory for rnaseq-pipeline automatic rnaseq handoff")
+
+    # rnaseq-pipeline (nfcore-rnaseq-wrapper) specific flags. Declared here so they
+    # appear in `python clawbio.py run rnaseq-pipeline --help` and parse with the
+    # correct types instead of surviving only via parse_known_args + the registry
+    # allowlist.
+    run_parser.add_argument("--pipeline-local", default=None, help="Local nf-core pipeline checkout for rnaseq-pipeline or sarek-pipeline")
+    run_parser.add_argument("--aligner", default=None, help="Aligner override for rnaseq-pipeline or sarek-pipeline")
+    run_parser.add_argument("--pseudo-aligner", default=None, help="Pseudo-aligner for rnaseq-pipeline (salmon|kallisto)")
+    run_parser.add_argument("--pseudo-aligner-kmer-size", type=int, default=None, help="K-mer size for pseudo-aligner index")
+    run_parser.add_argument("--prokaryotic", action="store_true", help="Compose -profile prokaryotic for rnaseq-pipeline")
+    run_parser.add_argument("--gff", default=None, help="GFF3 annotation for rnaseq-pipeline")
+    run_parser.add_argument("--gene-bed", default=None, help="Gene BED file for rnaseq-pipeline")
+    run_parser.add_argument("--additional-fasta", default=None, help="Additional FASTA (spike-ins) for rnaseq-pipeline")
+    run_parser.add_argument("--splicesites", default=None, help="HISAT2 splice sites file")
+    run_parser.add_argument("--hisat2-index", default=None, help="Prebuilt HISAT2 index for rnaseq-pipeline")
+    run_parser.add_argument("--rsem-index", default=None, help="Prebuilt RSEM index for rnaseq-pipeline")
+    run_parser.add_argument("--bowtie2-index", default=None, help="Prebuilt Bowtie2 index for rnaseq-pipeline")
+    run_parser.add_argument("--salmon-index", default=None, help="Prebuilt Salmon index for rnaseq-pipeline")
+    run_parser.add_argument("--gencode", action="store_true", help="GENCODE GTF flag for rnaseq-pipeline")
+    run_parser.add_argument("--trimmer", default=None, help="Trimmer for rnaseq-pipeline (trimgalore|fastp)")
+    run_parser.add_argument("--extra-trimgalore-args", default=None, help="Extra args passed to TrimGalore")
+    run_parser.add_argument("--extra-fastp-args", default=None, help="Extra args passed to fastp")
+    run_parser.add_argument("--min-trimmed-reads", type=int, default=None, help="Minimum trimmed reads per sample")
+    run_parser.add_argument("--remove-ribo-rna", action="store_true", help="Enable rRNA removal for rnaseq-pipeline")
+    run_parser.add_argument("--ribo-removal-tool", default=None, help="rRNA removal tool (sortmerna|ribodetector|bowtie2)")
+    run_parser.add_argument("--with-umi", action="store_true", help="Enable UMI handling for rnaseq-pipeline")
+    run_parser.add_argument("--umi-dedup-tool", default=None, help="UMI dedup tool (umitools|umicollapse)")
+    run_parser.add_argument("--umitools-extract-method", default=None, choices=["string", "regex"], help="umi_tools extract method (nf-core schema: string|regex)")
+    run_parser.add_argument("--umitools-bc-pattern", default=None, help="umi_tools barcode pattern")
+    run_parser.add_argument("--umitools-bc-pattern2", default=None, help="umi_tools barcode pattern (read 2)")
+    run_parser.add_argument("--umi-discard-read", type=int, default=None, help="UMI: discard read 1 or 2")
+    run_parser.add_argument("--umitools-umi-separator", default=None, help="umi_tools UMI separator")
+    run_parser.add_argument("--umitools-grouping-method", default=None, choices=["unique", "percentile", "cluster", "adjacency", "directional"], help="umi_tools grouping method (nf-core schema enum)")
+    run_parser.add_argument("--skip-umi-extract", action="store_true", help="Skip UMI extraction (UMIs already in headers)")
+    run_parser.add_argument("--salmon-quant-libtype", default=None, choices=["A", "IS", "ISF", "ISR", "IU", "MS", "MSF", "MSR", "MU", "OS", "OSF", "OSR", "OU", "SF", "SR", "U"], help="Force Salmon library type (nf-core schema enum)")
+    run_parser.add_argument("--extra-star-align-args", default=None, help="Extra args passed to STAR (star_salmon only)")
+    run_parser.add_argument("--extra-bowtie2-align-args", default=None, help="Extra args passed to Bowtie2 (bowtie2_salmon only)")
+    run_parser.add_argument("--extra-salmon-quant-args", default=None, help="Extra args passed to salmon quant")
+    run_parser.add_argument("--extra-kallisto-quant-args", default=None, help="Extra args passed to kallisto quant")
+    run_parser.add_argument("--rsem-extra-args", default=None, help="Extra args forwarded to rsem-calculate-expression (star_rsem only)")
+    run_parser.add_argument("--kallisto-quant-fraglen", type=int, default=None, help="Kallisto fragment length (single-end)")
+    run_parser.add_argument("--kallisto-quant-fraglen-sd", type=int, default=None, help="Kallisto fragment length SD (single-end)")
+    run_parser.add_argument("--min-mapped-reads", type=float, default=None, help="Minimum %% unique mapped reads (default 5)")
+    run_parser.add_argument("--stranded-threshold", type=float, default=None, help="Salmon strand inference threshold (default 0.8)")
+    run_parser.add_argument("--unstranded-threshold", type=float, default=None, help="Salmon strand inference unstranded threshold (default 0.1)")
+    run_parser.add_argument("--contaminant-screening", default=None, choices=["kraken2", "kraken2_bracken", "sylph"], help="Contaminant screening engine for rnaseq-pipeline")
+    run_parser.add_argument("--contaminant-screening-input", default=None, choices=["trimmed", "unmapped"], help="Reads used for contaminant screening")
+    run_parser.add_argument("--kraken-db", default=None, help="Kraken2 database for contaminant screening")
+    run_parser.add_argument("--bracken-precision", default=None, choices=["D", "P", "C", "O", "F", "G", "S"], help="Bracken precision level (D P C O F G S)")
+    run_parser.add_argument("--sylph-db", default=None, help="Sylph database for contaminant screening")
+    run_parser.add_argument("--sylph-taxonomy", default=None, help="Sylph taxonomy TSV")
+    run_parser.add_argument("--bbsplit-fasta-list", default=None, help="BBSplit FASTA list")
+    run_parser.add_argument("--bbsplit-index", default=None, help="Prebuilt BBSplit index")
+    run_parser.add_argument("--skip-bbsplit", action="store_true", help="Skip BBSplit even when --bbsplit-fasta-list or --bbsplit-index is provided")
+    run_parser.add_argument("--save-kraken-assignments", action="store_true", help="Save Kraken assignment outputs")
+    run_parser.add_argument("--save-kraken-unassigned", action="store_true", help="Save Kraken unassigned reads")
+    run_parser.add_argument("--bam-csi-index", action="store_true", help="Use CSI BAM index instead of BAI")
+    run_parser.add_argument("--stringtie-ignore-gtf", action="store_true", help="StringTie de novo assembly without GTF")
+    run_parser.add_argument("--gtf-extra-attributes", default=None, help="GTF extra attributes for Salmon")
+    run_parser.add_argument("--gtf-group-features", default=None, help="GTF grouping attribute for Salmon")
+    run_parser.add_argument("--featurecounts-group-type", default=None, help="featureCounts biotype group attribute")
+    run_parser.add_argument("--featurecounts-feature-type", default=None, help="featureCounts feature type")
+    run_parser.add_argument("--deseq2-vst", action="store_true", default=None, help="Force DESeq2 VST on")
+    run_parser.add_argument("--no-deseq2-vst", dest="deseq2_vst", action="store_false", help="Disable DESeq2 VST")
+    run_parser.add_argument("--rseqc-modules", default=None, help="Comma-separated RSeQC modules to run")
+    run_parser.add_argument("--skip-trimming", action="store_true", help="Skip adapter trimming")
+    run_parser.add_argument("--skip-alignment", action="store_true", help="Skip all alignment-based processes")
+    run_parser.add_argument("--skip-pseudo-alignment", action="store_true", help="Skip pseudo-alignment processes")
+    run_parser.add_argument("--skip-quantification-merge", action="store_true", help="Per-sample TSVs instead of merged matrix")
+    run_parser.add_argument("--skip-markduplicates", action="store_true", help="Skip Picard MarkDuplicates")
+    run_parser.add_argument("--skip-bigwig", action="store_true", help="Skip bigWig creation")
+    run_parser.add_argument("--skip-stringtie", action="store_true", help="Skip StringTie")
+    run_parser.add_argument("--skip-dupradar", action="store_true", help="Skip dupRadar")
+    run_parser.add_argument("--skip-qualimap", action="store_true", help="Skip Qualimap")
+    run_parser.add_argument("--skip-rseqc", action="store_true", help="Skip RSeQC")
+    run_parser.add_argument("--skip-biotype-qc", action="store_true", help="Skip featureCounts biotype QC")
+    run_parser.add_argument("--skip-deseq2-qc", action="store_true", help="Skip DESeq2 PCA/heatmap")
+    run_parser.add_argument("--skip-qc", action="store_true", help="Skip all QC except MultiQC")
+    run_parser.add_argument("--enable-preseq", action="store_true", help="Enable Preseq complexity estimation")
+    run_parser.add_argument("--save-trimmed", action="store_true", help="Save trimmed FASTQs")
+    run_parser.add_argument("--save-unaligned", action="store_true", help="Save unaligned reads")
+    run_parser.add_argument("--save-merged-fastq", action="store_true", help="Save merged technical-replicate FASTQs")
+    run_parser.add_argument("--save-non-ribo-reads", action="store_true", help="Save non-rRNA reads")
+    run_parser.add_argument("--save-umi-intermeds", action="store_true", help="Save UMI intermediate files")
+    run_parser.add_argument("--seq-platform", default=None, help="Sequencing platform for BAM read group")
+    run_parser.add_argument("--multiqc-config", default=None, help="MultiQC config file for rnaseq-pipeline")
+    run_parser.add_argument("--multiqc-logo", default=None, help="MultiQC logo image for rnaseq-pipeline")
+    run_parser.add_argument("--multiqc-methods-description", default=None, help="MultiQC methods description YAML for rnaseq-pipeline")
+    # rnaseq-pipeline — profile modifiers and architecture / GPU acceleration
+    run_parser.add_argument("--arm", action="store_true", help="Compose -profile arm64 for ARM64-native containers (Apple Silicon, AWS Graviton)")
+    run_parser.add_argument("--rapid-quant", action="store_true", help="Compose -profile rapid_quant for rnaseq-pipeline (per-sample pseudo-alignment only)")
+    run_parser.add_argument("--gpu-container-options", default=None, help="GPU container runtime flags for rnaseq-pipeline (e.g. '--gpus all' for Docker, '--nv' for Singularity)")
+    run_parser.add_argument("--use-rustqc", action="store_true", help="Enable experimental RustQC consolidated QC for rnaseq-pipeline")
+    run_parser.add_argument("--use-parabricks-star", action="store_true", help="Accelerate STAR + MarkDuplicates with Parabricks (GPU) for rnaseq-pipeline")
+    run_parser.add_argument("--use-sentieon-star", action="store_true", help="Accelerate STAR with Sentieon for rnaseq-pipeline (requires SENTIEON_LICENSE_BASE64 secret)")
+    run_parser.add_argument("--use-gpu-ribodetector", action="store_true", help="Use GPU acceleration for Ribodetector rRNA removal")
+    # rnaseq-pipeline — references and index overrides not already covered above
+    run_parser.add_argument("--igenomes-base", default=None, help="iGenomes base path override (S3 URI or local mirror) for pipeline skills")
+    run_parser.add_argument("--sortmerna-index", default=None, help="Prebuilt SortMeRNA index for rnaseq-pipeline")
+    run_parser.add_argument("--ribo-database-manifest", default=None, help="SortMeRNA rRNA database manifest for rnaseq-pipeline")
+    run_parser.add_argument("--hisat2-build-memory", default=None, help="HISAT2 index build memory (e.g. '200.GB') for rnaseq-pipeline")
+    run_parser.add_argument("--gffread-transcript-fasta", action="store_true", help="Use gffread instead of RSEM to derive transcript FASTA")
+    # rnaseq-pipeline — UMI extras
+    run_parser.add_argument("--umitools-dedup-stats", action="store_true", help="Generate UMI-tools dedup statistics for rnaseq-pipeline")
+    run_parser.add_argument("--umitools-dedup-primary-only", action="store_true", help="Restrict UMI-tools dedup to primary alignments")
+    # rnaseq-pipeline — linting / GTF filtering / extras
+    run_parser.add_argument("--extra-fqlint-args", default=None, help="Extra fq-lint arguments for rnaseq-pipeline")
+    run_parser.add_argument("--skip-linting", action="store_true", help="Skip fq-lint pre-trimming FASTQ checks")
+    run_parser.add_argument("--skip-gtf-filter", action="store_true", help="Skip GTF scaffold/transcript ID filtering")
+    run_parser.add_argument("--skip-gtf-transcript-filter", action="store_true", help="Skip the transcript_id check inside the GTF filter")
+    # rnaseq-pipeline — output and publishing controls
+    run_parser.add_argument("--save-bbsplit-reads", action="store_true", help="Save BBSplit-separated FASTQ files for rnaseq-pipeline")
+    run_parser.add_argument("--publish-dir-mode", default=None, choices=["symlink", "rellink", "link", "copy", "copyNoFollow", "move"], help="Nextflow publishDir mode for rnaseq-pipeline (pipeline default: copy)")
+    # rnaseq-pipeline — Nextflow config passthrough (repeatable)
+    run_parser.add_argument("--nextflow-config", action="append", metavar="CONFIG", default=None, help="Additional Nextflow config file(s) passed as -c (repeatable)")
     run_parser.add_argument("--mode", default=None, help="Mode for diffviz skill (auto|bulk|scrna)")
     run_parser.add_argument("--adata", default=None, help="AnnData input for enhanced diffviz scRNA plots")
     run_parser.add_argument("--top-genes", type=int, default=None, help="Top genes/markers to display in diffviz")
@@ -1140,7 +1970,7 @@ def main():
         default=None,
         help="Local CellTypist model name or path for scrna skill",
     )
-    run_parser.add_argument("--search", default=None, help="Live Bioconductor package search query for bioc skill")
+    run_parser.add_argument("--search", default=None, help="Search query (bioc / galaxy skills)")
     run_parser.add_argument("--recommend", default=None, help="Recommendation query for bioc skill")
     run_parser.add_argument("--workflow", default=None, help="Workflow query for bioc skill")
     run_parser.add_argument("--package-details", default=None, help="Bioconductor package name for bioc skill")
@@ -1153,8 +1983,34 @@ def main():
     run_parser.add_argument("--container", default=None, help="Canonical object/container hint for bioc skill")
     run_parser.add_argument("--modality", default=None, help="Modality hint for bioc skill")
     run_parser.add_argument("--max-results", type=int, default=None, help="Maximum bioc search/recommendation results")
+    # flow-bio skill flags
+    run_parser.add_argument("--flow-search", dest="flow_search", default=None, help="Search query (flow skill)")
+    run_parser.add_argument("--pipelines", action="store_true", help="List pipelines (flow skill)")
+    run_parser.add_argument("--samples", action="store_true", help="List samples (flow skill)")
+    run_parser.add_argument("--projects", action="store_true", help="List projects (flow skill)")
+    run_parser.add_argument("--executions", action="store_true", help="List executions (flow skill)")
+    run_parser.add_argument("--organisms", action="store_true", help="List organisms (flow skill)")
+    run_parser.add_argument("--sample-types", action="store_true", help="List sample types (flow skill)")
+    run_parser.add_argument("--data", action="store_true", help="List data (flow skill)")
+    run_parser.add_argument("--metadata-attributes", action="store_true", help="List metadata attributes (flow skill)")
+    run_parser.add_argument("--search-samples", nargs="+", default=None, help="Search samples by metadata key=value pairs (flow skill)")
+    run_parser.add_argument("--upload-sample", action="store_true", help="Upload a sample (flow skill)")
+    run_parser.add_argument("--name", default=None, help="Sample name for upload (flow skill)")
+    run_parser.add_argument("--reads1", default=None, help="First reads file (flow skill)")
+    run_parser.add_argument("--reads2", default=None, help="Second reads file (flow skill)")
+    run_parser.add_argument("--organism", default=None, help="Organism name or ID (flow skill)")
+    run_parser.add_argument("--project", default=None, help="Project ID (flow skill)")
+    run_parser.add_argument("--run-pipeline", default=None, help="Pipeline version ID to run (flow skill)")
+    run_parser.add_argument("--run-samples", default=None, help="Comma-separated sample IDs for pipeline (flow skill)")
+    run_parser.add_argument("--run-data", default=None, help="Comma-separated data IDs for pipeline (flow skill)")
+    run_parser.add_argument("--run-params", default=None, help="Pipeline parameters as JSON string (flow skill)")
+    run_parser.add_argument("--genome", default=None, help="Genome ID for pipeline run (flow/scrnaseq skill)")
+    run_parser.add_argument("--pipeline-detail", default=None, dest="pipeline_detail", help="Get pipeline details by ID (flow skill)")
+    run_parser.add_argument("--sample-detail", default=None, dest="sample_detail", help="Get sample details by ID (flow skill)")
+    run_parser.add_argument("--execution-detail", default=None, dest="execution_detail", help="Get execution details by ID (flow skill)")
+    run_parser.add_argument("--json", action="store_true", help="Output raw JSON (flow skill)")
 
-    args = parser.parse_args()
+    args, extra = parser.parse_known_args()
 
     if args.command == "list":
         list_skills()
@@ -1175,8 +2031,280 @@ def main():
             sys.exit(1)
 
     elif args.command == "run":
+        skill_backend_profile = None
+        if args.skill == "scrnaseq-pipeline" and getattr(args, "profile_path", None) in {"docker", "conda", "singularity", "apptainer"}:
+            skill_backend_profile = args.profile_path
+            args.profile_path = None
+        elif args.skill in {"rnaseq-pipeline", "sarek-pipeline"} and getattr(args, "profile_path", None) is not None:
+            skill_backend_profile = args.profile_path
+            args.profile_path = None
+
         # Build extra_args from skill-specific flags
-        extra = []
+        extra = list(extra)
+        if getattr(args, "check", False):
+            extra.append("--check")
+        if skill_backend_profile:
+            extra.extend(["--profile", skill_backend_profile])
+        if getattr(args, "pipeline_version", None):
+            extra.extend(["--pipeline-version", args.pipeline_version])
+        if getattr(args, "preset", None):
+            extra.extend(["--preset", args.preset])
+        if getattr(args, "protocol", None):
+            extra.extend(["--protocol", args.protocol])
+        if getattr(args, "email", None):
+            extra.extend(["--email", args.email])
+        if getattr(args, "multiqc_title", None):
+            extra.extend(["--multiqc-title", args.multiqc_title])
+        if getattr(args, "expected_cells", None) is not None:
+            extra.extend(["--expected-cells", str(args.expected_cells)])
+        if getattr(args, "resume", False):
+            extra.append("--resume")
+        if getattr(args, "save_reference", False):
+            extra.append("--save-reference")
+        if getattr(args, "save_align_intermeds", False):
+            extra.append("--save-align-intermeds")
+        if getattr(args, "skip_cellbender", False):
+            extra.append("--skip-cellbender")
+        if getattr(args, "skip_fastqc", False):
+            extra.append("--skip-fastqc")
+        if getattr(args, "skip_emptydrops", False):
+            extra.append("--skip-emptydrops")
+        if getattr(args, "skip_multiqc", False):
+            extra.append("--skip-multiqc")
+        if getattr(args, "skip_cellranger_renaming", False):
+            extra.append("--skip-cellranger-renaming")
+        if getattr(args, "skip_cellrangermulti_vdjref", False):
+            extra.append("--skip-cellrangermulti-vdjref")
+        if getattr(args, "run_downstream", False):
+            extra.append("--run-downstream")
+        if getattr(args, "skip_downstream", False):
+            extra.append("--skip-downstream")
+        if getattr(args, "fasta", None):
+            extra.extend(["--fasta", args.fasta])
+        if getattr(args, "gtf", None):
+            extra.extend(["--gtf", args.gtf])
+        if getattr(args, "transcript_fasta", None):
+            extra.extend(["--transcript-fasta", args.transcript_fasta])
+        if getattr(args, "txp2gene", None):
+            extra.extend(["--txp2gene", args.txp2gene])
+        if getattr(args, "simpleaf_index", None):
+            extra.extend(["--simpleaf-index", args.simpleaf_index])
+        if getattr(args, "simpleaf_umi_resolution", None):
+            extra.extend(["--simpleaf-umi-resolution", args.simpleaf_umi_resolution])
+        if getattr(args, "kallisto_index", None):
+            extra.extend(["--kallisto-index", args.kallisto_index])
+        if getattr(args, "kb_workflow", None):
+            extra.extend(["--kb-workflow", args.kb_workflow])
+        if getattr(args, "kb_t1c", None):
+            extra.extend(["--kb-t1c", args.kb_t1c])
+        if getattr(args, "kb_t2c", None):
+            extra.extend(["--kb-t2c", args.kb_t2c])
+        if getattr(args, "star_index", None):
+            extra.extend(["--star-index", args.star_index])
+        if getattr(args, "star_feature", None):
+            extra.extend(["--star-feature", args.star_feature])
+        if getattr(args, "star_ignore_sjdbgtf", False):
+            extra.append("--star-ignore-sjdbgtf")
+        if getattr(args, "seq_center", None):
+            extra.extend(["--seq-center", args.seq_center])
+        if getattr(args, "cellranger_index", None):
+            extra.extend(["--cellranger-index", args.cellranger_index])
+        if getattr(args, "cellranger_vdj_index", None):
+            extra.extend(["--cellranger-vdj-index", args.cellranger_vdj_index])
+        if getattr(args, "cellrangerarc_config", None):
+            extra.extend(["--cellrangerarc-config", args.cellrangerarc_config])
+        if getattr(args, "cellrangerarc_reference", None):
+            extra.extend(["--cellrangerarc-reference", args.cellrangerarc_reference])
+        if getattr(args, "barcode_whitelist", None):
+            extra.extend(["--barcode-whitelist", args.barcode_whitelist])
+        if getattr(args, "motifs", None):
+            extra.extend(["--motifs", args.motifs])
+        if getattr(args, "gex_frna_probe_set", None):
+            extra.extend(["--gex-frna-probe-set", args.gex_frna_probe_set])
+        if getattr(args, "gex_target_panel", None):
+            extra.extend(["--gex-target-panel", args.gex_target_panel])
+        if getattr(args, "gex_cmo_set", None):
+            extra.extend(["--gex-cmo-set", args.gex_cmo_set])
+        if getattr(args, "fb_reference", None):
+            extra.extend(["--fb-reference", args.fb_reference])
+        if getattr(args, "vdj_inner_enrichment_primers", None):
+            extra.extend(["--vdj-inner-enrichment-primers", args.vdj_inner_enrichment_primers])
+        if getattr(args, "gex_barcode_sample_assignment", None):
+            extra.extend(["--gex-barcode-sample-assignment", args.gex_barcode_sample_assignment])
+        if getattr(args, "cellranger_multi_barcodes", None):
+            extra.extend(["--cellranger-multi-barcodes", args.cellranger_multi_barcodes])
+
+        # rnaseq-pipeline (nfcore-rnaseq-wrapper) flag forwarding. Only forward when
+        # the active skill is rnaseq-pipeline so we don't pollute other skills'
+        # extra args with unrelated values.
+        if args.skill == "rnaseq-pipeline":
+            if getattr(args, "pipeline_local", None):
+                extra.extend(["--pipeline-local", args.pipeline_local])
+            for value_flag in (
+                ("aligner", "--aligner"),
+                ("pseudo_aligner", "--pseudo-aligner"),
+                ("gff", "--gff"),
+                ("gene_bed", "--gene-bed"),
+                ("additional_fasta", "--additional-fasta"),
+                ("splicesites", "--splicesites"),
+                ("hisat2_index", "--hisat2-index"),
+                ("rsem_index", "--rsem-index"),
+                ("bowtie2_index", "--bowtie2-index"),
+                ("salmon_index", "--salmon-index"),
+                ("trimmer", "--trimmer"),
+                ("extra_trimgalore_args", "--extra-trimgalore-args"),
+                ("extra_fastp_args", "--extra-fastp-args"),
+                ("ribo_removal_tool", "--ribo-removal-tool"),
+                ("umi_dedup_tool", "--umi-dedup-tool"),
+                ("umitools_extract_method", "--umitools-extract-method"),
+                ("umitools_bc_pattern", "--umitools-bc-pattern"),
+                ("umitools_bc_pattern2", "--umitools-bc-pattern2"),
+                ("umitools_umi_separator", "--umitools-umi-separator"),
+                ("umitools_grouping_method", "--umitools-grouping-method"),
+                ("salmon_quant_libtype", "--salmon-quant-libtype"),
+                ("extra_star_align_args", "--extra-star-align-args"),
+                ("extra_bowtie2_align_args", "--extra-bowtie2-align-args"),
+                ("extra_salmon_quant_args", "--extra-salmon-quant-args"),
+                ("extra_kallisto_quant_args", "--extra-kallisto-quant-args"),
+                ("rsem_extra_args", "--rsem-extra-args"),
+                ("contaminant_screening", "--contaminant-screening"),
+                ("contaminant_screening_input", "--contaminant-screening-input"),
+                ("kraken_db", "--kraken-db"),
+                ("bracken_precision", "--bracken-precision"),
+                ("sylph_db", "--sylph-db"),
+                ("sylph_taxonomy", "--sylph-taxonomy"),
+                ("bbsplit_fasta_list", "--bbsplit-fasta-list"),
+                ("bbsplit_index", "--bbsplit-index"),
+                ("rseqc_modules", "--rseqc-modules"),
+                ("gtf_extra_attributes", "--gtf-extra-attributes"),
+                ("gtf_group_features", "--gtf-group-features"),
+                ("featurecounts_group_type", "--featurecounts-group-type"),
+                ("featurecounts_feature_type", "--featurecounts-feature-type"),
+                ("seq_platform", "--seq-platform"),
+                ("multiqc_config", "--multiqc-config"),
+                ("multiqc_logo", "--multiqc-logo"),
+                ("multiqc_methods_description", "--multiqc-methods-description"),
+                ("email_on_fail", "--email-on-fail"),
+                ("igenomes_base", "--igenomes-base"),
+                ("sortmerna_index", "--sortmerna-index"),
+                ("ribo_database_manifest", "--ribo-database-manifest"),
+                ("hisat2_build_memory", "--hisat2-build-memory"),
+                ("gpu_container_options", "--gpu-container-options"),
+                ("extra_fqlint_args", "--extra-fqlint-args"),
+                ("publish_dir_mode", "--publish-dir-mode"),
+                ("metadata", "--metadata"),
+                ("formula", "--formula"),
+                ("contrast", "--contrast"),
+                ("downstream_output", "--downstream-output"),
+            ):
+                attr, flag = value_flag
+                value = getattr(args, attr, None)
+                if value:
+                    extra.extend([flag, value])
+            for int_flag in (
+                ("pseudo_aligner_kmer_size", "--pseudo-aligner-kmer-size"),
+                ("min_trimmed_reads", "--min-trimmed-reads"),
+                ("umi_discard_read", "--umi-discard-read"),
+                ("kallisto_quant_fraglen", "--kallisto-quant-fraglen"),
+                ("kallisto_quant_fraglen_sd", "--kallisto-quant-fraglen-sd"),
+            ):
+                attr, flag = int_flag
+                value = getattr(args, attr, None)
+                if value is not None:
+                    extra.extend([flag, str(value)])
+            for float_flag in (
+                ("min_mapped_reads", "--min-mapped-reads"),
+                ("stranded_threshold", "--stranded-threshold"),
+                ("unstranded_threshold", "--unstranded-threshold"),
+            ):
+                attr, flag = float_flag
+                value = getattr(args, attr, None)
+                if value is not None:
+                    extra.extend([flag, str(value)])
+            for bool_flag in (
+                ("prokaryotic", "--prokaryotic"),
+                ("rapid_quant", "--rapid-quant"),
+                ("arm", "--arm"),
+                ("gencode", "--gencode"),
+                ("remove_ribo_rna", "--remove-ribo-rna"),
+                ("with_umi", "--with-umi"),
+                ("skip_umi_extract", "--skip-umi-extract"),
+                ("umitools_dedup_stats", "--umitools-dedup-stats"),
+                ("umitools_dedup_primary_only", "--umitools-dedup-primary-only"),
+                ("bam_csi_index", "--bam-csi-index"),
+                ("stringtie_ignore_gtf", "--stringtie-ignore-gtf"),
+                ("gffread_transcript_fasta", "--gffread-transcript-fasta"),
+                ("use_rustqc", "--use-rustqc"),
+                ("use_parabricks_star", "--use-parabricks-star"),
+                ("use_sentieon_star", "--use-sentieon-star"),
+                ("use_gpu_ribodetector", "--use-gpu-ribodetector"),
+                ("skip_trimming", "--skip-trimming"),
+                ("skip_alignment", "--skip-alignment"),
+                ("skip_pseudo_alignment", "--skip-pseudo-alignment"),
+                ("skip_quantification_merge", "--skip-quantification-merge"),
+                ("skip_markduplicates", "--skip-markduplicates"),
+                ("skip_bigwig", "--skip-bigwig"),
+                ("skip_stringtie", "--skip-stringtie"),
+                ("skip_dupradar", "--skip-dupradar"),
+                ("skip_qualimap", "--skip-qualimap"),
+                ("skip_rseqc", "--skip-rseqc"),
+                ("skip_biotype_qc", "--skip-biotype-qc"),
+                ("skip_deseq2_qc", "--skip-deseq2-qc"),
+                ("enable_preseq", "--enable-preseq"),
+                ("skip_qc", "--skip-qc"),
+                ("save_trimmed", "--save-trimmed"),
+                ("save_unaligned", "--save-unaligned"),
+                ("save_merged_fastq", "--save-merged-fastq"),
+                ("save_non_ribo_reads", "--save-non-ribo-reads"),
+                ("save_umi_intermeds", "--save-umi-intermeds"),
+                ("save_kraken_assignments", "--save-kraken-assignments"),
+                ("save_kraken_unassigned", "--save-kraken-unassigned"),
+                ("skip_bbsplit", "--skip-bbsplit"),
+                ("save_bbsplit_reads", "--save-bbsplit-reads"),
+                ("skip_linting", "--skip-linting"),
+                ("skip_gtf_filter", "--skip-gtf-filter"),
+                ("skip_gtf_transcript_filter", "--skip-gtf-transcript-filter"),
+            ):
+                attr, flag = bool_flag
+                if getattr(args, attr, False):
+                    extra.append(flag)
+            # --deseq2-vst is tri-state: True (force on), False (--no-deseq2-vst),
+            # None (default — don't forward either direction).
+            if getattr(args, "deseq2_vst", None) is False:
+                extra.append("--no-deseq2-vst")
+            elif getattr(args, "deseq2_vst", None) is True:
+                extra.append("--deseq2-vst")
+            # --nextflow-config uses action='append'; emit each entry so the wrapper
+            # receives the full list (matching `-c <cfg>` Nextflow expectations).
+            for cfg in getattr(args, "nextflow_config", None) or []:
+                extra.extend(["--nextflow-config", cfg])
+        if args.skill == "sarek-pipeline":
+            for value_flag in (
+                ("pipeline_local", "--pipeline-local"),
+                ("aligner", "--aligner"),
+                ("seq_platform", "--seq-platform"),
+                ("email_on_fail", "--email-on-fail"),
+                ("multiqc_config", "--multiqc-config"),
+                ("multiqc_logo", "--multiqc-logo"),
+                ("multiqc_methods_description", "--multiqc-methods-description"),
+                ("igenomes_base", "--igenomes-base"),
+                ("bbsplit_fasta_list", "--bbsplit-fasta-list"),
+                ("bbsplit_index", "--bbsplit-index"),
+                ("publish_dir_mode", "--publish-dir-mode"),
+            ):
+                attr, flag = value_flag
+                value = getattr(args, attr, None)
+                if value:
+                    extra.extend([flag, value])
+            for attr, flag in (
+                ("arm", "--arm"),
+                ("save_trimmed", "--save-trimmed"),
+                ("save_bbsplit_reads", "--save-bbsplit-reads"),
+            ):
+                if getattr(args, attr, False):
+                    extra.append(flag)
+            for cfg in getattr(args, "nextflow_config", None) or []:
+                extra.extend(["--nextflow-config", cfg])
         if getattr(args, "drug", None):
             extra.extend(["--drug", args.drug])
         if getattr(args, "dose", None):
@@ -1247,11 +2375,11 @@ def main():
             extra.extend(["--ica-run-id", args.ica_run_id])
         if getattr(args, "counts", None):
             extra.extend(["--counts", args.counts])
-        if getattr(args, "metadata", None):
+        if args.skill != "rnaseq-pipeline" and getattr(args, "metadata", None):
             extra.extend(["--metadata", args.metadata])
-        if getattr(args, "formula", None):
+        if args.skill != "rnaseq-pipeline" and getattr(args, "formula", None):
             extra.extend(["--formula", args.formula])
-        if getattr(args, "contrast", None):
+        if args.skill != "rnaseq-pipeline" and getattr(args, "contrast", None):
             extra.extend(["--contrast", args.contrast])
         if getattr(args, "backend", None):
             extra.extend(["--backend", args.backend])
@@ -1349,6 +2477,62 @@ def main():
             extra.extend(["--modality", args.modality])
         if getattr(args, "max_results", None) is not None:
             extra.extend(["--max-results", str(args.max_results)])
+        # flow-bio skill flags
+        if getattr(args, "flow_search", None):
+            extra.extend(["--search", args.flow_search])
+        if getattr(args, "pipelines", False):
+            extra.append("--pipelines")
+        if getattr(args, "samples", False):
+            extra.append("--samples")
+        if getattr(args, "projects", False):
+            extra.append("--projects")
+        if getattr(args, "executions", False):
+            extra.append("--executions")
+        if getattr(args, "organisms", False):
+            extra.append("--organisms")
+        if getattr(args, "sample_types", False):
+            extra.append("--sample-types")
+        if getattr(args, "data", False):
+            extra.append("--data")
+        if getattr(args, "metadata_attributes", False):
+            extra.append("--metadata-attributes")
+        if getattr(args, "search_samples", None):
+            extra.append("--search-samples")
+            extra.extend(args.search_samples)
+        if getattr(args, "upload_sample", False):
+            extra.append("--upload-sample")
+        if getattr(args, "name", None):
+            extra.extend(["--name", args.name])
+        if getattr(args, "reads1", None):
+            extra.extend(["--reads1", args.reads1])
+        if getattr(args, "reads2", None):
+            extra.extend(["--reads2", args.reads2])
+        if getattr(args, "organism", None):
+            extra.extend(["--organism", args.organism])
+        if getattr(args, "project", None):
+            extra.extend(["--project", args.project])
+        if getattr(args, "run_pipeline", None):
+            extra.extend(["--run-pipeline", args.run_pipeline])
+        if getattr(args, "run_samples", None):
+            extra.extend(["--run-samples", args.run_samples])
+        if getattr(args, "run_data", None):
+            extra.extend(["--run-data", args.run_data])
+        if getattr(args, "run_params", None):
+            extra.extend(["--run-params", args.run_params])
+        if getattr(args, "genome", None):
+            extra.extend(["--genome", args.genome])
+        if getattr(args, "pipeline_detail", None):
+            extra.extend(["--pipeline", args.pipeline_detail])
+        if getattr(args, "sample_detail", None):
+            extra.extend(["--sample", args.sample_detail])
+        if getattr(args, "execution_detail", None):
+            extra.extend(["--execution", args.execution_detail])
+        if getattr(args, "json", False):
+            extra.append("--json")
+
+        run_timeout = args.timeout
+        if args.timeout == 300:
+            run_timeout = SKILLS.get(args.skill, {}).get("default_timeout_seconds", args.timeout)
 
         result = run_skill(
             skill_name=args.skill,
@@ -1356,7 +2540,7 @@ def main():
             output_dir=args.output_dir,
             demo=args.demo,
             extra_args=extra or None,
-            timeout=args.timeout,
+            timeout=run_timeout,
             profile_path=getattr(args, "profile_path", None),
         )
 

@@ -1,14 +1,129 @@
 """Reproducibility helpers for ClawBio skills.
 
-Provides write_checksums and write_environment_yml, both writing into
+Provides write_checksums, write_environment_yml, write_commands_sh,
+write_conda_lock, write_ro_crate (RO-Crate 1.1), and portable-bundle helpers
+(ReproPath, ReproCommand, write_portable_commands_sh), all writing into
 <output_dir>/reproducibility/.
 """
 
 from __future__ import annotations
 
+import json
+import subprocess
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Union
 
 from clawbio.common.checksums import sha256_file
+
+
+@dataclass
+class ReproPath:
+    """A path reference that renders portably in reproducibility scripts.
+
+    anchor controls how the path is rendered in commands.sh:
+      "repo_root"  → $CLAWBIO_ROOT/<path relative to repo root>
+      "output_dir" → $OUTPUT_DIR/<path relative to output dir>
+      "auto"       → absolute path (for user-supplied inputs outside the repo)
+    """
+
+    path: Path
+    anchor: str = "auto"
+
+    def __post_init__(self) -> None:
+        self.path = Path(self.path)
+
+
+@dataclass
+class ReproCommand:
+    """Structured representation of a reproducibility command.
+
+    Used by write_portable_commands_sh to generate a portable commands.sh.
+    """
+
+    script_path: Path
+    args: list[Union[str, ReproPath]] = field(default_factory=list)
+    comment: str = ""
+    preflight: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        self.script_path = Path(self.script_path)
+
+
+def write_portable_commands_sh(
+    output_dir: Path | str,
+    command: ReproCommand,
+    *,
+    repo_root: Path | str | None = None,
+) -> Path:
+    """Write reproducibility/commands.sh with portable path references.
+
+    The script sets CLAWBIO_ROOT (defaulting to the repo root at bundle
+    generation time) and OUTPUT_DIR (auto-detected from the script location),
+    then renders ReproPath arguments as shell variable expansions so the bundle
+    can be replayed on any machine that has the repo checked out.
+    """
+    output_dir = Path(output_dir)
+    repro_dir = output_dir / "reproducibility"
+    repro_dir.mkdir(parents=True, exist_ok=True)
+
+    repo_root_resolved = Path(repo_root).resolve() if repo_root else None
+    default_root = str(repo_root_resolved) if repo_root_resolved else "/path/to/ClawBio"
+
+    def render_arg(arg: str | ReproPath) -> str:
+        if not isinstance(arg, ReproPath):
+            return arg
+        p = arg.path
+        if arg.anchor == "repo_root" and repo_root_resolved is not None:
+            try:
+                rel = p.relative_to(repo_root_resolved)
+                return f'"$CLAWBIO_ROOT/{rel}"'
+            except ValueError:
+                pass
+        if arg.anchor == "output_dir":
+            if p == output_dir:
+                return '"$OUTPUT_DIR"'
+            try:
+                rel = p.relative_to(output_dir)
+                return f'"$OUTPUT_DIR/{rel}"'
+            except ValueError:
+                pass
+        return f'"{p}"'
+
+    rendered = [render_arg(a) for a in command.args]
+    script_ref = f'"$CLAWBIO_ROOT/{command.script_path}"'
+
+    parts = [f"python {script_ref}"] + rendered
+    if len(parts) <= 2:
+        cmd_line = " ".join(parts)
+    else:
+        cmd_line = parts[0] + " \\\n  " + " \\\n  ".join(parts[1:])
+
+    lines = ["#!/usr/bin/env bash"]
+    if command.comment:
+        lines.append(f"# {command.comment}")
+    lines += [
+        "set -euo pipefail",
+        'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"',
+        'OUTPUT_DIR="$(dirname "$SCRIPT_DIR")"',
+        f': "${{CLAWBIO_ROOT:={default_root}}}"',
+        'if [ ! -d "$CLAWBIO_ROOT" ]; then',
+        '  echo "Invalid CLAWBIO_ROOT: $CLAWBIO_ROOT" >&2',
+        "  exit 1",
+        "fi",
+        "",
+    ]
+    if command.preflight:
+        lines.extend(command.preflight)
+        lines.append("")
+    lines.append(cmd_line)
+
+    content = "\n".join(lines) + "\n"
+    path = repro_dir / "commands.sh"
+    path.write_text(content)
+    path.chmod(path.stat().st_mode | 0o111)
+    return path
 
 
 def write_checksums(
@@ -78,7 +193,7 @@ def write_environment_yml(
     conda_lines = "\n".join(f"  - {dep}" for dep in filtered_conda)
     conda_block = f"\n{conda_lines}" if conda_lines else ""
 
-    # Only emit the pip block when there are pip deps — empty pip: is invalid YAML for conda.
+    # Only emit the pip block when there are pip deps - empty pip: is invalid YAML for conda.
     if pip_deps:
         pip_lines = "\n".join(f"      - {dep}" for dep in pip_deps)
         pip_block = f"  - pip:\n{pip_lines}\n"
@@ -115,4 +230,113 @@ def write_commands_sh(output_dir: Path | str, command: str) -> Path:
     path = repro_dir / "commands.sh"
     path.write_text(content)
     path.chmod(path.stat().st_mode | 0o111)
+    return path
+
+
+def write_conda_lock(output_dir: Path | str) -> Path:
+    """Write reproducibility/conda-lock.yml from an existing environment.yml.
+
+    Runs ``conda-lock lock`` in the reproducibility directory. conda-lock
+    defaults to multi-platform resolution and writes conda-lock.yml.
+
+    Args:
+        output_dir: Skill output directory containing reproducibility/environment.yml.
+
+    Raises:
+        FileNotFoundError: If reproducibility/environment.yml is missing.
+        subprocess.CalledProcessError: If conda-lock exits with a non-zero status.
+
+    Returns the path of the written conda-lock.yml file.
+    """
+    output_dir = Path(output_dir)
+    repro_dir = output_dir / "reproducibility"
+    if not (repro_dir / "environment.yml").exists():
+        raise FileNotFoundError(repro_dir / "environment.yml")
+
+    try:
+        subprocess.run(
+            ["conda-lock", "lock", "-f", "environment.yml"],
+            cwd=repro_dir,
+            check=True,
+        )
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            "conda-lock is not installed. Install it with: pip install conda-lock"
+        )
+    return repro_dir / "conda-lock.yml"
+
+
+def write_ro_crate(
+    output_dir: Path | str,
+    *,
+    skill_name: str,
+    skill_version: str,
+    script_path: str,
+    description: str = "",
+    completed_at: str | None = None,
+    params: dict | None = None,
+) -> Path:
+    """Write an RO-Crate 1.1 ro-crate-metadata.json to output_dir.
+
+    Includes a CreateAction for run provenance (schema.org).
+    Returns the path of the written file.
+
+    Warning: every file under output_dir is packaged into the crate metadata
+    via rglob("*"). Callers must not place sensitive files (credentials, raw
+    patient data) in output_dir before calling this function.
+    """
+    from rocrate.rocrate import ROCrate
+    from rocrate.model import ContextEntity
+
+    output_dir = Path(output_dir)
+    completed_at = completed_at or datetime.now(timezone.utc).isoformat()
+    action_id = "#run"
+
+    crate = ROCrate(version="1.1")
+    crate.name = f"{skill_name} run"
+    crate.description = description
+    crate.root_dataset["version"] = skill_version
+    crate.root_dataset["datePublished"] = completed_at
+    crate.root_dataset["license"] = {"@id": "https://spdx.org/licenses/MIT.html"}
+
+    # Add output files - library manages hasPart automatically
+    result_refs = []
+    for f in sorted(output_dir.rglob("*")):
+        if f.is_file() and f.name != "ro-crate-metadata.json":
+            rel = str(f.relative_to(output_dir))
+            crate.add_file(f, dest_path=rel)
+            result_refs.append({"@id": rel})
+
+    # Script as contextual entity - not physically in the crate
+    crate.add(ContextEntity(crate, script_path, properties={
+        "@type": "SoftwareSourceCode",
+        "name": skill_name,
+        "version": skill_version,
+        "programmingLanguage": {"@id": "https://www.python.org/"},
+    }))
+
+    # Flatten PropertyValue params as top-level entities
+    param_refs = []
+    for k, v in (params or {}).items():
+        crate.add(ContextEntity(crate, f"#{k}", properties={
+            "@type": "PropertyValue",
+            "name": k,
+            "value": str(v),
+        }))
+        param_refs.append({"@id": f"#{k}"})
+
+    action_props = {
+        "@type": "CreateAction",
+        "name": f"{skill_name} execution",
+        "instrument": {"@id": script_path},
+        "endTime": completed_at,
+        "result": result_refs,
+    }
+    if param_refs:
+        action_props["object"] = param_refs
+    action = crate.add(ContextEntity(crate, action_id, properties=action_props))
+    crate.root_dataset["mentions"] = action
+
+    path = output_dir / "ro-crate-metadata.json"
+    path.write_text(json.dumps(crate.metadata.generate(), indent=2))
     return path

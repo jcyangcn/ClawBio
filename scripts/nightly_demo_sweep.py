@@ -36,6 +36,7 @@ SKIP_IN_CI = {
     "methylation-clock",  # needs pyaging (heavy)
     "scrna-orchestrator", # needs scanpy + anndata (heavy)
     "galaxy-bridge",      # queries live Galaxy API
+    "nfcore-sarek-wrapper",  # needs Nextflow + Java + Docker/Singularity (heavy)
 }
 
 

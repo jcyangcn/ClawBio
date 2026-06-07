@@ -7,6 +7,8 @@ Uses the FIXED demo patient (demo_patient.txt) with known genotypes
 so that all assertions are deterministic and reproducible.
 """
 
+import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -29,6 +31,7 @@ from pharmgx_reporter import (
     generate_report,
     generate_html_report,
     enrich_with_clinpgx,
+    write_commands_sh,
     _evidence_cell_html,
     _evidence_level_html,
 )
@@ -367,6 +370,100 @@ def test_report_contains_disclaimer():
     results = lookup_drugs(p)
     report = generate_report(str(DEMO), "23andme", 31, pgx, p, results)
     assert "NOT a diagnostic device" in report
+
+
+def test_report_renders_standard_classification_token():
+    """Standard-classified drugs must render the literal STANDARD token, not 'OK'.
+
+    Regression for Tessl eval 019e83b8 scenario 1: the STANDARD bucket scored
+    0/8 because standard drugs displayed as 'OK', so no STANDARD token appeared
+    anywhere in the report (avoid/caution/indeterminate all rendered correctly).
+    """
+    _, _, pgx, _ = parse_file(str(DEMO))
+    p = _profiles()
+    results = lookup_drugs(p)
+    assert len(results["standard"]) > 0, "demo patient should have >=1 standard drug"
+    report = generate_report(str(DEMO), "23andme", 31, pgx, p, results)
+    assert "STANDARD" in report, "report must label standard-dosing drugs as STANDARD"
+
+
+# ── Reproducibility commands.sh ───────────────────────────────────────────────
+
+def test_write_commands_sh_creates_file(tmp_path):
+    """write_commands_sh must create reproducibility/commands.sh with the rerun command.
+
+    Regression for Tessl eval 019e83b8 scenario 6: reproducibility/commands.sh
+    scored 0/10 because the script never wrote the file the SKILL.md promises.
+    """
+    path = write_commands_sh(str(tmp_path), str(DEMO))
+    assert path.exists(), "commands.sh should be written to disk"
+    assert path.name == "commands.sh"
+    assert path.parent.name == "reproducibility"
+    content = path.read_text()
+    assert "pharmgx_reporter.py" in content
+    assert DEMO.name in content, "commands.sh should reference the input filename"
+
+
+# ── Output contract (SKILL.md must match what the skill actually produces) ─────
+
+def _parse_output_contract(skill_md):
+    """Extract files promised in the SKILL.md '## Output Structure' tree.
+
+    Directory lines, and any entry whose inline comment contains 'optional', are
+    skipped. Returns [] when there is no parseable section.
+    """
+    if not skill_md.exists():
+        return []
+    m = re.search(r"##\s*Output Structure\s*\n+```[^\n]*\n(.*?)\n```",
+                  skill_md.read_text(), re.S)
+    if not m:
+        return []
+    files, parents = [], {}
+    for raw in m.group(1).splitlines():
+        if not raw.strip():
+            continue
+        parts = re.split(r"\s+#", raw, maxsplit=1)
+        entry, comment = parts[0], (parts[1] if len(parts) > 1 else "")
+        mm = re.match(r"^([\s│├└─]*)(.*)$", entry)
+        prefix, name = mm.group(1), mm.group(2).strip()
+        if not name:
+            continue
+        depth = len(prefix) // 4
+        if depth == 0:
+            continue
+        if name.endswith("/"):
+            parents[depth] = name.rstrip("/")
+            for d in [k for k in parents if k > depth]:
+                del parents[d]
+            continue
+        if "optional" in comment.lower():
+            continue
+        rel = "/".join(parents[d] for d in sorted(parents) if d < depth)
+        files.append(rel + "/" + name if rel else name)
+    return files
+
+
+def test_documented_outputs_are_produced(tmp_path):
+    """Every artifact in the SKILL.md Output Structure must be produced by a demo run.
+
+    Deterministic, local capture of the doc/code drift the Tessl eval surfaced:
+    reproducibility/commands.sh was documented but never written. This test would
+    have failed before that fix.
+    """
+    skill_dir = Path(__file__).resolve().parent.parent
+    promised = _parse_output_contract(skill_dir / "SKILL.md")
+    assert promised, "expected a parseable '## Output Structure' section in SKILL.md"
+    result = subprocess.run(
+        [sys.executable, str(skill_dir / "pharmgx_reporter.py"),
+         "--demo", "--output", str(tmp_path), "--no-enrich"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, f"demo run failed: {result.stderr}"
+    missing = [p for p in promised if not (tmp_path / p).exists()]
+    assert not missing, (
+        "SKILL.md Output Structure promises artifacts the skill did not produce: "
+        f"{missing}"
+    )
 
 
 # ── Data Integrity ─────────────────────────────────────────────────────────────

@@ -1,25 +1,25 @@
 ---
 name: bio-orchestrator
-description: Meta-agent that routes bioinformatics requests to specialised sub-skills. Handles file type detection, analysis planning, report generation, and reproducibility export.
-version: 0.1.0
+description: Meta-agent that routes bioinformatics requests to specialised sub-skills. Handles file type detection, analysis
+  planning, report generation, and reproducibility export.
+license: MIT
 metadata:
+  version: 0.1.0
   openclaw:
     requires:
       bins:
-        - python3
-      env: []
-      config: []
+      - python3
     always: false
-    emoji: "🦖"
+    emoji: 🦖
     homepage: https://github.com/ClawBio/ClawBio
-    os: [darwin, linux]
+    os:
+    - darwin
+    - linux
     install:
-      - kind: uv
-        package: biopython
-        bins: []
-      - kind: uv
-        package: pandas
-        bins: []
+    - kind: uv
+      package: biopython
+    - kind: uv
+      package: pandas
 ---
 
 # 🦖 Bio Orchestrator
@@ -48,16 +48,23 @@ You are the **Bio Orchestrator**, a ClawBio meta-agent for bioinformatics analys
 | Bioconductor package / setup query | bioconductor-bridge | "Which Bioconductor package should I use?", "Set up Bioconductor", "What does AnnotationHub do?" |
 | Literature query | lit-synthesizer | "Find papers on X", "Summarise recent work on Y" |
 | Ancestry/population CSV | equity-scorer | "Score population diversity", "HEIM equity report" |
+| OT colocalisation row or `(gene, exposure_qtl, outcome_gwas, lead_variant)` tuple | mr-region-run -> locuscompare-region-render | "Compute MR and render locuscompare for SORT1 in liver eQTL vs LDL-C", "Replicate this Open Targets coloc row with a regional plot", "Wald-ratio MR for an eQTL x GWAS coloc and overlay it on the LocusCompare diagnostic" |
 | "Make reproducible" | repro-enforcer | "Export as Nextflow", "Create Singularity container" |
 | Image file (PNG/JPG/TIFF) | data-extractor | "Extract data from this figure", "Digitize this bar chart" |
 | Lab notebook query | labstep | "Show my experiments", "Find protocols", "List reagents" |
+| FASTA / DNA sequence + promoter question | gi-promoter | "Predict promoters in this sequence", "Find TSS", "Is this a promoter?" |
+| FASTA / gene body + splice question | gi-splice | "Predict splice sites", "Find splice donors / acceptors", "Score cryptic splice sites" |
+| FASTA / DNA sequence + enhancer question | gi-enhancer | "Predict enhancer activity", "Score this for cis-regulatory function", "DeepSTARR / STARR-seq prediction" |
+| FASTA / DNA sequence + chromatin question | gi-chromatin | "Predict chromatin state", "Histone marks / DNase / TF binding from sequence", "DeepSEA prediction" |
+| FASTA / 9.2 kbp TSS window + expression question | gi-expression | "Predict expression for this gene / sequence", "Sequence-to-TPM", "Cell-type expression prediction" |
+| FASTA / genomic region + gene annotation question | gi-annotation | "Annotate this DNA", "Predict transcripts / gene structure from sequence", "De novo gene prediction" |
 
 ## Decision Process
 
 When receiving a bioinformatics request:
 
 1. **Identify file types**: Check file extensions and headers. If the user mentions a file, verify it exists and determine its format.
-2. **Map to skill**: Use the routing table above. If a query implies a two-step scRNA latent workflow, explain the `scrna-embedding -> scrna-orchestrator --use-rep X_scvi` chain rather than hiding it. If ambiguous, ask the user to clarify.
+2. **Map to skill**: Use the routing table above. If a query implies a two-step scRNA latent workflow, explain the `scrna-embedding -> scrna-orchestrator --use-rep X_scvi` chain rather than hiding it. If a query asks for MR plus visual replication of an Open Targets colocalisation, explain the `mr-region-run -> locuscompare-region-render --mr-result-json` chain rather than hiding it (both commands take the same unified config -- the `(gene, exposure, outcome, lead)` tuple; `mr-region-run` writes `result.json` which `locuscompare-region-render` consumes via `--mr-result-json` to overlay the causal-magnitude annotation on the regional plot). If ambiguous, ask the user to clarify.
    - For `.csv` / `.tsv`, inspect headers to distinguish raw count matrices and metadata from finished DE / marker result tables.
 3. **Check dependencies**: Before invoking a skill, verify its required binaries are installed (e.g., `which samtools`).
 4. **Plan the analysis**: For multi-step requests, outline the plan and get user confirmation before proceeding.

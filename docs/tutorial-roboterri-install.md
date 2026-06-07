@@ -1,10 +1,15 @@
-# Tutorial: Run ClawBio Skills via a Telegram Bot
+# Minimal Telegram Adapter Tutorial
 
-> **Production bot available**: If you want the full-featured bot with Claude-powered reasoning, medication photo detection, and the RoboTerri persona, see [`bot/roboterri.py`](../bot/roboterri.py) and its [README](../bot/README.md). The tutorial below builds a simpler version from scratch for learning purposes.
+This compact Telegram walkthrough builds a small teaching bot rather than the
+current production adapters. It preserves the original request/response pattern
+in the smallest useful form.
 
-This tutorial walks you through building a Telegram bot that runs ClawBio skills. By the end, you'll be able to send a genetic data file to your bot and receive a pharmacogenomics report, equity score, or genome comparison — all running locally on your machine.
+For maintained interfaces, see [`bot/`](../bot/) and [`bot/README.md`](../bot/README.md):
+there are Telegram, Discord, and WhatsApp adapters. A browser route through the
+OpenClaw bridge is documented in [docs/custom-domain-webchat.md](custom-domain-webchat.md)
+and is more operationally involved.
 
-**Time**: ~20 minutes | **Difficulty**: Intermediate | **Prerequisites**: Python 3.11+, a Telegram account
+**Time**: ~20 minutes | **Difficulty**: Intermediate | **Prerequisites**: Python 3.11+, Telegram for this walkthrough
 
 ---
 
@@ -15,39 +20,60 @@ This tutorial walks you through building a Telegram bot that runs ClawBio skills
 3. [Clone and Install ClawBio](#3-clone-and-install-clawbio)
 4. [Create a Telegram Bot](#4-create-a-telegram-bot)
 5. [Get Your Telegram Chat ID](#5-get-your-telegram-chat-id)
-6. [Set Up Your API Key](#6-set-up-your-api-key)
+6. [Configure Environment](#6-configure-environment)
 7. [Build the Bot](#7-build-the-bot)
 8. [Run It](#8-run-it)
 9. [Test It](#9-test-it)
-10. [Next Steps](#10-next-steps)
-11. [Troubleshooting](#11-troubleshooting)
+10. [What the Maintained Adapters Add](#10-what-the-maintained-adapters-add)
+11. [Next Steps](#11-next-steps)
+12. [Troubleshooting](#12-troubleshooting)
 
 ---
 
 ## 1. Overview
 
 ```
-You (Telegram)  →  Your bot (your machine)  →  ClawBio skills (local)
-      ↑                                              │
-      └──────── report + figures ←───────────────────┘
+      ┌── report + figures; you choose next command ─┐
+      ▼                                              │
+You (Telegram)                                       │
+      │ sends command or file                        │
+      ▼                                              │
+Toy Telegram bot on your machine                     │
+      │ calls clawbio.py                             │
+      ▼                                              │
+ClawBio skills (local)                               │
+      └──────────────────────────────────────────────┘
 ```
 
 The bot you'll build:
-- Accepts messages and genetic data files in Telegram
-- Routes to the correct ClawBio skill via the CLI
-- Runs the analysis **locally** — no genetic data leaves your machine
-- Sends back a summary, report, and figures directly in Telegram
+
+- accepts commands and genetic data files in Telegram
+- routes to ClawBio by command or file extension
+- runs the analysis **locally** — no genetic data leaves your machine
+- sends reports and figures back to Telegram, where you decide the next step
+
+### Common Confusions
+
+- **LLM integration**: this toy bot does not use an LLM. It maps `/demo` and file
+  extensions directly to `python3 clawbio.py run ...`. The maintained adapters in
+  [`bot/`](../bot/) add the LLM as a planning layer: it chooses a candidate local
+  tool call from tool descriptions, argument schemas, and the user's wording.
+  The adapter still validates and executes `clawbio.py` locally.
+- **Slash commands**: `/start`, `/list`, and `/demo` are Telegram bot commands
+  handled by `python-telegram-bot`'s `CommandHandler`. They are separate from the
+  repository's [`commands/`](../commands/) directory, which contains
+  agent-facing slash-command workflows such as `/analyse` and `/run-demo`.
 
 ---
 
 ## 2. Prerequisites
 
-| Requirement | Version | Check |
-|---|---|---|
-| Python | 3.11+ | `python3 --version` |
-| pip | latest | `pip3 install --upgrade pip` |
-| Git | any | `git --version` |
-| Telegram | account + app | [telegram.org](https://telegram.org) |
+| Requirement | Version | Check                        |
+|-------------|---------|------------------------------|
+| Python      | 3.11+   | `python3 --version`          |
+| pip         | latest  | `pip3 install --upgrade pip` |
+| Git         | any     | `git --version`              |
+| Telegram    | account + app for this walkthrough | [telegram.org](https://telegram.org) |
 
 ### macOS
 
@@ -68,7 +94,7 @@ sudo apt update && sudo apt install python3.11 python3.11-venv python3-pip
 ```bash
 git clone https://github.com/ClawBio/ClawBio.git
 cd ClawBio
-pip3 install -r requirements.txt
+pip3 install -e .
 ```
 
 Verify it works:
@@ -79,6 +105,12 @@ python3 clawbio.py run pharmgx --demo
 ```
 
 You should see a pharmacogenomics report generated in under 1 second.
+
+Install the two Python packages used by the teaching bot:
+
+```bash
+pip3 install "python-telegram-bot[job-queue]>=21.0" python-dotenv
+```
 
 ---
 
@@ -98,6 +130,7 @@ Still in the BotFather chat, send `/setcommands`, select your bot, then paste:
 
 ```
 start - Start the bot
+list - List ClawBio skills
 demo - Run a ClawBio demo skill
 ```
 
@@ -121,13 +154,7 @@ Alternatively, search for **@userinfobot** on Telegram and send `/start`.
 
 ---
 
-## 6. Set Up Your API Key
-
-Install the Telegram bot library:
-
-```bash
-pip3 install "python-telegram-bot[job-queue]"
-```
+## 6. Configure Environment
 
 Create a file called `.env` in the ClawBio directory:
 
@@ -135,6 +162,9 @@ Create a file called `.env` in the ClawBio directory:
 TELEGRAM_BOT_TOKEN=your-bot-token-here
 TELEGRAM_CHAT_ID=your-chat-id-here
 ```
+
+The teaching bot uses `TELEGRAM_CHAT_ID` as a simple allow-list so only your
+chat can run local analyses.
 
 Add `.env` to your `.gitignore` so it never gets committed:
 
@@ -169,12 +199,14 @@ from telegram.ext import (
 
 load_dotenv()
 
+# The token and chat ID stay outside the script so they are not committed.
 BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 ALLOWED_CHAT_ID = int(os.environ["TELEGRAM_CHAT_ID"])
 CLAWBIO = Path(__file__).parent / "clawbio.py"
 
 
 def is_authorised(update: Update) -> bool:
+    # Keep the demo private; remove this check only for a public bot.
     return update.effective_chat.id == ALLOWED_CHAT_ID
 
 
@@ -207,6 +239,7 @@ async def demo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Running {skill} demo...")
 
     with tempfile.TemporaryDirectory() as tmpdir:
+        # Call the local CLI. The bot is only a thin Telegram wrapper.
         cmd = ["python3", str(CLAWBIO), "run", skill, "--demo", "--output", tmpdir]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
@@ -214,7 +247,7 @@ async def demo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"Error:\n```\n{result.stderr[:2000]}\n```", parse_mode="Markdown")
             return
 
-        # Send stdout summary
+        # Telegram messages have length limits, so split long stdout summaries.
         if result.stdout.strip():
             for chunk in [result.stdout[i:i+4000] for i in range(0, len(result.stdout), 4000)]:
                 await update.message.reply_text(chunk)
@@ -237,9 +270,9 @@ async def handle_file(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"Received {doc.file_name}. Analysing...")
 
-    # Download file
     tg_file = await doc.get_file()
     with tempfile.TemporaryDirectory() as tmpdir:
+        # Keep uploaded data and generated output in a temporary local directory.
         local_path = Path(tmpdir) / doc.file_name
         await tg_file.download_to_drive(local_path)
 
@@ -274,9 +307,11 @@ async def handle_file(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
+    # Telegram slash commands are wired to plain Python functions here.
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("list", list_skills))
     app.add_handler(CommandHandler("demo", demo))
+    # Uploaded documents use the extension-based router above.
     app.add_handler(MessageHandler(filters.Document.ALL, handle_file))
     print("Bot is running. Press Ctrl+C to stop.")
     app.run_polling()
@@ -308,16 +343,18 @@ Bot is running. Press Ctrl+C to stop.
 
 ### Run in the background (optional)
 
+Using nohup
 ```bash
-# Using nohup
 nohup python3 telegram_bot.py > bot.log 2>&1 &
+```
 
-# Or using screen
+Or using [screen](https://www.gnu.org/software/screen/):
+```bash
 screen -S clawbio-bot
 python3 telegram_bot.py
-# Detach: Ctrl+A, then D
-# Reattach: screen -r clawbio-bot
 ```
+To detach use Ctrl+A followed by 'D'.
+To reattach from the command line: screen -r clawbio-bot
 
 ---
 
@@ -360,17 +397,45 @@ Bot: Received 23andMe_raw_data.txt. Analysing...
 
 ---
 
-## 10. Next Steps
+## 10. What the Maintained Adapters Add
+
+The teaching bot above is intentionally thin. The maintained adapters in
+[`bot/`](../bot/) build on the same local `clawbio.py` runner, but add the pieces
+needed for conversational and multi-platform use. If you find yourself wanting
+any of these, switch to a maintained adapter rather than expanding the toy bot.
+
+| Capability | Teaching bot in this tutorial | Maintained adapters |
+|------------|--------------------------------|---------------------|
+| Routing | File extension and explicit commands | LLM tool-use loop with structured tool descriptions; optional `INTENTS.json` descriptors |
+| State across messages | Stateless; every request starts a new subprocess | Pending action store with expiry, numbered replies, cancellation, and confirmation gates |
+| Skill follow-ups | Sends stdout, reports, and figures | Renders `workflow_state`, `chat_summary_lines`, `suggested_actions`, and `preferred_artifacts` from `result.json` |
+| Safety | Simple chat-ID allow-list | Per-skill flag allow-lists, file scoping, rate limits, and redacted audit logs |
+| Platforms | Telegram only | Telegram, Discord, WhatsApp, and a browser route through the OpenClaw bridge |
+| Media handling | Telegram documents and generated files | Documents, photos, queued media, and optional voice replies where supported |
+| Client compatibility | Chat-only example | The same structured result fields can also be used by richer clients and GUI panels |
+
+There is no architectural break between the two. The toy bot shows the core
+loop; the maintained adapters keep that local runner and add planning, state,
+platform handling, and structured follow-up menus around it. The structured
+follow-up fields are described in the [Skill Action Contract](skill-action-contract.md).
+
+---
+
+## 11. Next Steps
 
 - **Add more skills**: Extend `handle_file()` to route `.fastq` to metagenomics, or add keyword detection
-- **Add Claude reasoning**: Use the [Anthropic SDK](https://docs.anthropic.com/en/docs/sdks) to add conversational AI around the skill results
+- **Use a maintained adapter**: See the comparison above and the setup notes in [`bot/README.md`](../bot/README.md)
 - **Build your own skill**: See [CONTRIBUTING.md](../CONTRIBUTING.md) and the [skill template](../templates/SKILL-TEMPLATE.md)
 - **Explore the architecture**: See [docs/architecture.md](architecture.md)
 - **Watch the demo**: [ClawBio at UK AI Agent Hack](https://www.youtube.com/watch?v=eEEA71qSOmU)
 
 ---
 
-## 11. Troubleshooting
+## 12. Troubleshooting
+
+### "Error: TELEGRAM_BOT_TOKEN not set"
+
+Create `.env` in the ClawBio root and add `TELEGRAM_BOT_TOKEN=...`.
 
 ### "ModuleNotFoundError: No module named 'telegram'"
 

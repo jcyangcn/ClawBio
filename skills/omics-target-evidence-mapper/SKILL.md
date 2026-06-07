@@ -1,31 +1,31 @@
 ---
 name: omics-target-evidence-mapper
 description: Aggregate public target-level evidence across omics and translational sources for research triage.
-version: 0.1.0
-tags:
+license: MIT
+metadata:
+  version: 0.1.0
+  tags:
   - omics
   - targets
   - translational-research
   - literature
   - trials
-metadata:
   openclaw:
     requires:
       bins:
-        - python3
-      env: []
-      config: []
+      - python3
     always: false
-    emoji: "🧬"
+    emoji: 🧬
     homepage: https://github.com/ClawBio/ClawBio
-    os: [darwin, linux]
-    install: []
+    os:
+    - darwin
+    - linux
     trigger_keywords:
-      - target evidence
-      - gene disease evidence
-      - target triage
-      - omics evidence
-      - gene disease mapper
+    - target evidence
+    - gene disease evidence
+    - target triage
+    - omics evidence
+    - gene disease mapper
 ---
 
 # Why This Exists
@@ -61,7 +61,10 @@ This skill is for research triage only. It does not infer causality, rank therap
 3. Query public data sources.
 4. Normalise results into a structured evidence object.
 5. Write JSON and Markdown outputs.
-6. Write file checksums for reproducibility.
+6. Write reproducibility bundle:
+   - `reproducibility/checksums.sha256` — SHA-256 hashes of all output files
+   - `reproducibility/environment.yml` — pinned Conda/pip environment
+   - `ro-crate-metadata.json` — RO-Crate 1.1 provenance record (run params, outputs, script)
 
 # CLI Reference
 

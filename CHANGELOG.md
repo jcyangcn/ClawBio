@@ -5,6 +5,13 @@ All notable changes to ClawBio are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### New Skills
+- **nfcore-scrnaseq-wrapper** (`skills/nfcore-scrnaseq-wrapper/`, `scrnaseq-pipeline`): Upstream single-cell RNA-seq preprocessing from FASTQ using nf-core/scrnaseq. Supports six presets (simpleaf/standard, STARsolo/star, kallisto, cellranger, cellrangerarc, cellrangermulti), strict preflight for Java/Nextflow/backend, samplesheet validation, `params.yaml`-driven execution, SHA-256 reproducibility bundle, and automatic handoff to `scrna-orchestrator` (via `--run-downstream`). Includes macOS/Apple Silicon Docker workaround. 282 tests.
+- **nfcore-rnaseq-wrapper** (`skills/nfcore-rnaseq-wrapper/`, `rnaseq-pipeline`): Upstream bulk RNA-seq preprocessing from FASTQ/BAM using nf-core/rnaseq v3.26.0. Supports STAR+Salmon, STAR+RSEM, HISAT2, and Bowtie2+Salmon routes; strict preflight for Java/Nextflow/backend, samplesheet strandedness and references; `params.yaml`-driven execution; SHA-256 reproducibility bundle; provenance JSONs; and template handoff to `rnaseq-de`. Hardening round: contaminant screening (`--contaminant-screening`, `--kraken-db`, `--sylph-db`, `--bracken-precision`, BBSplit auto-enable), iGenomes name validation with fast-fail in preflight, GENCODE GTF auto-detect, real `duration_seconds` measurement, auto-handoff to `rnaseq-de` (`--run-downstream --metadata --formula --contrast`), `--prokaryotic` restricted to profile modifier (never standalone backend), `--check` guaranteed to never invoke Nextflow, passthrough flags `--enable-preseq`, `--multiqc-config`, `--multiqc-logo`, `--rsem-extra-args`. 538 tests.
+- **nfcore-sarek-wrapper** (`skills/nfcore-sarek-wrapper/`, `sarek-pipeline`): nf-core/sarek v3.8.1 wrapper with step-aware restart sheets, somatic/germline validation, caller and annotation resources, output discovery, and portable reproducibility bundles. Alignment audit hardening includes effective iGenomes resources with the documented `false` sentinel, final `--extra-param` precedence, `--outdir-cache` cache-download preflight, full integrated CLI help/forwarding, and exact portable replay of the captured Nextflow invocation. 285 tests.
+
 ## [v0.5.0] — 2026-04-04 — Validation & Benchmark Infrastructure
 
 ### Added
