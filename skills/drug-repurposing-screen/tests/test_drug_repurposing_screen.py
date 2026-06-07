@@ -14,6 +14,8 @@ SKILL_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SKILL_DIR))
 
 from screen_engine import (
+    UnsafeSampleQueryError,
+    apply_sample_query,
     bh_fdr,
     classify_selectivity,
     fit_dose_response,
@@ -32,6 +34,52 @@ def demo_bundle(tmp_path_factory):
         check=True, cwd=str(SKILL_DIR),
     )
     return SKILL_DIR / "demo"
+
+
+class TestSafeSampleQuery:
+    @pytest.fixture
+    def sample_frame(self) -> pd.DataFrame:
+        return pd.DataFrame({
+            "sample_id": ["S1", "S2", "S3"],
+            "context": ["context_A", "context_B", "context_A"],
+            "lineage": ["organoid", "fibroblast", "organoid"],
+            "passage": [3, 5, 7],
+        })
+
+    def test_valid_equality_query(self, sample_frame):
+        mask = apply_sample_query(sample_frame, "context == 'context_A'")
+        assert mask.tolist() == [True, False, True]
+
+    def test_valid_compound_query(self, sample_frame):
+        mask = apply_sample_query(
+            sample_frame,
+            "(context == 'context_A') & (lineage == 'organoid')",
+        )
+        assert mask.tolist() == [True, False, True]
+
+    def test_valid_numeric_query(self, sample_frame):
+        mask = apply_sample_query(sample_frame, "passage <= 5")
+        assert mask.tolist() == [True, True, False]
+
+    def test_empty_query_selects_all(self, sample_frame):
+        mask = apply_sample_query(sample_frame, None)
+        assert mask.all()
+
+    def test_unknown_column_rejected(self, sample_frame):
+        with pytest.raises(UnsafeSampleQueryError, match="Unknown sample_info column"):
+            apply_sample_query(sample_frame, "missing_col == 'x'")
+
+    def test_call_expression_rejected(self, sample_frame):
+        with pytest.raises(UnsafeSampleQueryError, match="forbidden token"):
+            apply_sample_query(sample_frame, "__import__('os')")
+
+    def test_attribute_access_rejected(self, sample_frame):
+        with pytest.raises(UnsafeSampleQueryError, match="Attribute access"):
+            apply_sample_query(sample_frame, "context.real")
+
+    def test_subscript_rejected(self, sample_frame):
+        with pytest.raises(UnsafeSampleQueryError, match="Subscripting"):
+            apply_sample_query(sample_frame, "context[0] == 'A'")
 
 
 class TestStatistics:

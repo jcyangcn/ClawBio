@@ -328,6 +328,7 @@ output_directory/
 - **Audit trail:** Schema, objective, command line, and pip freeze are written to `reproducibility/` on every run.
 - **No hallucinated science:** All thresholds trace to `schema.yaml` or `objective.yaml`; no parameter is invented by the agent.
 - **Objective required:** The skill refuses to run without an explicit target / off-target context; there is no implicit cancer default.
+- **Safe sample filters:** `target_context.sample_info_query` and `off_target_context.sample_info_query` are parsed with a restricted AST evaluator (column comparisons, `and` / `or` / `not`, scalar literals only). Arbitrary Python expressions are rejected so a crafted `objective.yaml` cannot execute code. Queries may reference only columns present in `sample_info.csv` matching `[A-Za-z_][A-Za-z0-9_]*`.
 
 ## Agent Boundary
 

@@ -7,7 +7,9 @@ reference implementation (prism_utils.py).
 
 from __future__ import annotations
 
+import ast
 import math
+import operator
 import re
 import warnings
 from dataclasses import dataclass
@@ -218,10 +220,128 @@ def load_readout_long(path: Path, sample_col: str = "sample_id") -> pd.DataFrame
     return long
 
 
+_COLUMN_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_FORBIDDEN_QUERY_TOKENS = ("__", "import", "exec", "eval", "open", "getattr", "lambda")
+
+_COMPARE_OPS: dict[type, Any] = {
+    ast.Eq: operator.eq,
+    ast.NotEq: operator.ne,
+    ast.Lt: operator.lt,
+    ast.LtE: operator.le,
+    ast.Gt: operator.gt,
+    ast.GtE: operator.ge,
+}
+
+
+class UnsafeSampleQueryError(ValueError):
+    """Raised when objective.yaml sample_info_query is not a safe filter expression."""
+
+
+def _validate_query_string(query: str) -> None:
+    lowered = query.lower()
+    for token in _FORBIDDEN_QUERY_TOKENS:
+        if token in lowered:
+            raise UnsafeSampleQueryError(
+                f"Invalid sample_info_query: forbidden token {token!r} in {query!r}"
+            )
+
+
+def _eval_query_node(node: ast.AST, df: pd.DataFrame) -> pd.Series | str | int | float | bool | None:
+    if isinstance(node, ast.BoolOp):
+        values = [_eval_query_node(v, df) for v in node.values]
+        if not values or not all(isinstance(v, pd.Series) for v in values):
+            raise UnsafeSampleQueryError("Boolean combinations must yield per-sample masks")
+        result = values[0]
+        for value in values[1:]:
+            if isinstance(node.op, ast.And):
+                result = result & value
+            elif isinstance(node.op, ast.Or):
+                result = result | value
+            else:
+                raise UnsafeSampleQueryError(f"Unsupported boolean operator: {ast.dump(node.op)}")
+        return result
+
+    if isinstance(node, ast.BinOp):
+        if isinstance(node.op, ast.BitAnd):
+            left = _eval_query_node(node.left, df)
+            right = _eval_query_node(node.right, df)
+            if not isinstance(left, pd.Series) or not isinstance(right, pd.Series):
+                raise UnsafeSampleQueryError("Boolean combinations must yield per-sample masks")
+            return left & right
+        if isinstance(node.op, ast.BitOr):
+            left = _eval_query_node(node.left, df)
+            right = _eval_query_node(node.right, df)
+            if not isinstance(left, pd.Series) or not isinstance(right, pd.Series):
+                raise UnsafeSampleQueryError("Boolean combinations must yield per-sample masks")
+            return left | right
+        raise UnsafeSampleQueryError(f"Unsupported binary operator: {ast.dump(node.op)}")
+
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        operand = _eval_query_node(node.operand, df)
+        if not isinstance(operand, pd.Series):
+            raise UnsafeSampleQueryError("Logical not must apply to a per-sample mask")
+        return ~operand
+
+    if isinstance(node, ast.Compare):
+        if len(node.ops) != 1 or len(node.comparators) != 1:
+            raise UnsafeSampleQueryError("Chained comparisons are not supported in sample_info_query")
+        op_type = type(node.ops[0])
+        compare = _COMPARE_OPS.get(op_type)
+        if compare is None:
+            raise UnsafeSampleQueryError(f"Unsupported comparison operator: {ast.dump(node.ops[0])}")
+        left = _eval_query_node(node.left, df)
+        right = _eval_query_node(node.comparators[0], df)
+        return compare(left, right)
+
+    if isinstance(node, ast.Attribute):
+        raise UnsafeSampleQueryError("Attribute access is not supported in sample_info_query")
+
+    if isinstance(node, ast.Subscript):
+        raise UnsafeSampleQueryError("Subscripting is not supported in sample_info_query")
+
+    if isinstance(node, ast.Call):
+        raise UnsafeSampleQueryError("Function calls are not supported in sample_info_query")
+
+    if isinstance(node, ast.Name):
+        column = node.id
+        if not _COLUMN_NAME_RE.match(column):
+            raise UnsafeSampleQueryError(f"Invalid column name in sample_info_query: {column!r}")
+        if column not in df.columns:
+            raise UnsafeSampleQueryError(f"Unknown sample_info column in sample_info_query: {column!r}")
+        return df[column]
+
+    if isinstance(node, ast.Constant):
+        value = node.value
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            return value
+        raise UnsafeSampleQueryError(f"Unsupported literal type: {type(value).__name__}")
+
+    raise UnsafeSampleQueryError(f"Unsupported expression in sample_info_query: {ast.dump(node)}")
+
+
+def safe_sample_query(df: pd.DataFrame, query: str) -> pd.Series:
+    """Evaluate a restricted boolean filter over sample_info columns.
+
+    Only column comparisons, ``and`` / ``or`` / ``not``, and scalar literals are
+    permitted. Arbitrary Python (including ``df.eval(..., engine='python')``) is
+    rejected so user-supplied ``objective.yaml`` cannot inject code.
+    """
+    _validate_query_string(query)
+    try:
+        parsed = ast.parse(query.strip(), mode="eval")
+    except SyntaxError as exc:
+        raise UnsafeSampleQueryError(f"Invalid sample_info_query syntax: {query!r}") from exc
+
+    result = _eval_query_node(parsed.body, df)
+    if not isinstance(result, pd.Series):
+        raise UnsafeSampleQueryError("sample_info_query must evaluate to a per-sample boolean mask")
+    return result.fillna(False).astype(bool)
+
+
 def apply_sample_query(df: pd.DataFrame, query: str | None) -> pd.Series:
     if not query:
         return pd.Series(True, index=df.index)
-    return df.eval(query, engine="python")
+    return safe_sample_query(df, query)
 
 
 def run_primary_qc(
