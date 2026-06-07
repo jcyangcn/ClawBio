@@ -346,6 +346,13 @@ SKILLS = {
         "allowed_extra_flags": set(),
         "accepts_genotypes": False,
     },
+    "phylo": {
+        "script": SKILLS_DIR / "phylogenetics-builder" / "phylogenetics_builder.py",
+        "demo_args": ["--demo"],
+        "description": "Build maximum-likelihood phylogenetic trees from aligned FASTA data using IQ-TREE 2",
+        "allowed_extra_flags": set(),
+        "accepts_genotypes": False,
+    },
     "scrna": {
         "script": SKILLS_DIR / "scrna-orchestrator" / "scrna_orchestrator.py",
         "demo_args": ["--demo"],
@@ -1111,6 +1118,26 @@ SKILLS = {
             "--kmer", "--window-bp", "--window-variants", "--timeout", "--verbose",
         },
         "no_input_required": False,
+        "accepts_genotypes": False,
+    },
+    "bioqc": {
+        "script": SKILLS_DIR / "bioqc-mcp" / "bioqc_mcp.py",
+        "demo_args": ["--demo"],
+        "description": "BioQC quality control & custom visualizer (wraps FastQC + MultiQC, 20+ chart types, dual CLI/MCP server)",
+        "allowed_extra_flags": {
+            "--input", "--output", "--threads", "--mode", "--chart-type",
+            "--chart-data", "--title", "--x-label", "--y-label", "--style",
+            "--width", "--height",
+        },
+        "accepts_genotypes": False,
+    },
+    "pathway-enricher": {
+        "script": SKILLS_DIR / "pathway-enricher" / "pathway_enricher.py",
+        "demo_args": ["--demo"],
+        "description": "Gene-set pathway enrichment via Enrichr (KEGG, GO BP/MF/CC, Reactome, WikiPathways) — bubble charts & ranked tables",
+        "allowed_extra_flags": {
+            "--input", "--output", "--databases", "--top-n",
+        },
         "accepts_genotypes": False,
     },
 }
