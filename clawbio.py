@@ -43,6 +43,36 @@ PROFILES_DIR = CLAWBIO_DIR / "profiles"
 # Python binary — use the same interpreter that launched clawbio.py
 PYTHON = sys.executable
 
+SCRNASEQ_BACKEND_PROFILES = {
+    "docker",
+    "conda",
+    "mamba",
+    "singularity",
+    "apptainer",
+    "podman",
+    "shifter",
+    "charliecloud",
+    "wave",
+    "gpu",
+    "debug",
+    "arm64",
+    "emulate_amd64",
+    "test",
+    "test_full",
+    "test_cellrangermulti",
+    "test_multiome",
+}
+
+
+def _is_scrnaseq_backend_profile(value: str | None) -> bool:
+    if not value:
+        return False
+    components = [part.strip() for part in str(value).split(",") if part.strip()]
+    return bool(components) and all(
+        component in SCRNASEQ_BACKEND_PROFILES or re.fullmatch(r"[A-Za-z0-9_.-]+", component)
+        for component in components
+    )
+
 # --------------------------------------------------------------------------- #
 # ANSI color support
 # --------------------------------------------------------------------------- #
@@ -519,17 +549,37 @@ SKILLS = {
         "max_output_files_listed": 50,
         "allowed_extra_flags": {
             "--check",
+            "-c",
+            "--config",
             "--profile",
             "--pipeline-version",
+            "--allow-dirty-pipeline",
+            "--require-local-pipeline",
+            "--allow-pipeline-version-override",
+            "--trust-config-params",
             "--preset",
+            "--aligner",
             "--protocol",
             "--email",
             "--multiqc-title",
             "--expected-cells",
+            "--timeout-hours",
+            "--work-dir",
+            "--allow-conda-cellranger",
             "--resume",
             "--genome",
+            "--igenomes-base",
+            "--igenomes-ignore",
+            "--email-on-fail",
+            "--multiqc-config",
+            "--multiqc-logo",
+            "--multiqc-methods-description",
+            "--publish-dir-mode",
+            "--trace-report-suffix",
+            "--monochrome-logs",
             "--save-reference",
             "--save-align-intermeds",
+            "--no-save-align-intermeds",
             "--skip-cellbender",
             "--skip-fastqc",
             "--skip-emptydrops",
@@ -568,7 +618,12 @@ SKILLS = {
         },
         "allowed_extra_flags_without_values": {
             "--check",
+            "--allow-dirty-pipeline",
+            "--require-local-pipeline",
+            "--allow-pipeline-version-override",
+            "--trust-config-params",
             "--resume",
+            "--allow-conda-cellranger",
             "--skip-cellbender",
             "--skip-fastqc",
             "--skip-emptydrops",
@@ -579,7 +634,10 @@ SKILLS = {
             "--skip-downstream",
             "--save-reference",
             "--save-align-intermeds",
+            "--no-save-align-intermeds",
+            "--igenomes-ignore",
             "--star-ignore-sjdbgtf",
+            "--monochrome-logs",
         },
         "accepts_genotypes": False,
     },
@@ -1633,7 +1691,7 @@ def main():
     run_parser.add_argument("--demo", action="store_true", help="Run with demo data")
     run_parser.add_argument("--input", dest="input_path", help="Path to input file")
     run_parser.add_argument("--output", dest="output_dir", help="Output directory")
-    run_parser.add_argument("--profile", dest="profile_path", metavar="PROFILE", help="Execution backend profile (docker/conda/singularity/…) for pipeline skills, or path to patient profile JSON for genomics skills")
+    run_parser.add_argument("--profile", dest="profile_path", metavar="PROFILE", help="Execution backend profile or comma-separated nf-core profile list for pipeline skills, or path to patient profile JSON for genomics skills")
     run_parser.add_argument(
         "--timeout", type=int, default=300, help="Timeout in seconds (default: 300)"
     )
@@ -1692,16 +1750,26 @@ def main():
     run_parser.add_argument("--min-count", type=int, default=None, help="Minimum count threshold for rnaseq skill")
     run_parser.add_argument("--min-samples", type=int, default=None, help="Minimum samples threshold for rnaseq skill")
     run_parser.add_argument("--check", action="store_true", help="Preflight-only mode for pipeline skills (scrnaseq-pipeline, rnaseq-pipeline)")
+    run_parser.add_argument("-c", "--config", dest="extra_config", action="append", default=None, help="Additional Nextflow config file for scrnaseq-pipeline")
     run_parser.add_argument("--pipeline-version", default=None, help="Pinned pipeline version/tag for pipeline skills")
+    run_parser.add_argument("--allow-dirty-pipeline", action="store_true", help="Allow an intentionally modified local scrnaseq checkout")
+    run_parser.add_argument("--require-local-pipeline", action="store_true", help="Require a verifiable local scrnaseq checkout")
     run_parser.add_argument("--preset", default=None, help="Curated preset for pipeline skills")
     run_parser.add_argument("--protocol", default=None, help="Protocol value for pipeline skills")
     run_parser.add_argument("--email", default=None, help="Email address for pipeline completion notification")
     run_parser.add_argument("--email-on-fail", default=None, help="Email address for failure notification only")
     run_parser.add_argument("--multiqc-title", default=None, help="Custom MultiQC title for pipeline skills")
     run_parser.add_argument("--expected-cells", type=int, default=None, help="expected_cells override for scrnaseq-pipeline")
+    run_parser.add_argument("--work-dir", default=None, help="Nextflow work directory for scrnaseq-pipeline")
+    run_parser.add_argument("--allow-conda-cellranger", action="store_true", help="Allow Cell Ranger presets with conda/mamba when a trusted site config supplies Cell Ranger")
     run_parser.add_argument("--resume", action="store_true", help="Enable resume policy for pipeline skills")
     run_parser.add_argument("--save-reference", action="store_true", help="Save built reference indexes for pipeline skills")
-    run_parser.add_argument("--save-align-intermeds", action="store_true", help="Save alignment intermediates for pipeline skills")
+    run_parser.add_argument(
+        "--save-align-intermeds",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Save alignment intermediates for pipeline skills; use --no-save-align-intermeds to force off",
+    )
     run_parser.add_argument("--skip-cellbender", action="store_true", help="Disable cellbender for scrnaseq-pipeline")
     run_parser.add_argument("--skip-fastqc", action="store_true", help="Skip FastQC for pipeline skills")
     run_parser.add_argument(
@@ -1748,7 +1816,7 @@ def main():
     # correct types instead of surviving only via parse_known_args + the registry
     # allowlist.
     run_parser.add_argument("--pipeline-local", default=None, help="Local nf-core pipeline checkout for rnaseq-pipeline or sarek-pipeline")
-    run_parser.add_argument("--aligner", default=None, help="Aligner override for rnaseq-pipeline or sarek-pipeline")
+    run_parser.add_argument("--aligner", default=None, help="Aligner for pipeline skills: scrnaseq-pipeline uses nf-core/scrnaseq aligners; rnaseq-pipeline uses star_salmon|star_rsem|hisat2|bowtie2_salmon; sarek-pipeline uses its aligner override")
     run_parser.add_argument("--pseudo-aligner", default=None, help="Pseudo-aligner for rnaseq-pipeline (salmon|kallisto)")
     run_parser.add_argument("--pseudo-aligner-kmer-size", type=int, default=None, help="K-mer size for pseudo-aligner index")
     run_parser.add_argument("--prokaryotic", action="store_true", help="Compose -profile prokaryotic for rnaseq-pipeline")
@@ -1830,6 +1898,8 @@ def main():
     run_parser.add_argument("--multiqc-config", default=None, help="MultiQC config file for rnaseq-pipeline")
     run_parser.add_argument("--multiqc-logo", default=None, help="MultiQC logo image for rnaseq-pipeline")
     run_parser.add_argument("--multiqc-methods-description", default=None, help="MultiQC methods description YAML for rnaseq-pipeline")
+    run_parser.add_argument("--trace-report-suffix", default=None, help="Suffix appended to Nextflow trace report filenames for pipeline skills")
+    run_parser.add_argument("--monochrome-logs", action="store_true", help="Disable ANSI colors in Nextflow logs for pipeline skills")
     # rnaseq-pipeline — profile modifiers and architecture / GPU acceleration
     run_parser.add_argument("--arm", action="store_true", help="Compose -profile arm64 for ARM64-native containers (Apple Silicon, AWS Graviton)")
     run_parser.add_argument("--rapid-quant", action="store_true", help="Compose -profile rapid_quant for rnaseq-pipeline (per-sample pseudo-alignment only)")
@@ -1854,7 +1924,7 @@ def main():
     run_parser.add_argument("--skip-gtf-transcript-filter", action="store_true", help="Skip the transcript_id check inside the GTF filter")
     # rnaseq-pipeline — output and publishing controls
     run_parser.add_argument("--save-bbsplit-reads", action="store_true", help="Save BBSplit-separated FASTQ files for rnaseq-pipeline")
-    run_parser.add_argument("--publish-dir-mode", default=None, choices=["symlink", "rellink", "link", "copy", "copyNoFollow", "move"], help="Nextflow publishDir mode for rnaseq-pipeline (pipeline default: copy)")
+    run_parser.add_argument("--publish-dir-mode", default=None, choices=["symlink", "rellink", "link", "copy", "copyNoFollow", "move"], help="Nextflow publishDir mode for pipeline skills (pipeline default: copy)")
     # rnaseq-pipeline — Nextflow config passthrough (repeatable)
     run_parser.add_argument("--nextflow-config", action="append", metavar="CONFIG", default=None, help="Additional Nextflow config file(s) passed as -c (repeatable)")
     run_parser.add_argument("--mode", default=None, help="Mode for diffviz skill (auto|bulk|scrna)")
@@ -2032,7 +2102,7 @@ def main():
 
     elif args.command == "run":
         skill_backend_profile = None
-        if args.skill == "scrnaseq-pipeline" and getattr(args, "profile_path", None) in {"docker", "conda", "singularity", "apptainer"}:
+        if args.skill == "scrnaseq-pipeline" and _is_scrnaseq_backend_profile(getattr(args, "profile_path", None)):
             skill_backend_profile = args.profile_path
             args.profile_path = None
         elif args.skill in {"rnaseq-pipeline", "sarek-pipeline"} and getattr(args, "profile_path", None) is not None:
@@ -2055,14 +2125,43 @@ def main():
             extra.extend(["--email", args.email])
         if getattr(args, "multiqc_title", None):
             extra.extend(["--multiqc-title", args.multiqc_title])
+        if args.skill == "scrnaseq-pipeline":
+            if getattr(args, "allow_dirty_pipeline", False):
+                extra.append("--allow-dirty-pipeline")
+            if getattr(args, "require_local_pipeline", False):
+                extra.append("--require-local-pipeline")
+            if getattr(args, "allow_conda_cellranger", False):
+                extra.append("--allow-conda-cellranger")
+            if getattr(args, "aligner", None):
+                extra.extend(["--aligner", args.aligner])
+            for config_path in getattr(args, "extra_config", []) or []:
+                extra.extend(["--config", config_path])
+            for value_flag in (
+                ("email_on_fail", "--email-on-fail"),
+                ("multiqc_config", "--multiqc-config"),
+                ("multiqc_logo", "--multiqc-logo"),
+                ("multiqc_methods_description", "--multiqc-methods-description"),
+                ("igenomes_base", "--igenomes-base"),
+                ("publish_dir_mode", "--publish-dir-mode"),
+                ("trace_report_suffix", "--trace-report-suffix"),
+                ("work_dir", "--work-dir"),
+            ):
+                attr, flag = value_flag
+                value = getattr(args, attr, None)
+                if value:
+                    extra.extend([flag, value])
+            if getattr(args, "monochrome_logs", False):
+                extra.append("--monochrome-logs")
         if getattr(args, "expected_cells", None) is not None:
             extra.extend(["--expected-cells", str(args.expected_cells)])
         if getattr(args, "resume", False):
             extra.append("--resume")
         if getattr(args, "save_reference", False):
             extra.append("--save-reference")
-        if getattr(args, "save_align_intermeds", False):
+        if getattr(args, "save_align_intermeds", None) is True:
             extra.append("--save-align-intermeds")
+        elif getattr(args, "save_align_intermeds", None) is False:
+            extra.append("--no-save-align-intermeds")
         if getattr(args, "skip_cellbender", False):
             extra.append("--skip-cellbender")
         if getattr(args, "skip_fastqc", False):

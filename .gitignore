@@ -1,5 +1,7 @@
 __pycache__/
 *.pyc
+.mypy_cache/
+.pytest_cache/
 .DS_Store
 .idea
 *.egg-info/
@@ -27,3 +29,8 @@ skills/proteomics-de/output_maxquant_test/
 .claude/
 .claire/
 brief.md
+
+# Superpowers framework artifacts (brainstorming/plans/specs) — never committed
+docs/superpowers/
+**/superpowers/plans/
+**/superpowers/specs/

@@ -359,7 +359,7 @@ def build_catalog() -> list[dict]:
 
         tags = [str(tag) for tag in skill_meta.get("tags", [])]
         deps = _normalize_dependencies(skill_meta.get("dependencies"))
-        trigger_keywords = skill_meta.get("openclaw", {}).get("trigger_keywords") or TRIGGER_KEYWORDS.get(folder_name, [])
+        trigger_keywords = yaml_data.get("trigger_keywords") or skill_meta.get("openclaw", {}).get("trigger_keywords") or TRIGGER_KEYWORDS.get(folder_name, [])
 
         entry = {
             "name": folder_name,
