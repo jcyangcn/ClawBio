@@ -9,7 +9,7 @@
   <a href="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml"><img src="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="#quick-start"><img src="https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=white" alt="Python 3.10+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
-  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-87_skills-orange" alt="ClawHub Skills"></a>
+  <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-88_skills-orange" alt="ClawHub Skills"></a>
   <a href="https://doi.org/10.5281/zenodo.19420648"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.19420648.svg" alt="DOI"></a>
   <a href="https://github.com/ClawBio/ClawBio/issues"><img src="https://img.shields.io/github/issues/ClawBio/ClawBio" alt="Open Issues"></a>
   <a href="https://clawbio.github.io/ClawBio/slides/"><img src="https://img.shields.io/badge/slides-London_Bioinformatics_Meetup-purple" alt="Slides"></a>
@@ -54,7 +54,7 @@ Or install as a [Claude Code](https://claude.ai/claude-code) plugin: `/plugin ma
 
 ## What ClawBio Does Today
 
-**87 skills (29 production-ready) + 8,000 Galaxy tools + 2,318 tests + benchmark validation. Local-first. No cloud. No guessing.**
+**88 skills (29 production-ready) + 8,000 Galaxy tools + 2,318 tests + benchmark validation. Local-first. No cloud. No guessing.**
 
 > **v0.5.0 released** (4 Apr 2026): Validation and Benchmark Infrastructure. AD ground truth benchmark, mock API server for offline testing, swappable fine-mapping pipeline (SuSiE vs ABF), 74 benchmark tests, red/green TDD mandate. [Release notes](https://github.com/ClawBio/ClawBio/releases/tag/v0.5.0). DOI: [10.5281/zenodo.19420648](https://doi.org/10.5281/zenodo.19420648).
 
@@ -180,7 +180,7 @@ The exact contents can vary by skill, and some replays also require the original
 
 ## Skills
 
-A curated cross-section of ClawBio's 87 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
+A curated cross-section of ClawBio's 88 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
 
 | Skill | Scale | Description |
 |-------|-------|-------------|
@@ -654,7 +654,7 @@ ClawBio follows [Semantic Versioning](https://semver.org/). The current release 
 
 ### What is ClawBio?
 
-ClawBio is the **first bioinformatics-native AI agent skill library**. Built on OpenClaw (180k+ GitHub stars), it provides 87 skills (29 production-ready) for genomics analysis, pharmacogenomics, ancestry profiling, and more. Local-first, privacy-focused, and reproducible.
+ClawBio is the **first bioinformatics-native AI agent skill library**. Built on OpenClaw (180k+ GitHub stars), it provides 88 skills (29 production-ready) for genomics analysis, pharmacogenomics, ancestry profiling, and more. Local-first, privacy-focused, and reproducible.
 
 ### What are ClawBio skills?
 
