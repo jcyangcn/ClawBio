@@ -21,13 +21,11 @@ def test_package_exports_documented_symbols():
 
 def test_package_exports_same_runner_implementation():
     from clawbio import list_skills, run_skill, upload_profile
-    from clawbio import runner as package_runner
+    from clawbio import cli as engine
 
-    root_runner = package_runner._load_root_runner()
-
-    assert list_skills is root_runner.list_skills
-    assert run_skill is root_runner.run_skill
-    assert upload_profile is root_runner.upload_profile
+    assert list_skills is engine.list_skills
+    assert run_skill is engine.run_skill
+    assert upload_profile is engine.upload_profile
 
 
 def test_list_skills_returns_registry_with_known_skill():
@@ -51,10 +49,9 @@ def test_run_skill_unknown_skill_returns_structured_failure():
 
 def test_upload_profile_works_with_fixture(tmp_path, monkeypatch):
     from clawbio import upload_profile
-    from clawbio import runner as package_runner
+    from clawbio import cli as engine
 
-    root_runner = package_runner._load_root_runner()
-    monkeypatch.setattr(root_runner, "PROFILES_DIR", tmp_path)
+    monkeypatch.setattr(engine, "PROFILES_DIR", tmp_path)
 
     result = upload_profile(str(FIXTURES / "mock_23andme.txt"), patient_id="pkg-api")
 

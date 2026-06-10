@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-import importlib.util
 import json
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-
-_RUNNER_SPEC = importlib.util.spec_from_file_location("clawbio_runner", PROJECT_ROOT / "clawbio.py")
-assert _RUNNER_SPEC and _RUNNER_SPEC.loader
-clawbio_runner = importlib.util.module_from_spec(_RUNNER_SPEC)
-_RUNNER_SPEC.loader.exec_module(clawbio_runner)
+# The runner engine lives in clawbio.cli; import it directly so monkeypatching
+# its module-level state (SKILLS, subprocess) affects run_skill's behaviour.
+from clawbio import cli as clawbio_runner
 
 
 def test_run_skill_promotes_structured_result_fields(monkeypatch, tmp_path: Path):

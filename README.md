@@ -20,18 +20,11 @@
 ### Install in 30 seconds
 
 ```bash
-git clone https://github.com/ClawBio/ClawBio.git
-cd ClawBio
-uv sync                            # Python 3.11+ (installs from pyproject.toml + uv.lock)
-uv run python clawbio.py run pharmgx --demo
+pip install clawbio                 # Python 3.11+
+clawbio run pharmgx --demo
 ```
 
-Don't have [uv](https://docs.astral.sh/uv/)? Install it with `curl -LsSf https://astral.sh/uv/install.sh | sh` (Linux/macOS) or `brew install uv` (macOS via Homebrew), or use pip instead:
-
-```bash
-pip install -e .                   # reads pyproject.toml
-python clawbio.py run pharmgx --demo
-```
+Prefer [conda](https://docs.conda.io/)? `conda install -c bioconda clawbio`.
 
 Or use as a Python library:
 
@@ -42,7 +35,15 @@ result = run_skill("pharmgx", demo=True)
 
 Or install as a [Claude Code](https://claude.ai/claude-code) plugin: `/plugin marketplace add ClawBio/ClawBio`
 
-> No `pip install clawbio` package yet (planned for a future release).
+**Developing ClawBio or want all skills with full demo data?** Work from a
+source checkout instead ([uv](https://docs.astral.sh/uv/) recommended):
+
+```bash
+git clone https://github.com/ClawBio/ClawBio.git
+cd ClawBio
+uv sync                            # installs from pyproject.toml + uv.lock
+uv run python clawbio.py run pharmgx --demo
+```
 
 ---
 
@@ -380,17 +381,21 @@ The OpenClaw-borrowed "magic" happens when an external LLM interprets a user's r
 
 To experience that orchestration layer conversationally, ClawBio can be used through Telegram or Discord via RoboTerri, as a Claude Code skill, or through a self-hosted OpenClaw gateway with browser-based webchat. Of these options, the self-hosted OpenClaw gateway offers the strongest privacy story together with LLM-assisted interaction, because the LLM stays at the meta/orchestration level rather than operating on the underlying biological data themselves.
 
-### Clone and run
+### Install and run
+
+```bash
+pip install clawbio                      # or: conda install -c bioconda clawbio
+clawbio run pharmgx --demo
+```
+
+PharmGx demo runs in <2 seconds. Needs Python 3.11+. To develop ClawBio or get
+all skills with full demo data, work from a source checkout instead:
 
 ```bash
 git clone https://github.com/ClawBio/ClawBio.git && cd ClawBio
 uv sync                                  # or: pip install -e .
 uv run python clawbio.py run pharmgx --demo
 ```
-
-PharmGx demo runs in <2 seconds. Only needs Python 3.10+. Dependencies and the locked dependency graph live in `pyproject.toml` and `uv.lock`.
-
-> **Note:** ClawBio is currently installed by cloning the repository. There is no `pip install clawbio` package yet (planned for a future release).
 
 ### Use as a Python library
 

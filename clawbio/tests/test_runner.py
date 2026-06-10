@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-import importlib.util
-import sys
 from pathlib import Path
 
+# The runner engine lives in clawbio.cli; import it directly so monkeypatching
+# its subprocess attribute affects run_skill's behaviour.
+from clawbio import cli as clawbio_runner
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-_RUNNER_SPEC = importlib.util.spec_from_file_location("clawbio_runner", PROJECT_ROOT / "clawbio.py")
-clawbio_runner = importlib.util.module_from_spec(_RUNNER_SPEC)
-sys.modules["clawbio_runner"] = clawbio_runner
-assert _RUNNER_SPEC.loader is not None
-_RUNNER_SPEC.loader.exec_module(clawbio_runner)
 
 
 def test_run_skill_passes_absolute_output_to_subprocess(monkeypatch, tmp_path):
