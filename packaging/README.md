@@ -64,7 +64,7 @@ deliberately.
    uvx twine upload --repository testpypi dist/*
    uvx twine upload dist/*
    ```
-5. Tag the release: `git tag v0.5.1 && git push --tags`.
+5. Tag the release: `git tag v0.5.2 && git push --tags`.
 
 ## Publish to bioconda (maintainer action: needs a bioconda-recipes fork)
 

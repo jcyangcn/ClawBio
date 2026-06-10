@@ -1,6 +1,6 @@
 """ClawBio: Bioinformatics AI Agent shared library."""
 
-__version__ = "0.5.1"
+__version__ = "0.5.2"
 
 from .runner import list_skills, run_skill, upload_profile
 

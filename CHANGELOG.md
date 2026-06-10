@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **nfcore-rnaseq-wrapper** (`skills/nfcore-rnaseq-wrapper/`, `rnaseq-pipeline`): Upstream bulk RNA-seq preprocessing from FASTQ/BAM using nf-core/rnaseq v3.26.0. Supports STAR+Salmon, STAR+RSEM, HISAT2, and Bowtie2+Salmon routes; strict preflight for Java/Nextflow/backend, samplesheet strandedness and references; `params.yaml`-driven execution; SHA-256 reproducibility bundle; provenance JSONs; and template handoff to `rnaseq-de`. Hardening round: contaminant screening (`--contaminant-screening`, `--kraken-db`, `--sylph-db`, `--bracken-precision`, BBSplit auto-enable), iGenomes name validation with fast-fail in preflight, GENCODE GTF auto-detect, real `duration_seconds` measurement, auto-handoff to `rnaseq-de` (`--run-downstream --metadata --formula --contrast`), `--prokaryotic` restricted to profile modifier (never standalone backend), `--check` guaranteed to never invoke Nextflow, passthrough flags `--enable-preseq`, `--multiqc-config`, `--multiqc-logo`, `--rsem-extra-args`. 538 tests.
 - **nfcore-sarek-wrapper** (`skills/nfcore-sarek-wrapper/`, `sarek-pipeline`): nf-core/sarek v3.8.1 wrapper with step-aware restart sheets, somatic/germline validation, caller and annotation resources, output discovery, and portable reproducibility bundles. Alignment audit hardening includes effective iGenomes resources with the documented `false` sentinel, final `--extra-param` precedence, `--outdir-cache` cache-download preflight, full integrated CLI help/forwarding, and exact portable replay of the captured Nextflow invocation. 285 tests.
 
+## [v0.5.2] - 2026-06-10 - pip / conda packaging
+
+### Packaging
+- ClawBio is now installable with `pip install clawbio`, and a bioconda recipe is ready for `conda install -c bioconda clawbio`. The CLI engine moved into the importable `clawbio` package with a `clawbio` console entry point; all skills' logic is bundled into the wheel (full demo data for the headline skills); output and patient profiles route to the working directory when installed; and the version is single-sourced from `clawbio/__init__.py`. First PyPI release was 0.5.1; 0.5.2 additionally bundles the skills below.
+
+### New Skills
+- **drug-repurposing-screen**, **pathway-enricher**, **phylogenetics-builder**, **bioqc-mcp**: contributor skills now bundled in the installable package.
+
 ## [v0.5.0] — 2026-04-04 — Validation & Benchmark Infrastructure
 
 ### Added
