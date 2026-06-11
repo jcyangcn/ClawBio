@@ -15,7 +15,7 @@ def test_skill_catalog_loads():
     catalog = build_skill_catalog()
     assert len(catalog) >= 7
     # Core skills must be present
-    for skill in ["pharmgx-reporter", "nutrigx_advisor", "genome-compare",
+    for skill in ["pharmgx-reporter", "nutrigx", "genome-compare",
                   "gwas-prs", "clinpgx", "gwas-lookup", "profile-report"]:
         assert skill in catalog, f"{skill} not in catalog"
         assert len(catalog[skill]) > 0  # has a description

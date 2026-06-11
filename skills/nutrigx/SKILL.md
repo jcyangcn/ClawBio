@@ -1,5 +1,5 @@
 ---
-name: nutrigx-advisor
+name: nutrigx
 description: Personalised nutrition report from consumer genetic data (23andMe, AncestryDNA, VCF) — interrogates nutritionally-relevant
   SNPs and generates actionable dietary guidance, all computed locally.
 license: MIT
@@ -228,9 +228,9 @@ python examples/generate_patient.py --run
 ## File Structure
 
 ```
-skills/nutrigx-advisor/
+skills/nutrigx/
 ├── SKILL.md                      ← this file (agent instructions)
-├── nutrigx_advisor.py            ← main entry point
+├── nutrigx.py                    ← main entry point
 ├── parse_input.py                ← multi-format parser
 ├── extract_genotypes.py          ← SNP lookup engine
 ├── score_variants.py             ← risk scoring algorithm

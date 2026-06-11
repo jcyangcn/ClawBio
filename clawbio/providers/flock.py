@@ -33,7 +33,7 @@ SKILL_DESCRIPTIONS = {
     "gwas-prs": "Polygenic risk score calculation from consumer genetic data using PGS Catalog.",
     "profile-report": "Unified personal genomic profile report aggregating results from multiple skills.",
     "equity-scorer": "HEIM diversity metrics (FST, heterozygosity, representation) from VCF or ancestry data.",
-    "nutrigx_advisor": "Personalised nutrigenomics recommendations from genetic data — diet, vitamins, caffeine, lactose.",
+    "nutrigx": "Personalised nutrigenomics recommendations from genetic data — diet, vitamins, caffeine, lactose.",
     "claw-ancestry-pca": "Ancestry decomposition PCA against the Simons Genome Diversity Project.",
     "claw-semantic-sim": "Semantic Isolation Index for disease research equity using PubMed abstracts.",
     "claw-metagenomics": "Shotgun metagenomics profiling — taxonomy, resistome, and functional pathways.",

@@ -26,7 +26,7 @@ from pathlib import Path
 BENCH_TO_FOLDER = {
     "bio-orchestrator": "bio-orchestrator",
     "equity-scorer": "equity-scorer",
-    "nutrigx-advisor": "nutrigx-advisor",
+    "nutrigx": "nutrigx",
     "pharmgx-reporter": "pharmgx-reporter",
     "claw-metagenomics": "claw-metagenomics",
     "clawbio-finemapping": "fine-mapping",

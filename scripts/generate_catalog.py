@@ -194,7 +194,7 @@ def load_skills_registry() -> set:
 FOLDER_TO_ALIAS = {
     "pharmgx-reporter": "pharmgx",
     "equity-scorer": "equity",
-    "nutrigx_advisor": "nutrigx",
+    "nutrigx": "nutrigx",
     "scrna-orchestrator": "scrna",
     "scrna-embedding": "scrna-embedding",
     "claw-metagenomics": "metagenomics",
@@ -224,7 +224,7 @@ EXCLUDED_FOLDERS = {"pr-audit", "wes-clinical-report-es"}
 
 # Skills that are MVP (have working Python + are in SKILLS dict or are bio-orchestrator)
 MVP_FOLDERS = {
-    "pharmgx-reporter", "equity-scorer", "nutrigx_advisor", "claw-metagenomics",
+    "pharmgx-reporter", "equity-scorer", "nutrigx", "claw-metagenomics",
     "nfcore-scrnaseq-wrapper", "nfcore-rnaseq-wrapper", "nfcore-sarek-wrapper", "scrna-orchestrator", "scrna-embedding",
     "genome-compare", "drug-photo", "gwas-prs", "clinpgx", "gwas-lookup",
     "bigquery-public",
@@ -250,7 +250,7 @@ TRIGGER_KEYWORDS: dict[str, list[str]] = {
     "profile-report": ["profile report", "unified report", "my profile", "genomic profile"],
     "genome-compare": ["genome comparison", "IBS", "George Church", "Corpasome", "pairwise"],
     "equity-scorer": ["HEIM", "equity", "FST", "heterozygosity", "population representation"],
-    "nutrigx_advisor": ["nutrition", "nutrigenomics", "diet genetics", "MTHFR", "caffeine", "lactose"],
+    "nutrigx": ["nutrition", "nutrigenomics", "diet genetics", "MTHFR", "caffeine", "lactose"],
     "nfcore-scrnaseq-wrapper": ["scrnaseq", "nf-core scrnaseq", "single-cell preprocessing", "10x fastq", "generate h5ad from fastq"],
     "nfcore-rnaseq-wrapper": ["bulk RNA-seq preprocessing", "nf-core rnaseq", "run rnaseq from fastq", "FASTQ to count matrix", "STAR Salmon RNA-seq pipeline"],
     "nfcore-sarek-wrapper": ["sarek", "germline variant calling", "somatic variant calling", "tumor-normal pair", "mutect2", "strelka", "haplotypecaller", "ascat", "WES variant calling", "WGS variant calling", "VEP annotation", "nf-core sarek", "tumor-only variant calling", "ControlFREEC", "Manta"],
@@ -281,10 +281,10 @@ CHAINING: dict[str, list[str]] = {
     "gwas-lookup": ["clinpgx", "gwas-prs", "lit-synthesizer"],
     "bigquery-public": [],
     "gwas-prs": ["profile-report", "gwas-lookup"],
-    "profile-report": ["pharmgx-reporter", "nutrigx_advisor", "gwas-prs", "genome-compare"],
+    "profile-report": ["pharmgx-reporter", "nutrigx", "gwas-prs", "genome-compare"],
     "genome-compare": ["claw-ancestry-pca", "profile-report"],
     "equity-scorer": ["claw-semantic-sim"],
-    "nutrigx_advisor": ["profile-report", "pharmgx-reporter"],
+    "nutrigx": ["profile-report", "pharmgx-reporter"],
     "nfcore-scrnaseq-wrapper": ["scrna-orchestrator", "scrna-embedding", "bio-orchestrator"],
     "nfcore-rnaseq-wrapper": ["rnaseq-de", "diff-visualizer", "bio-orchestrator"],
     "nfcore-sarek-wrapper": ["variant-annotation", "clinical-variant-reporter", "bio-orchestrator"],

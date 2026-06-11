@@ -78,7 +78,7 @@ Run PCA against the SGDP reference panel to see where this European individual c
 
 Generate a complete nutrigenomics profile covering 40 SNPs across 13 dietary domains: caffeine metabolism, lactose tolerance, vitamin needs, fat metabolism, and more.
 
-**Skills:** nutrigx_advisor, profile-report
+**Skills:** nutrigx, profile-report
 
 **Try it:**
 - "What does this genome say about caffeine metabolism?"
@@ -150,4 +150,4 @@ The 30x WGS extends this in several ways:
 - **Resolution:** every base of the genome sequenced, not just pre-selected positions
 - **Gene regions:** full coverage of pharmacogene haplotypes (CYP2D6, HLA), which arrays often miss
 
-Both datasets come from the same individual (Manuel Corpas) and are CC0 licensed. The 23andMe data remains the quickest way to demo the pharmgx-reporter and nutrigx_advisor skills. The WGS data adds depth for variant annotation, structural variant exploration, and comprehensive benchmarking.
+Both datasets come from the same individual (Manuel Corpas) and are CC0 licensed. The 23andMe data remains the quickest way to demo the pharmgx-reporter and nutrigx skills. The WGS data adds depth for variant annotation, structural variant exploration, and comprehensive benchmarking.

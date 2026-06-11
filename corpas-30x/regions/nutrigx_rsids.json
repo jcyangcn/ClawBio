@@ -1,6 +1,6 @@
 {
-  "description": "30 nutrigenomics SNP rsIDs from ClawBio nutrigx_advisor (13 dietary domains)",
-  "source": "skills/nutrigx_advisor/data/snp_panel.json",
+  "description": "30 nutrigenomics SNP rsIDs from ClawBio nutrigx (13 dietary domains)",
+  "source": "skills/nutrigx/data/snp_panel.json",
   "rsids": [
     "rs1801133",
     "rs1801131",

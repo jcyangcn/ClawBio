@@ -267,7 +267,7 @@ def main():
             out_dir = Path(__file__).parent / "output" / f"results_{seed}"
             cmd = [
                 sys.executable,
-                str(skill_root / "nutrigx_advisor.py"),
+                str(skill_root / "nutrigx.py"),
                 "--input", str(out_csv),
                 "--output", str(out_dir),
             ]

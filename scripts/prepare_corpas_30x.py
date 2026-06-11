@@ -383,7 +383,7 @@ def cmd_subsets() -> int:
         # extract by genomic position. Coordinates come from the ClawBio
         # demo patient files (GRCh37). The VCF uses chr-prefixed names.
         pgx_demo = CLAWBIO_DIR / "skills" / "pharmgx-reporter" / "demo_patient.txt"
-        nutrigx_demo = CLAWBIO_DIR / "skills" / "nutrigx_advisor" / "tests" / "synthetic_patient.csv"
+        nutrigx_demo = CLAWBIO_DIR / "skills" / "nutrigx" / "tests" / "synthetic_patient.csv"
 
         for subset_name, coord_source, source_type in [
             ("pgx_loci.vcf.gz", pgx_demo, "demo_tsv"),

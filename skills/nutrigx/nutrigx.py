@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-nutrigx_advisor.py — NutriGx Advisor: Personalised Nutrition from Genetic Data
+nutrigx.py — NutriGx Advisor: Personalised Nutrition from Genetic Data
 ClawBio Skill v0.2.0
 
 Usage:
-    python nutrigx_advisor.py --input genome.csv --output results/
-    python nutrigx_advisor.py --input variants.vcf --output results/ --format vcf
+    python nutrigx.py --input genome.csv --output results/
+    python nutrigx.py --input variants.vcf --output results/ --format vcf
 """
 
 import argparse

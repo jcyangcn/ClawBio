@@ -222,7 +222,7 @@ def generate_report(snp_calls, risk_scores, snp_panel, output_dir, figures=True,
         "## References",
         "",
         "SNP-nutrient associations sourced from GWAS Catalog, ClinVar, and CPIC guidelines.",
-        "Full citations available in `skills/nutrigx-advisor/SKILL.md`.",
+        "Full citations available in `skills/nutrigx/SKILL.md`.",
         "",
     ]
 

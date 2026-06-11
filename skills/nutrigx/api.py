@@ -1,4 +1,4 @@
-"""Importable API for the nutrigx_advisor skill."""
+"""Importable API for the nutrigx skill."""
 from __future__ import annotations
 
 import json

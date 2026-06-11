@@ -86,8 +86,8 @@ jobs:
       - name: Run Equity Scorer tests
         run: uv run pytest skills/equity-scorer/tests/test_equity_scorer.py -v
 
-      - name: Run NutriGx Advisor tests
-        run: uv run pytest skills/nutrigx-advisor/tests/test_nutrigx.py -v
+      - name: Run NutriGx tests
+        run: uv run pytest skills/nutrigx/tests/test_nutrigx.py -v
 
       - name: Run Genome Comparator tests
         run: uv run pytest skills/genome-compare/tests/test_genome_compare.py -v

@@ -1,7 +1,7 @@
 """Unified genetic file parsing for ClawBio.
 
 Consolidates parsers from:
-- skills/nutrigx_advisor/parse_input.py (cleanest modular design)
+- skills/nutrigx/parse_input.py (cleanest modular design)
 - skills/genome-compare/genome_compare.py (iCloud staging, gzip, position metadata)
 - skills/pharmgx-reporter/pharmgx_reporter.py (gzip handling)
 - skills/equity-scorer/equity_scorer.py (VCF matrix parsing)
