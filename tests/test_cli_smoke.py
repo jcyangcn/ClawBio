@@ -31,6 +31,14 @@ def test_upload_help_exits_zero():
     assert result.returncode == 0, result.stderr
 
 
+def test_version_flag_prints_version_and_exits_zero():
+    from clawbio import __version__
+
+    result = _run("--version")
+    assert result.returncode == 0, result.stderr
+    assert __version__ in result.stdout
+
+
 def test_skill_flags_pass_through():
     """Unknown flags must reach the skill, not be rejected by clawbio.py."""
     result = _run("run", "pharmgx", "--unknown-future-flag", "value", "--help")
