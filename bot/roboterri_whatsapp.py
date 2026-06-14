@@ -52,6 +52,10 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from openai import AsyncOpenAI, APIError
 
+# Shared bot security helpers (identity isolation + webhook signature check).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from security import is_sender_allowed, scoped_get, verify_whatsapp_signature
+
 # --------------------------------------------------------------------------- #
 # Config
 # --------------------------------------------------------------------------- #
@@ -60,8 +64,15 @@ load_dotenv()
 
 WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN", "")
 WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
-WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "roboterri_verify")
+WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
+WHATSAPP_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET", "")
 WHATSAPP_ADMIN_PHONE = os.environ.get("WHATSAPP_ADMIN_PHONE", "")
+# Sender allow-list: only these numbers (plus the admin) may use the bot.
+# Public access is an explicit opt-in via WHATSAPP_PUBLIC=1, never the default.
+WHATSAPP_ALLOWED_NUMBERS = {
+    n.strip() for n in os.environ.get("WHATSAPP_ALLOWED_NUMBERS", "").split(",") if n.strip()
+}
+WHATSAPP_PUBLIC = os.environ.get("WHATSAPP_PUBLIC", "").lower() in ("1", "true", "yes")
 WHATSAPP_PORT = int(os.environ.get("WHATSAPP_PORT", "5001"))
 
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
@@ -80,6 +91,9 @@ if not WHATSAPP_PHONE_NUMBER_ID:
 if not LLM_API_KEY:
     print("Error: LLM_API_KEY not set. See bot/README.md for setup.")
     sys.exit(1)
+if not WHATSAPP_APP_SECRET:
+    print("WARNING: WHATSAPP_APP_SECRET not set -- all webhook POSTs are rejected "
+          "(fail closed). Set it to your Meta app secret to enable signature checks.")
 
 CLAWBIO_DIR = Path(__file__).resolve().parent.parent
 CLAWBIO_PY = CLAWBIO_DIR / "clawbio.py"
@@ -207,7 +221,7 @@ _received_files: dict[str, dict] = {}
 _pending_media: dict[str, list[dict]] = {}
 
 # Pending text queue: bypass LLM paraphrasing for compare/drugphoto
-_pending_text: list[str] = []
+_pending_text: dict[str, list[str]] = {}
 
 # Per-user voice reply toggle
 _voice_enabled: dict[str, bool] = {}
@@ -656,7 +670,7 @@ def _validate_path(filepath: Path, allowed_root: Path) -> bool:
 # --------------------------------------------------------------------------- #
 
 
-async def execute_clawbio(args: dict) -> str:
+async def execute_clawbio(args: dict, phone: str) -> str:
     """Execute a ClawBio bioinformatics skill via subprocess."""
     skill_key = args.get("skill", "auto")
     mode = args.get("mode", "demo")
@@ -670,9 +684,9 @@ async def execute_clawbio(args: dict) -> str:
 
         orch_input = query
         if mode == "file":
-            for _uid, info in _received_files.items():
+            info = scoped_get(_received_files, phone)
+            if info:
                 orch_input = info["path"]
-                break
         if not orch_input:
             return "Error: skill='auto' requires either a file or a query to route."
 
@@ -718,10 +732,10 @@ async def execute_clawbio(args: dict) -> str:
     # Resolve input and profile for file mode
     input_path = None
     profile_path = None
-    for _uid, info in _received_files.items():
+    info = scoped_get(_received_files, phone)
+    if info:
         input_path = info.get("path")
         profile_path = info.get("profile_path")
-        break
 
     if mode == "file" and not input_path and not profile_path:
         if OWNER_GENOME.exists():
@@ -812,7 +826,7 @@ async def execute_clawbio(args: dict) -> str:
     if skill_key in ("compare", "drugphoto", "profile"):
         raw_output = stdout_str.strip()
         if raw_output:
-            _pending_text.append(raw_output)
+            _pending_text.setdefault(phone, []).append(raw_output)
         return "Result sent directly to chat. Do not repeat or paraphrase it."
 
     if out_dir.exists():
@@ -869,12 +883,9 @@ async def execute_clawbio(args: dict) -> str:
 # --------------------------------------------------------------------------- #
 
 
-async def execute_save_file(args: dict) -> str:
+async def execute_save_file(args: dict, phone: str) -> str:
     """Save the most recently received file to the requested destination."""
-    file_info = None
-    for _uid, info in _received_files.items():
-        file_info = info
-        break
+    file_info = scoped_get(_received_files, phone)
 
     if not file_info:
         return "No recently received file to save. Send a file first."
@@ -906,7 +917,7 @@ async def execute_save_file(args: dict) -> str:
 # --------------------------------------------------------------------------- #
 
 
-async def execute_write_file(args: dict) -> str:
+async def execute_write_file(args: dict, phone: str) -> str:
     """Create or overwrite a file with the given content."""
     content = args.get("content")
     filename = args.get("filename")
@@ -932,7 +943,7 @@ async def execute_write_file(args: dict) -> str:
 # --------------------------------------------------------------------------- #
 
 
-async def execute_generate_audio(args: dict) -> str:
+async def execute_generate_audio(args: dict, phone: str) -> str:
     """Generate MP3 audio from text using edge-tts."""
     text = args.get("text")
     filename = args.get("filename")
@@ -1102,7 +1113,7 @@ async def llm_tool_loop(phone: str, user_content: str | list) -> str:
                 _audit("tool_call", phone=phone, tool=func_name,
                        args_preview=json.dumps(args, default=str)[:300])
                 try:
-                    result = await executor(args)
+                    result = await executor(args, phone)
                 except Exception as tool_err:
                     logger.error(f"Tool {func_name} raised: {tool_err}", exc_info=True)
                     _audit("tool_error", phone=phone, tool=func_name,
@@ -1244,6 +1255,9 @@ def drain_pending_media(phone: str):
 
 def handle_whatsapp_message(phone: str, msg: dict):
     """Process an incoming WhatsApp message."""
+    if not is_sender_allowed(phone, WHATSAPP_ALLOWED_NUMBERS, WHATSAPP_ADMIN_PHONE, WHATSAPP_PUBLIC):
+        _audit("sender_rejected", phone=phone)
+        return
     msg_id = msg.get("id", "")
     msg_type = msg.get("type", "")
 
@@ -1376,9 +1390,9 @@ def handle_whatsapp_message(phone: str, msg: dict):
             try:
                 reply = run_async(llm_tool_loop(phone,
                     f"Run the {skill} demo using the clawbio tool with mode='demo'."))
-                if _pending_text:
-                    reply = "\n\n".join(_pending_text)
-                    _pending_text.clear()
+                _pt = _pending_text.pop(phone, None)
+                if _pt:
+                    reply = "\n\n".join(_pt)
                 wa_send_text(phone, reply)
                 drain_pending_media(phone)
                 if _voice_enabled.get(phone):
@@ -1394,9 +1408,9 @@ def handle_whatsapp_message(phone: str, msg: dict):
         # Regular text message -> LLM
         try:
             reply = run_async(llm_tool_loop(phone, text))
-            if _pending_text:
-                reply = "\n\n".join(_pending_text)
-                _pending_text.clear()
+            _pt = _pending_text.pop(phone, None)
+            if _pt:
+                reply = "\n\n".join(_pt)
             wa_send_text(phone, reply)
             drain_pending_media(phone)
             if _voice_enabled.get(phone):
@@ -1466,9 +1480,9 @@ def handle_whatsapp_message(phone: str, msg: dict):
 
         try:
             reply = run_async(llm_tool_loop(phone, content_blocks))
-            if _pending_text:
-                reply = "\n\n".join(_pending_text)
-                _pending_text.clear()
+            _pt = _pending_text.pop(phone, None)
+            if _pt:
+                reply = "\n\n".join(_pt)
             wa_send_text(phone, reply)
             if _voice_enabled.get(phone):
                 try:
@@ -1514,9 +1528,9 @@ def handle_whatsapp_message(phone: str, msg: dict):
             ]
             try:
                 reply = run_async(llm_tool_loop(phone, content_blocks))
-                if _pending_text:
-                    reply = "\n\n".join(_pending_text)
-                    _pending_text.clear()
+                _pt = _pending_text.pop(phone, None)
+                if _pt:
+                    reply = "\n\n".join(_pt)
                 wa_send_text(phone, reply)
             except Exception as e:
                 wa_send_text(phone, f"Sorry, couldn't process that image -- {e}")
@@ -1587,9 +1601,9 @@ def handle_whatsapp_message(phone: str, msg: dict):
 
         try:
             reply = run_async(llm_tool_loop(phone, "\n\n".join(parts)))
-            if _pending_text:
-                reply = "\n\n".join(_pending_text)
-                _pending_text.clear()
+            _pt = _pending_text.pop(phone, None)
+            if _pt:
+                reply = "\n\n".join(_pt)
             wa_send_text(phone, reply)
             drain_pending_media(phone)
             if _voice_enabled.get(phone):
@@ -1630,6 +1644,11 @@ def webhook_verify():
 @app.route("/webhook", methods=["POST"])
 def webhook_receive():
     """Handle incoming WhatsApp messages (POST)."""
+    raw_body = request.get_data()
+    signature = request.headers.get("X-Hub-Signature-256")
+    if not verify_whatsapp_signature(raw_body, signature, WHATSAPP_APP_SECRET):
+        _audit("webhook_signature_rejected", sig_present=bool(signature))
+        return "forbidden", 403
     data = request.get_json(silent=True)
     if not data:
         return "OK", 200
