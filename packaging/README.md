@@ -49,22 +49,50 @@ uv venv /tmp/cb && uv pip install --python /tmp/cb/bin/python dist/clawbio-*.whl
 /tmp/cb/bin/clawbio run pharmgx --demo
 ```
 
-## Publish to PyPI (maintainer action: needs a PyPI token)
+## Publish to PyPI (automated: one tag push)
 
-PyPI release names and versions are permanent and cannot be reused, so publish
-deliberately.
+Releases are published automatically by `.github/workflows/publish.yml` when a
+`v*` tag is pushed. It authenticates with PyPI via Trusted Publishing (OIDC), so
+there is no API token or secret stored in the repo. PyPI release names and
+versions are permanent and cannot be reused, so release deliberately.
+
+To cut a release:
 
 1. Bump the version in `clawbio/__init__.py` (single source of truth; the wheel
    reads it via `[tool.hatch.version]`). Keep `CITATION.cff` / `CHANGELOG.md` in
    step.
-2. Clean build: `rm -rf dist && uv build`.
-3. Smoke-test the wheel in a clean venv (above).
-4. Upload to TestPyPI first, install from there, then upload to PyPI:
+2. Commit and push to `main`.
+3. Tag and push:
    ```bash
-   uvx twine upload --repository testpypi dist/*
-   uvx twine upload dist/*
+   git tag v0.5.3 && git push origin v0.5.3
    ```
-5. Tag the release: `git tag v0.5.2 && git push --tags`.
+   The workflow then verifies the tag matches `clawbio/__init__.py`, builds the
+   sdist + wheel, runs `twine check`, and publishes to PyPI. Watch it under the
+   repo's Actions tab.
+
+### One-time PyPI Trusted Publisher setup (required before the first automated run)
+
+On PyPI, go to the `clawbio` project -> **Settings** -> **Publishing** -> **Add a
+new pending publisher** (GitHub), and enter exactly:
+
+| Field | Value |
+|-------|-------|
+| Owner | `ClawBio` |
+| Repository name | `ClawBio` |
+| Workflow name | `publish.yml` |
+| Environment name | `pypi` |
+
+(Optionally create a `pypi` environment under the repo's GitHub Settings ->
+Environments to add protection rules; the workflow already targets it.)
+
+### Manual fallback (if you ever need to publish without the Action)
+
+```bash
+rm -rf dist && uv build
+uvx twine check dist/*
+uvx twine upload dist/*          # needs a PyPI token in ~/.pypirc
+git tag v0.5.3 && git push origin v0.5.3
+```
 
 ## Publish to bioconda (maintainer action: needs a bioconda-recipes fork)
 
