@@ -28,6 +28,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from clawbio import __version__
 from clawbio.contract_alerts import append_contract_alert_log, normalise_contract_alerts
 
 # --------------------------------------------------------------------------- #
@@ -1683,6 +1684,9 @@ def main():
 
     parser = argparse.ArgumentParser(
         description="ClawBio — Bioinformatics Skills Runner",
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
     sub = parser.add_subparsers(dest="command")
 
