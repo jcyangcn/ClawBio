@@ -55,7 +55,7 @@ uv run python clawbio.py run pharmgx --demo
 
 ## What ClawBio Does Today
 
-**88 skills (29 production-ready) + 8,000 Galaxy tools + 2,318 tests + benchmark validation. Local-first. No cloud. No guessing.**
+**88 skills (29 production-ready) + 8,000 Galaxy tools + 2,318 tests + benchmark validation. Local-first by default. Reproducible. No guessing.**
 
 > **v0.5.0 released** (4 Apr 2026): Validation and Benchmark Infrastructure. AD ground truth benchmark, mock API server for offline testing, swappable fine-mapping pipeline (SuSiE vs ABF), 74 benchmark tests, red/green TDD mandate. [Release notes](https://github.com/ClawBio/ClawBio/releases/tag/v0.5.0). DOI: [10.5281/zenodo.19420648](https://doi.org/10.5281/zenodo.19420648).
 
@@ -147,7 +147,7 @@ ClawBio skill                = specification-constrained, versioned, reproducibl
 
 - **Specification-first**: Domain expertise resides in `SKILL.md`, not in model weights. Specifications are versioned, human-readable, peer-reviewable, and trivially updatable.
 - **Agent-agnostic**: Skills execute identically whether invoked by Claude, ChatGPT, or a locally hosted model via Ollama. Reproducibility is decoupled from any specific AI vendor.
-- **Local-first**: Your genomic data never leaves your laptop. No cloud uploads, no data exfiltration.
+- **Local-first by default**: Your genome is analysed on your machine. Skills that send data to external services (hosted inference, public annotation APIs) are individually labelled and run only when you explicitly invoke them.
 - **Reproducible**: Many skills export replay metadata such as `commands.sh`, `environment.yml`, and SHA-256 checksums so runs can be rechecked without the original agent session.
 - **MIT licensed**: Open-source, free, community-driven.
 

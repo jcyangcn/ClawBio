@@ -153,7 +153,7 @@ jobs:
         run: uv sync --locked
 
       - name: Install clawbio-bench
-        run: uv pip install git+https://github.com/biostochastics/clawbio_bench.git
+        run: uv pip install "clawbio-bench @ git+https://github.com/biostochastics/clawbio_bench.git@49a0f11a8393b87a90f0721261a9bec5d52b61db"
 
       - name: Run scientific correctness audit (smoke)
         run: |
