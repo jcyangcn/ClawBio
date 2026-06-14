@@ -49,7 +49,7 @@ When the user asks a question, match it to a skill and act:
 | PubMed search, "summarise PubMed papers about X", "recent papers on gene/disease", research briefing, gene papers, disease papers | `skills/pubmed-summariser/` | Run `pubmed_summariser.py` |
 | Target evidence, omics evidence, translational evidence, target triage, gene evidence aggregation | `skills/omics-target-evidence-mapper/` | Run `omics_target_evidence_mapper.py` |
 | Target validation, GO/NO-GO, drug target scoring, target prioritisation, target assessment | `skills/target-validation-scorer/` | Run `target_validation_scorer.py` |
-| Upstream single-cell pipeline, run nf-core/scrnaseq, FASTQ to h5ad, 10x Chromium FASTQ preprocessing, generate h5ad from raw FASTQs, STARsolo from FASTQ, alevin-fry from FASTQ, run nextflow scrnaseq | `skills/nfcore-scrnaseq-wrapper/` | Run `nfcore_scrnaseq_wrapper.py` |
+| Upstream single-cell pipeline, run nf-core/scrnaseq, FASTQ to h5ad, 10x Chromium FASTQ preprocessing, generate h5ad from raw FASTQs, STARsolo from FASTQ, alevin-fry from FASTQ, run nextflow scrnaseq | `skills/nfcore-scrnaseq-wrapper/` | Run `nfcore_scrnaseq_wrapper.py` (alias `scrnaseq-pipeline`) |
 | Single-cell RNA-seq, Scanpy, clustering, marker genes, doublet removal, h5ad | `skills/scrna-orchestrator/` | Run `scrna_orchestrator.py` |
 | scVI, scANVI, single-cell embedding, latent embedding, batch integration, integrated h5ad | `skills/scrna-embedding/` | Run `scrna_embedding.py` |
 | Differential expression visualisation, volcano plot styling, marker heatmap, DE report plots, contrast visualisation | `skills/diff-visualizer/` | Run `diff_visualizer.py` |
@@ -209,6 +209,13 @@ python clawbio.py run sarek-pipeline --check \
   --input samplesheet.csv --output /tmp/sarek_check --genome GATK.GRCh38 --tools haplotypecaller
 python clawbio.py run sarek-pipeline --demo --output /tmp/sarek_demo
 # Full 173-flag surface (154 Sarek passthrough + 19 wrapper controls): python skills/nfcore-sarek-wrapper/nfcore_sarek_wrapper.py --help
+
+# Upstream single-cell RNA-seq — nf-core/scrnaseq 4.1.0 (FASTQ → h5ad count matrix)
+python clawbio.py run scrnaseq-pipeline \
+  --input samplesheet.csv --output <report_dir> --preset standard --genome GRCh38
+python clawbio.py run scrnaseq-pipeline --check --demo --output /tmp/scrnaseq_check
+python clawbio.py run scrnaseq-pipeline --demo --output /tmp/scrnaseq_demo
+# Full flag surface: python skills/nfcore-scrnaseq-wrapper/nfcore_scrnaseq_wrapper.py --help
 
 python skills/rnaseq-de/rnaseq_de.py \
   --counts <counts_csv_or_tsv> --metadata <metadata_csv_or_tsv> \
@@ -382,6 +389,7 @@ For instant demos when the user has no data:
 | Marker dominance demo counts (6 synthetic spots) | `skills/marker-dominance-mapper/demo_marker_counts.csv` | marker-dominance-mapper |
 | Flow.bio demo (live API + offline cache) | `--demo` flag / `skills/flow-bio/data/demo_cache.json` | flow-bio |
 | Sarek demo (upstream nf-core/sarek `-profile test` dataset, no local files) | `--demo` flag | nfcore-sarek-wrapper |
+| scRNA-seq demo (upstream nf-core/scrnaseq `-profile test` dataset, no local files) | `--demo` flag | nfcore-scrnaseq-wrapper |
 | Phylogenetics Builder demo FASTA (5 synthetic sequences, 50 bp) | `skills/phylogenetics-builder/demo_alignment.fasta` | phylogenetics-builder |
 
 ### Demo Commands
@@ -490,6 +498,9 @@ python skills/flow-bio/flow_bio.py --search "RNA-seq" --output /tmp/flow_search
 
 # Sarek upstream variant calling demo (upstream -profile test dataset)
 python clawbio.py run sarek-pipeline --demo --output /tmp/sarek_demo
+
+# scRNA-seq upstream preprocessing demo (upstream -profile test dataset)
+python clawbio.py run scrnaseq-pipeline --demo --output /tmp/scrnaseq_demo
 
 # Sample QC triage demo
 python skills/sample-qc-triage/sample_qc_triage.py --demo --output /tmp/sample_qc_demo
