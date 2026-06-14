@@ -28,7 +28,7 @@ GENOME_PATH = SKILLS_DIR / "genome-compare" / "data" / "manuel_corpas_23andme.tx
 # Maps skill directory names → clawbio.py registry names (core skills only)
 SKILL_REGISTRY_MAP: dict[str, str] = {
     "pharmgx-reporter": "pharmgx",
-    "nutrigx_advisor": "nutrigx",
+    "nutrigx": "nutrigx",
     "genome-compare": "compare",
     "gwas-prs": "prs",
     "clinpgx": "clinpgx",
@@ -37,11 +37,11 @@ SKILL_REGISTRY_MAP: dict[str, str] = {
 }
 
 # Skills that accept a genome file as --input (vs --demo)
-GENOME_SKILLS = {"pharmgx-reporter", "nutrigx_advisor", "genome-compare", "gwas-prs"}
+GENOME_SKILLS = {"pharmgx-reporter", "nutrigx", "genome-compare", "gwas-prs"}
 
 # Core skills exposed in Robotary (subset of all ClawBio skills)
 CORE_SKILLS = {
-    "pharmgx-reporter", "nutrigx_advisor", "genome-compare",
+    "pharmgx-reporter", "nutrigx", "genome-compare",
     "gwas-prs", "clinpgx", "gwas-lookup", "profile-report",
 }
 

@@ -6,7 +6,7 @@ skill-specific VCF subsets from the full 30x WGS data.
 ## Files
 
 - **pgx_rsids.json**: 31 pharmacogenomic SNPs (12 genes, CPIC guidelines). Source: `skills/pharmgx-reporter/pharmgx_reporter.py`.
-- **nutrigx_rsids.json**: 30 nutrigenomics SNPs (13 dietary domains). Source: `skills/nutrigx_advisor/data/snp_panel.json`.
+- **nutrigx_rsids.json**: 30 nutrigenomics SNPs (13 dietary domains). Source: `skills/nutrigx/data/snp_panel.json`.
 
 ## How subsets are generated
 
@@ -16,4 +16,4 @@ If an rsID is missing from the VCF (not called by the variant caller, or absent 
 
 ## Updating
 
-When new SNPs are added to the pharmgx-reporter or nutrigx_advisor panels, update the corresponding JSON file here and re-run `python scripts/prepare_corpas_30x.py --subsets`.
+When new SNPs are added to the pharmgx-reporter or nutrigx panels, update the corresponding JSON file here and re-run `python scripts/prepare_corpas_30x.py --subsets`.

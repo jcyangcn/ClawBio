@@ -321,10 +321,10 @@ SKILLS = {
         "accepts_genotypes": False,  # needs VCF/CSV file, not genotype dict
     },
     "nutrigx": {
-        "script": SKILLS_DIR / "nutrigx_advisor" / "nutrigx_advisor.py",
+        "script": SKILLS_DIR / "nutrigx" / "nutrigx.py",
         "demo_args": [
             "--input",
-            str(SKILLS_DIR / "nutrigx_advisor" / "tests" / "synthetic_patient.csv"),
+            str(SKILLS_DIR / "nutrigx" / "tests" / "synthetic_patient.csv"),
         ],
         "description": "Nutrigenomics advisor (diet, vitamins, caffeine, lactose)",
         "allowed_extra_flags": set(),

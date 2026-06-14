@@ -28,7 +28,7 @@ When the user asks a question, match it to a skill and act:
 | Drug interactions, pharmacogenomics, "what drugs should I worry about", 23andMe medications, CYP2D6, CYP2C19, warfarin, CPIC | `skills/pharmgx-reporter/` | Run `pharmgx_reporter.py` |
 | Medication photo, pill photo, drug package, tablet image, blister pack, "what medicine is this" | `skills/drug-photo/` | Read SKILL.md, apply methodology |
 | Genomic diversity, HEIM score, equity, population representation, FST, heterozygosity | `skills/equity-scorer/` | Run `equity_scorer.py` |
-| Nutrition, nutrigenomics, "what should I eat", diet genetics, MTHFR, folate, vitamin D, caffeine, lactose, omega-3 | `skills/nutrigx-advisor/` | Run `nutrigx_advisor.py` |
+| Nutrition, nutrigenomics, "what should I eat", diet genetics, MTHFR, folate, vitamin D, caffeine, lactose, omega-3 | `skills/nutrigx/` | Run `nutrigx.py` |
 | Ancestry, PCA, population structure, admixture, SGDP | `skills/claw-ancestry-pca/` | Read SKILL.md, apply methodology |
 | Semantic similarity, disease neglect, research gaps, NTDs, SII | `skills/claw-semantic-sim/` | Read SKILL.md, apply methodology |
 | Metagenomics, microbiome profiling, Kraken2, HUMAnN3, resistome, shotgun metagenomics | `skills/claw-metagenomics/` | Run `metagenomics_profiler.py` |
@@ -92,11 +92,11 @@ When the user asks a question, match it to a skill and act:
 
 ## How to Use a Skill
 
-### Skills with Python scripts (pharmgx-reporter, equity-scorer, nutrigx_advisor, claw-metagenomics, genome-compare, bio-orchestrator, variant-annotation, bioconductor-bridge, clinical-trial-finder, data-extractor, illumina-bridge, pubmed-summariser, omics-target-evidence-mapper, target-validation-scorer, nfcore-scrnaseq-wrapper, nfcore-rnaseq-wrapper, nfcore-sarek-wrapper, scrna-orchestrator, scrna-embedding, diff-visualizer, proteomics-de, struct-predictor, clinical-variant-reporter, multiqc-reporter, labstep, clinpgx, gwas-prs, gwas-lookup, methylation-clock, profile-report, ukb-navigator, galaxy-bridge, flow-bio, rnaseq-de, protocols-io, soul2dna, genome-match, recombinator, fine-mapping, cell-detection, wes-clinical-report-en, wes-clinical-report-es, proteomics-clock, sample-qc-triage, crispr-screen-triage, marker-dominance-mapper, busco-assessor, fastreer)
+### Skills with Python scripts (pharmgx-reporter, equity-scorer, nutrigx, claw-metagenomics, genome-compare, bio-orchestrator, variant-annotation, bioconductor-bridge, clinical-trial-finder, data-extractor, illumina-bridge, pubmed-summariser, omics-target-evidence-mapper, target-validation-scorer, nfcore-scrnaseq-wrapper, nfcore-rnaseq-wrapper, nfcore-sarek-wrapper, scrna-orchestrator, scrna-embedding, diff-visualizer, proteomics-de, struct-predictor, clinical-variant-reporter, multiqc-reporter, labstep, clinpgx, gwas-prs, gwas-lookup, methylation-clock, profile-report, ukb-navigator, galaxy-bridge, flow-bio, rnaseq-de, protocols-io, soul2dna, genome-match, recombinator, fine-mapping, cell-detection, wes-clinical-report-en, wes-clinical-report-es, proteomics-clock, sample-qc-triage, crispr-screen-triage, marker-dominance-mapper, busco-assessor, fastreer)
 1. Read the skill's `SKILL.md` for domain context
 2. Run the Python script with correct CLI arguments (see below)
 3. Show the user the output — open any generated figures and explain results
-4. **DEMO FALLBACK (MANDATORY):** If the user has no input file, do NOT refuse or just ask for a file. Instead, immediately offer to run the skill with built-in demo/synthetic data (use the `--demo` flag or the demo files listed in the Demo Data table below). Say something like "I'll run a demo with synthetic data so you can see the report — here it is!" and then run it. Most skills support `--demo`. For pharmgx, use `--input skills/pharmgx-reporter/demo_patient.txt`. For nutrigx, use `--input skills/nutrigx-advisor/synthetic_patient.txt`. Every skill has demo data — never tell the user you can't run a skill because they don't have a file.
+4. **DEMO FALLBACK (MANDATORY):** If the user has no input file, do NOT refuse or just ask for a file. Instead, immediately offer to run the skill with built-in demo/synthetic data (use the `--demo` flag or the demo files listed in the Demo Data table below). Say something like "I'll run a demo with synthetic data so you can see the report — here it is!" and then run it. Most skills support `--demo`. For pharmgx, use `--input skills/pharmgx-reporter/demo_patient.txt`. For nutrigx, use `--input skills/nutrigx/synthetic_patient.txt`. Every skill has demo data — never tell the user you can't run a skill because they don't have a file.
 
 ### Skills with SKILL.md only (no Python yet)
 1. Read the skill's `SKILL.md` thoroughly
@@ -116,7 +116,7 @@ python skills/equity-scorer/equity_scorer.py \
   --input <vcf_or_csv> [--pop-map <csv>] [--output <dir>] [--weights 0.35,0.25,0.20,0.20]
 
 # Nutrigenomics advisor from genetic data
-python skills/nutrigx-advisor/nutrigx_advisor.py \
+python skills/nutrigx/nutrigx.py \
   --input <patient_file> --output <report_dir>
 
 # scRNA-seq pipeline from AnnData (.h5ad)
@@ -339,7 +339,7 @@ For instant demos when the user has no data:
 | File | Location | Use With |
 |---|---|---|
 | Synthetic patient (PGx, 31 SNPs) | `skills/pharmgx-reporter/demo_patient.txt` | pharmgx-reporter |
-| Synthetic patient (NutriGx, 40 SNPs) | `skills/nutrigx-advisor/synthetic_patient.txt` | nutrigx_advisor |
+| Synthetic patient (NutriGx, 40 SNPs) | `skills/nutrigx/synthetic_patient.txt` | nutrigx |
 | PBMC3k raw demo (fallback synthetic) | `--demo` flag | scrna-orchestrator |
 | Demo VCF (50 samples, 5 populations) | `examples/demo_populations.vcf` | equity-scorer |
 | Population map | `examples/demo_population_map.csv` | equity-scorer |
@@ -375,7 +375,7 @@ For instant demos when the user has no data:
 | Corpas 30x SV calls (WGS) | `corpas-30x/subsets/sv_calls.vcf.gz` | variant-annotation |
 | Corpas 30x CNV calls (WGS) | `corpas-30x/subsets/cnv_calls.vcf.gz` | variant-annotation |
 | Corpas 30x PGx loci (WGS) | `corpas-30x/subsets/pgx_loci.vcf.gz` | pharmgx-reporter |
-| Corpas 30x NutriGx loci (WGS) | `corpas-30x/subsets/nutrigx_loci.vcf.gz` | nutrigx_advisor |
+| Corpas 30x NutriGx loci (WGS) | `corpas-30x/subsets/nutrigx_loci.vcf.gz` | nutrigx |
 | Corpas 30x QC baselines | `corpas-30x/baselines/qc_summary.json` | Benchmark tests |
 | Sample QC demo metrics (5 synthetic samples) | `skills/sample-qc-triage/demo_qc_metrics.csv` | sample-qc-triage |
 | CRISPR screen demo counts (12 synthetic guides, 6 genes) | `skills/crispr-screen-triage/demo_screen_counts.csv` | crispr-screen-triage |
@@ -400,8 +400,8 @@ python skills/equity-scorer/equity_scorer.py \
   --input examples/sample_ancestry.csv --output /tmp/equity_csv_demo
 
 # NutriGx demo
-python skills/nutrigx-advisor/nutrigx_advisor.py \
-  --input skills/nutrigx-advisor/synthetic_patient.txt --output /tmp/nutrigx_demo
+python skills/nutrigx/nutrigx.py \
+  --input skills/nutrigx/synthetic_patient.txt --output /tmp/nutrigx_demo
 
 # MultiQC demo
 python skills/multiqc-reporter/multiqc_reporter.py --demo --output /tmp/multiqc_demo

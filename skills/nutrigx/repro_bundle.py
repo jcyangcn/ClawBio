@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-CONDA_ENV = """name: nutrigx-advisor
+CONDA_ENV = """name: nutrigx
 channels:
   - conda-forge
   - defaults
@@ -51,10 +51,10 @@ set -euo pipefail
 
 # 1. Create conda environment
 conda env create -f environment.yml
-conda activate nutrigx-advisor
+conda activate nutrigx
 
 # 2. Run analysis
-python nutrigx_advisor.py {cmd_args}
+python nutrigx.py {cmd_args}
 
 # 3. Verify checksums
 sha256sum -c checksums.txt

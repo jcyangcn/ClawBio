@@ -810,7 +810,7 @@ async def execute_clawbio(args: dict) -> str:
                 orch_to_key = {
                     "pharmgx-reporter": "pharmgx",
                     "equity-scorer": "equity",
-                    "nutrigx_advisor": "nutrigx",
+                    "nutrigx": "nutrigx",
                     "claw-metagenomics": "metagenomics",
                     "genome-compare": "compare",
                     "gwas-prs": "prs",
