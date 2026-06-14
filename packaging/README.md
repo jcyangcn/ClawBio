@@ -72,8 +72,8 @@ To cut a release:
 
 ### One-time PyPI Trusted Publisher setup (required before the first automated run)
 
-On PyPI, go to the `clawbio` project -> **Settings** -> **Publishing** -> **Add a
-new pending publisher** (GitHub), and enter exactly:
+On PyPI, open the `clawbio` project -> **Manage** -> **Publishing**, then under
+**Add a new publisher** choose GitHub and enter exactly:
 
 | Field | Value |
 |-------|-------|
