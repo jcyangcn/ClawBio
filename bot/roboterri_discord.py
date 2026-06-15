@@ -39,6 +39,10 @@ _PROJECT_ROOT_FOR_IMPORT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT_FOR_IMPORT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT_FOR_IMPORT))
 
+# Shared bot security helpers (strict per-user identity isolation).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from security import scoped_get
+
 from clawbio.skill_intents import (
     load_default_skill_registry,
     plan_skill_intent,
@@ -191,8 +195,8 @@ class _TokenRedactFilter(logging.Filter):
         return True
 
 
-if DISCORD_BOT_TOKEN:
-    _redact = _TokenRedactFilter(DISCORD_BOT_TOKEN)
+for _secret in filter(None, [DISCORD_BOT_TOKEN, LLM_API_KEY]):
+    _redact = _TokenRedactFilter(_secret)
     for _ln in ("discord", "discord.http", "discord.gateway"):
         logging.getLogger(_ln).addFilter(_redact)
 
@@ -788,7 +792,7 @@ async def execute_clawbio(args: dict) -> str:
 
             orch_input = query
             if mode == "file":
-                file_info = _received_files.get(channel_id) if channel_id else next(iter(_received_files.values()), None)
+                file_info = scoped_get(_received_files, channel_id)
                 if file_info:
                     orch_input = file_info["path"]
             if not orch_input:
@@ -839,7 +843,7 @@ async def execute_clawbio(args: dict) -> str:
     # Resolve input and profile for file mode
     input_path = None
     profile_path = None
-    file_info = _received_files.get(channel_id) if channel_id else next(iter(_received_files.values()), None)
+    file_info = scoped_get(_received_files, channel_id)
     if file_info:
         input_path = file_info.get("path")
         profile_path = file_info.get("profile_path")
@@ -991,12 +995,17 @@ async def execute_clawbio(args: dict) -> str:
 # --------------------------------------------------------------------------- #
 
 
+_PROTECTED_NAMES = frozenset({
+    "soul.md", "claude.md", "agents.md", ".env",
+    "roboterri.py", "roboterri_discord.py", "roboterri_whatsapp.py",
+    "clawbio.py", "requirements.txt", "contributing.md",
+})
+
+
 async def execute_save_file(args: dict) -> str:
     """Save the most recently received file to the requested destination."""
-    file_info = None
-    for _cid, info in _received_files.items():
-        file_info = info
-        break
+    channel_id = args.get("_channel_id")
+    file_info = scoped_get(_received_files, channel_id)
 
     if not file_info:
         return "No recently received file to save. Send a file first."
@@ -1007,6 +1016,8 @@ async def execute_save_file(args: dict) -> str:
 
     dest_path = _resolve_dest(args.get("destination_folder"))
     filename = _sanitize_filename(args.get("filename") or file_info["filename"])
+    if filename.lower() in _PROTECTED_NAMES:
+        return f"Error: refusing to overwrite the protected file '{filename}'."
     final_path = dest_path / filename
 
     if not _validate_path(final_path, dest_path):
@@ -1039,6 +1050,8 @@ async def execute_write_file(args: dict) -> str:
 
     dest = _resolve_dest(args.get("destination_folder"))
     filename = _sanitize_filename(filename)
+    if filename.lower() in _PROTECTED_NAMES:
+        return f"Error: refusing to overwrite the protected file '{filename}'."
     filepath = dest / filename
 
     if not _validate_path(filepath, dest):

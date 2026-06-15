@@ -47,6 +47,10 @@ _PROJECT_ROOT_FOR_IMPORT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT_FOR_IMPORT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT_FOR_IMPORT))
 
+# Shared bot security helpers (strict per-user identity isolation).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from security import scoped_get
+
 from clawbio.skill_intents import (
     load_default_skill_registry,
     plan_skill_intent,
@@ -712,7 +716,7 @@ async def execute_clawbio(args: dict) -> str:
             orch_input = query
             if mode == "file":
                 chat_id = args.get("_chat_id")
-                file_info = _received_files.get(chat_id) if chat_id else next(iter(_received_files.values()), None)
+                file_info = scoped_get(_received_files, chat_id)
                 if file_info:
                     orch_input = file_info["path"]
             if not orch_input:
@@ -764,7 +768,7 @@ async def execute_clawbio(args: dict) -> str:
     input_path = None
     profile_path = None
     chat_id = args.get("_chat_id")
-    file_info = _received_files.get(chat_id) if chat_id else next(iter(_received_files.values()), None)
+    file_info = scoped_get(_received_files, chat_id)
     if file_info:
         input_path = file_info.get("path")
         profile_path = file_info.get("profile_path")
@@ -1000,7 +1004,7 @@ def _validate_path(filepath: Path, allowed_root: Path) -> bool:
 async def execute_save_file(args: dict) -> str:
     """Save the most recently received file to the requested destination."""
     chat_id = args.get("_chat_id")
-    file_info = _received_files.get(chat_id) if chat_id else None
+    file_info = scoped_get(_received_files, chat_id)
 
     if not file_info:
         return "No recently received file to save. Send a file first."
