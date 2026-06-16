@@ -30,6 +30,12 @@ metadata:
     - kind: pip
       package: tifffile
     - kind: pip
+      package: czifile
+    - kind: pip
+      package: nd2
+    - kind: pip
+      package: Pillow
+    - kind: pip
       package: scikit-image
     trigger_keywords:
     - cellpose
@@ -59,7 +65,7 @@ Manual cell counting and segmentation are slow, inconsistent, and hard to reprod
 
 ## Core Capabilities
 
-1. **Segment**: Run `cpsam` on any TIFF, PNG, or JPG fluorescence image
+1. **Segment**: Run `cpsam` on TIFF, CZI, ND2, PNG, or JPG fluorescence images
 2. **Measure**: Extract area, equivalent diameter, centroid, and eccentricity per cell
 3. **Report**: Produce `report.md`, `{stem}_measurements.csv`, and histogram figures
 
@@ -71,6 +77,8 @@ Manual cell counting and segmentation are slow, inconsistent, and hard to reprod
 | 2-channel TIFF | `.tif`, `.tiff` | H×W×2 — cytoplasm + nuclear, any order |
 | 3-channel TIFF | `.tif`, `.tiff` | H×W×3 — H&E or fluorescence, any order |
 | >3-channel TIFF | `.tif`, `.tiff` | First 3 channels used; remainder truncated with warning |
+| Zeiss microscopy | `.czi` | Reads CZI arrays via `czifile`; supports squeezed 2D/3D and C×Z×H×W |
+| Nikon microscopy | `.nd2` | Reads ND2 arrays via `nd2`; supports C×H×W and Z×C×H×W |
 | PNG / JPEG | `.png`, `.jpg`, `.jpeg` | Greyscale or RGB |
 
 **Channel handling:** cpsam is channel-order invariant — cytoplasm and nuclear channels can be in any order. You do not need to specify which channel is which. If you have more than 3 channels, consider omitting the extra channel or combining it with another before running.
@@ -109,7 +117,7 @@ Expected output: report.md with ~67 cells detected from a synthetic 512×512 blo
 
 ## Algorithm / Methodology
 
-1. Load image with `tifffile` (TIFF) or `PIL` (PNG/JPG); detect ndim
+1. Load image with `tifffile` (TIFF), `czifile` (CZI), `nd2` (ND2), or `PIL` (PNG/JPG); detect ndim
 2. If >3 channels, truncate to first 3 with a warning
 3. Instantiate `CellposeModel(gpu=<flag>)`
 4. Call `model.eval(img, diameter=<arg_or_None>)` — no `channels` arg (cpsam is channel-order invariant)
@@ -149,6 +157,8 @@ output_dir/
 
 - `cellpose>=4.0` — cpsam model
 - `tifffile` — TIFF I/O
+- `czifile` — Zeiss CZI I/O
+- `nd2` — Nikon ND2 I/O
 - `Pillow` — PNG/JPG loading
 - `numpy` — array ops
 - `matplotlib` — figures

@@ -344,6 +344,28 @@ class TestLoadImage:
         arr, n = cell_detection.load_image(str(path))
         assert n == 1
 
+    def test_load_czi_stack_squeezes_and_counts_channels(self, tmp_path):
+        import types
+        path = tmp_path / "img.czi"
+        path.write_bytes(b"")
+        fake_czi = types.ModuleType("czifile")
+        fake_czi.imread = lambda image: np.ones((1, 3, 32, 32), dtype=np.uint16)
+        with patch.dict("sys.modules", {"czifile": fake_czi}):
+            arr, n = cell_detection.load_image(str(path))
+        assert arr.shape == (32, 32, 3)
+        assert n == 3
+
+    def test_load_nd2_stack_counts_channels(self, tmp_path):
+        import types
+        path = tmp_path / "img.nd2"
+        path.write_bytes(b"")
+        fake_nd2 = types.ModuleType("nd2")
+        fake_nd2.imread = lambda image: np.ones((4, 3, 16, 16), dtype=np.uint16)
+        with patch.dict("sys.modules", {"nd2": fake_nd2}):
+            arr, n = cell_detection.load_image(str(path))
+        assert arr.shape == (16, 16, 3)
+        assert n == 3
+
 
 # ---------------------------------------------------------------------------
 # TestDemoImageEdgeCells

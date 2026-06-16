@@ -96,7 +96,8 @@ def load_image(path: str) -> tuple[np.ndarray, int]:
     to (H, W, C) so the rest of the pipeline sees a consistent layout.
     """
     p = Path(path)
-    if p.suffix.lower() in (".tif", ".tiff"):
+    extension = p.suffix.lower()
+    if extension in (".tif", ".tiff"):
         import tifffile
         with tifffile.TiffFile(str(p)) as tf:
             arr = tf.asarray()
@@ -104,10 +105,33 @@ def load_image(path: str) -> tuple[np.ndarray, int]:
             axes = ""
             if tf.series:
                 axes = tf.series[0].axes.upper()
+    elif extension == ".czi":
+        import czifile
+        arr = czifile.imread(str(p))
+        arr = np.asarray(arr).squeeze()
+        axes = ""
+    elif extension == ".nd2":
+        import nd2
+        arr = nd2.imread(str(p))
+        arr = np.asarray(arr)
+        axes = ""
     else:
         from PIL import Image
         arr = np.array(Image.open(str(p)))
         axes = ""
+    if arr.ndim == 4:
+        # Microscopy stacks can come as C×Z×H×W (CZI) or Z×C×H×W (ND2).
+        # For 2D segmentation, reduce Z by max projection while preserving channels.
+        if arr.shape[0] <= 20 and arr.shape[1] <= 20:
+            channel_axis = 0 if arr.shape[0] <= arr.shape[1] else 1
+        elif arr.shape[0] <= 20:
+            channel_axis = 0
+        elif arr.shape[1] <= 20:
+            channel_axis = 1
+        else:
+            raise ValueError(f"Unsupported 4D image shape {arr.shape} for {path}")
+        z_axis = 1 if channel_axis == 0 else 0
+        arr = arr.max(axis=z_axis)  # C×H×W
     if arr.ndim == 2:
         return arr, 1
     if arr.ndim == 3:
@@ -459,7 +483,7 @@ def main() -> None:
     write_environment_yml(
         output_dir,
         env_name="clawbio-cell-detection",
-        pip_deps=["cellpose>=4.0", "tifffile", "Pillow", "numpy", "matplotlib", "scikit-image", "scipy"],
+        pip_deps=["cellpose>=4.0", "tifffile", "czifile", "nd2", "Pillow", "numpy", "matplotlib", "scikit-image", "scipy"],
         python_version="3.10",
     )
     write_portable_commands_sh(

@@ -1,5 +1,7 @@
 cellpose>=4.0
 tifffile
+czifile
+nd2
 Pillow
 numpy
 matplotlib
