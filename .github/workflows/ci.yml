@@ -56,6 +56,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           failed=0
           passed=0
+          touch /tmp/skill_validate.log
           for skill_dir in skills/*/; do
             [ -f "$skill_dir/SKILL.md" ] || continue
             if agentskills validate "$skill_dir" >> /tmp/skill_validate.log 2>&1; then
