@@ -65,6 +65,9 @@ Repository = "https://github.com/ClawBio/ClawBio"
 Issues = "https://github.com/ClawBio/ClawBio/issues"
 
 [dependency-groups]
+dev = [
+    "skills-ref>=0.1.1,<1",
+]
 bot = [
     "python-telegram-bot[job-queue]>=21.0",
     "discord.py>=2.3.0",
