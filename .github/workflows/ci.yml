@@ -47,11 +47,32 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Lint SKILL.md files for OpenClaw discoverability
+      - name: Install agentskills validator
+        run: pip install "skills-ref>=0.1.1,<1"
+
+      - name: Validate SKILL.md files (agentskills spec)
         run: |
-          python3 scripts/lint_skills.py | tee /tmp/skill_lint.md
-          cat /tmp/skill_lint.md >> $GITHUB_STEP_SUMMARY
-          python3 scripts/lint_skills.py
+          echo "## Skill Validation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          failed=0
+          passed=0
+          for skill_dir in skills/*/; do
+            [ -f "$skill_dir/SKILL.md" ] || continue
+            if agentskills validate "$skill_dir" >> /tmp/skill_validate.log 2>&1; then
+              passed=$((passed + 1))
+            else
+              failed=$((failed + 1))
+            fi
+          done
+          echo "**${passed} passed** | **${failed} failed**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat /tmp/skill_validate.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat /tmp/skill_validate.log
+          if [ "$failed" -gt 0 ]; then
+            exit 1
+          fi
 
   test:
     runs-on: ubuntu-latest
