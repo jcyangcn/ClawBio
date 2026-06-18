@@ -1,8 +1,30 @@
 ---
 name: rare-disease-rnaseq
 description: Blood RNA-seq expression-outlier detection for rare-disease diagnostics. Cases scored against a control reference panel; outliers ranked and filtered by a haploinsufficient disease-gene panel.
-version: 0.1.0
-tags:
+metadata:
+  openclaw:
+    requires:
+      bins:
+      - python3
+      env: null
+      config: null
+    always: false
+    emoji: 🩸
+    homepage: https://github.com/ClawBio/ClawBio
+    os:
+    - darwin
+    - linux
+    install:
+    - kind: uv
+      package: pandas
+      bins: null
+    - kind: uv
+      package: numpy
+      bins: null
+    - kind: uv
+      package: matplotlib
+      bins: null
+  tags:
   - rna-seq
   - rare-disease
   - outlier-detection
@@ -12,7 +34,7 @@ tags:
   - blood
   - transcriptomics
   - haploinsufficiency
-trigger_keywords:
+  trigger_keywords:
   - rare disease rnaseq
   - expression outlier
   - OUTRIDER
@@ -21,29 +43,8 @@ trigger_keywords:
   - NGRL
   - undiagnosed
   - candidate diagnosis
-metadata:
-  openclaw:
-    requires:
-      bins:
-        - python3
-      env:
-      config:
-    always: false
-    emoji: "🩸"
-    homepage: https://github.com/ClawBio/ClawBio
-    os:
-      - darwin
-      - linux
-    install:
-      - kind: uv
-        package: pandas
-        bins:
-      - kind: uv
-        package: numpy
-        bins:
-      - kind: uv
-        package: matplotlib
-        bins:---
+  version: 0.1.0
+---
 
 # 🩸 Rare-Disease Blood RNA-seq Outlier Detection
 

@@ -1,14 +1,50 @@
 ---
 name: ncbi-datasets
-description: >-
-  Download genomes, genes, virus sequences, and taxonomy data from NCBI using
-  the datasets and dataformat CLI tools.
-version: 0.1.0
-author: nullvoid42
-domain: datasets
+description: Download genomes, genes, virus sequences, and taxonomy data from NCBI using the datasets and dataformat CLI tools.
 license: MIT
-
-tags:
+metadata:
+  openclaw:
+    requires:
+      bins:
+      - datasets
+      - dataformat
+      env: null
+      config: null
+    always: false
+    emoji: 🧬
+    homepage: https://www.ncbi.nlm.nih.gov/datasets/
+    os:
+    - darwin
+    - linux
+    - win32
+    install:
+    - kind: conda
+      package: ncbi-datasets-cli
+      channel: conda-forge
+      bins:
+      - datasets
+      - dataformat
+    trigger_keywords:
+    - ncbi
+    - datasets download
+    - datasets summary
+    - dataformat
+    - download genome
+    - download gene
+    - reference genome
+    - genome accession
+    - gene symbol
+    - ortholog
+    - download virus
+    - sars-cov-2 sequence
+    - taxonomy data
+    - dehydrated download
+    - rehydrate
+    - GCF
+    - GCA
+  author: nullvoid42
+  domain: datasets
+  tags:
   - ncbi
   - genomics
   - bioinformatics
@@ -20,46 +56,7 @@ tags:
   - dataformat
   - refseq
   - genbank
-metadata:
-  openclaw:
-    requires:
-      bins:
-        - datasets
-        - dataformat
-      env:
-      config:
-    always: false
-    emoji: "🧬"
-    homepage: https://www.ncbi.nlm.nih.gov/datasets/
-    os:
-      - darwin
-      - linux
-      - win32
-    install:
-      - kind: conda
-        package: ncbi-datasets-cli
-        channel: conda-forge
-        bins:
-          - datasets
-          - dataformat
-    trigger_keywords:
-      - ncbi
-      - datasets download
-      - datasets summary
-      - dataformat
-      - download genome
-      - download gene
-      - reference genome
-      - genome accession
-      - gene symbol
-      - ortholog
-      - download virus
-      - sars-cov-2 sequence
-      - taxonomy data
-      - dehydrated download
-      - rehydrate
-      - GCF
-      - GCA
+  version: 0.1.0
 ---
 
 # 🦖 Skill Name

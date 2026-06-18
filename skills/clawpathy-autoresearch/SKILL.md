@@ -1,51 +1,47 @@
 ---
 name: clawpathy-autoresearch
-description: >-
-  Eval-driven skill tuning. Given a task and an LLM-judge rubric, iteratively
-  rewrites a SKILL.md until a downstream executor agent performs well against
-  the judge. Low-code: all evaluation is LLM-as-judge, not deterministic Python.
-version: 1.0.0
-author: Jay Moore
+description: 'Eval-driven skill tuning. Given a task and an LLM-judge rubric, iteratively rewrites a SKILL.md until a downstream executor agent performs well against the judge. Low-code: all evaluation
+  is LLM-as-judge, not deterministic Python.'
 license: MIT
-tags:
+metadata:
+  openclaw:
+    requires:
+      bins:
+      - python3
+      - claude
+    always: false
+    emoji: 🔁
+    homepage: https://github.com/ClawBio/ClawBio
+    os:
+    - darwin
+    - linux
+    trigger_keywords:
+    - auto research
+    - autoresearch
+    - tune a skill
+    - skill tuning
+    - improve a skill
+    - eval-driven
+    - clawpathy
+    - replicate paper
+    - reproduce paper
+  author: Jay Moore
+  inputs:
+  - name: paper_query_or_task
+    type: string
+    description: Paper title/URL/PMID/DOI, or a freeform task description
+    required: true
+  outputs:
+  - name: workspace/
+    type: directory
+    description: Tuned skill/SKILL.md plus history.jsonl, snapshots, executor_runs
+  tags:
   - meta
   - autoresearch
   - skill-tuning
   - llm-judge
   - eval-driven
-inputs:
-  - name: paper_query_or_task
-    type: string
-    description: Paper title/URL/PMID/DOI, or a freeform task description
-    required: true
-
-outputs:
-  - name: workspace/
-    type: directory
-    description: Tuned skill/SKILL.md plus history.jsonl, snapshots, executor_runs
-
-metadata:
-  openclaw:
-    requires:
-      bins:
-        - python3
-        - claude
-    always: false
-    emoji: "🔁"
-    homepage: https://github.com/ClawBio/ClawBio
-    os:
-      - darwin
-      - linux
-    trigger_keywords:
-      - auto research
-      - autoresearch
-      - tune a skill
-      - skill tuning
-      - improve a skill
-      - eval-driven
-      - clawpathy
-      - replicate paper
-      - reproduce paper
+  version: 1.0.0
 ---
 
 # clawpathy-autoresearch
