@@ -4,19 +4,25 @@ description: Scaffold a new ClawBio skill from a spec file (JSON/YAML) or intera
 version: 0.1.0
 author: Mj
 license: MIT
-tags: [meta, scaffolding, developer-tools, skill-creation]
+tags:
+  - meta
+  - scaffolding
+  - developer-tools
+  - skill-creation
 metadata:
   openclaw:
     requires:
       bins:
         - python3
-      env: []
-      config: []
+      env:
+      config:
     always: false
     emoji: "🦖"
     homepage: https://github.com/ClawBio/ClawBio
-    os: [darwin, linux]
-    install: []
+    os:
+      - darwin
+      - linux
+    install:
     trigger_keywords:
       - create skill
       - new skill

@@ -29,20 +29,24 @@ metadata:
       anyBins:
         - docker
         - singularity
-      env: []
-      config: []
+      env:
+      config:
     always: false
     emoji: "🧬"
     homepage: https://github.com/ClawBio/ClawBio
-    os: [darwin, linux]
+    os:
+      - darwin
+      - linux
     install:
       - kind: url
         url: https://get.nextflow.io
-        bins: [nextflow]
+        bins:
+          - nextflow
         note: "curl -s https://get.nextflow.io | bash"
       - kind: conda
         package: bcftools
-        bins: [bcftools]
+        bins:
+          - bcftools
         note: "conda install -c bioconda bcftools  (optional, enables full VCF QC)"
     trigger_keywords:
       - WGS

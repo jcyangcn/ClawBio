@@ -8,12 +8,21 @@ version: 0.1.0
 author: ClawBio + Genomic Intelligence
 domain: genomics
 license: MIT
-tags: [genomics, enhancer, regulatory, cis-regulatory, deepstarr, dna-lm, gi-api]
-
+tags:
+  - genomics
+  - enhancer
+  - regulatory
+  - cis-regulatory
+  - deepstarr
+  - dna-lm
+  - gi-api
 inputs:
   - name: input_file
     type: file
-    format: [fa, fasta, fna]
+    format:
+      - fa
+      - fasta
+      - fna
     description: Single-record FASTA (any length; API windows automatically).
     required: false
 
@@ -45,17 +54,20 @@ endpoints:
 metadata:
   openclaw:
     requires:
-      bins: [python3]
-      env: []
-      config: []
+      bins:
+        - python3
+      env:
+      config:
     always: false
     emoji: "🎚️"
     homepage: https://docs.genomicintelligence.ai
-    os: [darwin, linux]
+    os:
+      - darwin
+      - linux
     install:
       - kind: pip
         package: requests
-        bins: []
+        bins:
     trigger_keywords:
       - enhancer
       - enhancer activity

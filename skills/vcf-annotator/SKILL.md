@@ -6,7 +6,9 @@ author: Sooraj (github.com/sooraj-codes)
 domain: genomics
 license: MIT
 emoji: "🧬"
-os: [darwin, linux]
+os:
+  - darwin
+  - linux
 inputs:
   - name: input
     type: file
@@ -20,7 +22,7 @@ outputs:
     description: Annotated variant report with ClinVar, gnomAD, and VEP results
 dependencies:
   python: ">=3.11"
-  packages: []
+  packages:
 tags:
   - vcf
   - variants
@@ -39,9 +41,11 @@ metadata:
     requires:
       always: false
     homepage: https://github.com/ClawBio/ClawBio
-    os: [darwin, linux]
+    os:
+      - darwin
+      - linux
     emoji: "🧬"
-    install: []
+    install:
     trigger_keywords:
       - "annotate vcf"
       - "annotate variants"

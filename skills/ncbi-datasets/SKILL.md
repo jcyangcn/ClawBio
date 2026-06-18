@@ -8,37 +8,40 @@ author: nullvoid42
 domain: datasets
 license: MIT
 
-tags: [
-  ncbi,
-  genomics,
-  bioinformatics,
-  genome-download,
-  gene,
-  virus,
-  taxonomy,
-  datasets,
-  dataformat,
-  refseq,
-  genbank
-]
-
+tags:
+  - ncbi
+  - genomics
+  - bioinformatics
+  - genome-download
+  - gene
+  - virus
+  - taxonomy
+  - datasets
+  - dataformat
+  - refseq
+  - genbank
 metadata:
   openclaw:
     requires:
       bins:
         - datasets
         - dataformat
-      env: []        
-      config: []
+      env:
+      config:
     always: false
     emoji: "🧬"
     homepage: https://www.ncbi.nlm.nih.gov/datasets/
-    os: [darwin, linux, win32]
+    os:
+      - darwin
+      - linux
+      - win32
     install:
       - kind: conda
         package: ncbi-datasets-cli
         channel: conda-forge
-        bins: [datasets, dataformat]
+        bins:
+          - datasets
+          - dataformat
     trigger_keywords:
       - ncbi
       - datasets download

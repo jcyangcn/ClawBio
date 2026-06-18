@@ -6,7 +6,9 @@ author: Daniel Garbozo
 domain: genomics
 license: MIT
 emoji: "🦖"
-os: [darwin, linux]
+os:
+  - darwin
+  - linux
 inputs:
   - name: r1
     type: file
@@ -38,7 +40,7 @@ outputs:
     description: "Sorted, duplicate-marked BAM with .bai index"
 dependencies:
   python: ">=3.10"
-  packages: []
+  packages:
 tags:
   - fastq
   - alignment
@@ -60,9 +62,11 @@ metadata:
     requires:
       always: false
     homepage: https://github.com/ClawBio/ClawBio
-    os: [darwin, linux]
+    os:
+      - darwin
+      - linux
     emoji: "🦖"
-    install: []
+    install:
     trigger_keywords:
       - "align reads"
       - "align fastq"

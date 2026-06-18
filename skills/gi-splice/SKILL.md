@@ -9,12 +9,22 @@ version: 0.1.0
 author: ClawBio + Genomic Intelligence
 domain: genomics
 license: MIT
-tags: [genomics, splice, splice-site, splicing, intron-exon, dna-lm, transformer, gi-api]
-
+tags:
+  - genomics
+  - splice
+  - splice-site
+  - splicing
+  - intron-exon
+  - dna-lm
+  - transformer
+  - gi-api
 inputs:
   - name: input_file
     type: file
-    format: [fa, fasta, fna]
+    format:
+      - fa
+      - fasta
+      - fna
     description: Single-record FASTA, typically a gene body (5'UTR → 3'UTR including introns).
     required: false
 
@@ -46,17 +56,20 @@ endpoints:
 metadata:
   openclaw:
     requires:
-      bins: [python3]
-      env: []
-      config: []
+      bins:
+        - python3
+      env:
+      config:
     always: false
     emoji: "✂️"
     homepage: https://docs.genomicintelligence.ai
-    os: [darwin, linux]
+    os:
+      - darwin
+      - linux
     install:
       - kind: pip
         package: requests
-        bins: []
+        bins:
     trigger_keywords:
       - splice
       - splice site

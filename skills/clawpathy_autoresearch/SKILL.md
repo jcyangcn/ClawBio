@@ -7,8 +7,12 @@ description: >-
 version: 1.0.0
 author: Jay Moore
 license: MIT
-tags: [meta, autoresearch, skill-tuning, llm-judge, eval-driven]
-
+tags:
+  - meta
+  - autoresearch
+  - skill-tuning
+  - llm-judge
+  - eval-driven
 inputs:
   - name: paper_query_or_task
     type: string
@@ -23,11 +27,15 @@ outputs:
 metadata:
   openclaw:
     requires:
-      bins: [python3, claude]
+      bins:
+        - python3
+        - claude
     always: false
     emoji: "🔁"
     homepage: https://github.com/ClawBio/ClawBio
-    os: [darwin, linux]
+    os:
+      - darwin
+      - linux
     trigger_keywords:
       - auto research
       - autoresearch
