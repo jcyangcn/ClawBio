@@ -45,8 +45,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
 
-      - name: Install agentskills validator
-        run: uv tool install "skills-ref>=0.1.1,<1"
+      - name: Install dependencies from lockfile
+        run: uv sync --frozen --only-group dev
 
       - name: Validate SKILL.md files (agentskills spec)
         run: |
@@ -57,7 +57,7 @@ jobs:
           touch /tmp/skill_validate.log
           for skill_dir in skills/*/; do
             [ -f "$skill_dir/SKILL.md" ] || continue
-            if agentskills validate "$skill_dir" >> /tmp/skill_validate.log 2>&1; then
+            if uv run agentskills validate "$skill_dir" >> /tmp/skill_validate.log 2>&1; then
               passed=$((passed + 1))
             else
               failed=$((failed + 1))
