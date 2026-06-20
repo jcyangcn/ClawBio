@@ -77,7 +77,7 @@ skills/pathway-enrichment/
 
 The `SKILL.md` file is the primary artifact. If a skill does not have a Python script, agents can still interpret `SKILL.md` to run the methodology. It must follow the exact structure defined in [templates/SKILL-TEMPLATE.md](templates/SKILL-TEMPLATE.md).
 
-Every skill's `SKILL.md` must pass the 17-point conformance checklist audited by [scripts/lint_skills.py](scripts/lint_skills.py).
+Every skill's `SKILL.md` must pass validation with `agentskills validate skills/<name>/`.
 
 ### YAML Frontmatter Details
 Your YAML frontmatter at the top of `SKILL.md` must contain:
@@ -292,10 +292,10 @@ Generate `skills/catalog.json`:
 python scripts/generate_catalog.py
 ```
 
-### 3. Run the Conformance Linter
-Run the linter to verify that `SKILL.md` is discoverable and error-free:
+### 3. Run the Conformance Validator
+Run the validator to verify that `SKILL.md` is discoverable and error-free:
 ```bash
-python scripts/lint_skills.py
+agentskills validate skills/<your-skill-name>/
 ```
 
 ---
