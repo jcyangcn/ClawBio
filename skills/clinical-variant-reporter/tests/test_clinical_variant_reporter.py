@@ -337,6 +337,20 @@ class TestDemoMode:
         assert result["total_variants"] == 20
         assert result["framework"] == "ACMG/AMP 2015 (Richards et al., PMID 25741868)"
 
+    def test_demo_transcripts_are_versioned(self, demo_vcf_path):
+        """HGVS v21.1 requires versioned transcript accessions (e.g. ENST00000357654.9)."""
+        records = parse_vcf(demo_vcf_path)
+        classified = run_classification(records, demo=True)
+        import re
+        versioned_pattern = re.compile(r"^ENST\d+\.\d+$")
+        for cv in classified:
+            transcript = cv.evidence.transcript
+            if transcript:
+                assert versioned_pattern.match(transcript), (
+                    f"Unversioned transcript {transcript} for {cv.evidence.gene} "
+                    f"at {cv.evidence.chrom}:{cv.evidence.pos}"
+                )
+
     def test_gene_filter(self, demo_vcf_path):
         records = parse_vcf(demo_vcf_path)
         classified = run_classification(records, demo=True, gene_filter={"BRCA1", "TP53"})
