@@ -35,6 +35,19 @@ jobs:
           git diff --stat HEAD~1 HEAD >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
+  lockfile-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+
+      - name: Check lockfile is up to date
+        run: uv lock --check
+
   skill-lint:
     runs-on: ubuntu-latest
     steps:
@@ -42,22 +55,42 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
 
-      - name: Lint SKILL.md files for OpenClaw discoverability
+      - name: Install dependencies from lockfile
+        run: uv sync --frozen --only-group dev
+
+      - name: Validate SKILL.md files (agentskills spec)
         run: |
-          python3 scripts/lint_skills.py | tee /tmp/skill_lint.md
-          cat /tmp/skill_lint.md >> $GITHUB_STEP_SUMMARY
-          python3 scripts/lint_skills.py
+          echo "## Skill Validation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          failed=0
+          passed=0
+          touch /tmp/skill_validate.log
+          for skill_dir in skills/*/; do
+            [ -f "$skill_dir/SKILL.md" ] || continue
+            if uv run agentskills validate "$skill_dir" >> /tmp/skill_validate.log 2>&1; then
+              passed=$((passed + 1))
+            else
+              failed=$((failed + 1))
+            fi
+          done
+          echo "**${passed} passed** | **${failed} failed**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat /tmp/skill_validate.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat /tmp/skill_validate.log
+          if [ "$failed" -gt 0 ]; then
+            exit 1
+          fi
 
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
