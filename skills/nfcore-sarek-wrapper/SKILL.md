@@ -241,6 +241,16 @@ python clawbio.py run sarek-pipeline \
   --tools haplotypecaller,vep \
   --genome GATK.GRCh38 \
   --run-downstream --downstream-skill clinical-variant-reporter
+
+# Wrapper runtime controls (parity with scrnaseq/rnaseq):
+#   --timeout-hours N   wall-clock cap (default 24h; 0 disables for HPC/cloud)
+#   --work-dir PATH     Nextflow work dir (local path or object-store URI; default <output>/upstream/work)
+#   --nextflow-config / -c / --config   extra Nextflow config file(s), repeatable
+#   --allow-pipeline-version-override    run a non-3.8.1 --pipeline-version at your own risk
+python clawbio.py run sarek-pipeline \
+  --input samplesheet.csv --output ./sarek_run \
+  --genome GATK.GRCh38 --tools haplotypecaller \
+  --timeout-hours 0 --work-dir s3://my-bucket/sarek/work
 ```
 
 ## Demo

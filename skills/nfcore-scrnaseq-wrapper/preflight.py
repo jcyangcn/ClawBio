@@ -11,8 +11,13 @@ from pathlib import Path
 from typing import Any
 
 _SKILL_DIR = Path(__file__).resolve().parent
-if str(_SKILL_DIR) not in sys.path:
-    sys.path.insert(0, str(_SKILL_DIR))
+if str(_SKILL_DIR) in sys.path:
+    sys.path.remove(str(_SKILL_DIR))
+sys.path.insert(0, str(_SKILL_DIR))
+sys.modules.pop("_isolated_imports", None)
+from _isolated_imports import purge_foreign_bare_modules
+
+purge_foreign_bare_modules("errors", "nfcore_4_1_0_contract", "schemas")
 
 from errors import ErrorCode, SkillError
 from nfcore_4_1_0_contract import (
@@ -554,6 +559,11 @@ def _check_reference_paths_exist(resolved: dict[str, str]) -> None:
     for key, value in resolved.items():
         if key in _SYMBOLIC_REFERENCE_FIELDS:
             continue  # symbolic identifiers, not local paths
+        if value and "://" in value:
+            # Remote URI (s3://, gs://, https://, …): Nextflow resolves it at runtime,
+            # so existence is not pre-checked here. Matches nfcore-rnaseq/sarek and the
+            # nf-core schema, which types references as strings Nextflow may fetch.
+            continue
         _check_upstream_path_schema_compatibility(key, value)
         if value and not Path(value).expanduser().exists():
             raise SkillError(

@@ -32,7 +32,25 @@ metadata:
     os:
     - darwin
     - linux
+    trigger_keywords:
+    - scrnaseq
+    - nf-core scrnaseq
+    - run scrnaseq from fastq
+    - preprocess 10x fastqs
+    - generate h5ad from single-cell fastq
+    - single-cell preprocessing
+    - nextflow scrna pipeline
+    - 10x chromium fastq pipeline
+    - starsolo upstream processing
+    - alevin-fry fastq to counts
+    - run nextflow scrnaseq
+    - upstream single-cell pipeline
+    - fastq to h5ad single cell
+    - 10x genomics fastq pipeline
   author: ClawBio
+  demo_data:
+  - path: demo/README.md
+    description: Demo mode uses the upstream nf-core/scrnaseq -profile test dataset rather than bundled FASTQs
   inputs:
   - name: samplesheet
     type: file
@@ -51,21 +69,6 @@ metadata:
     format:
     - json
     description: Structured result payload with detected outputs and provenance
-  trigger_keywords:
-  - scrnaseq
-  - nf-core scrnaseq
-  - run scrnaseq from fastq
-  - preprocess 10x fastqs
-  - generate h5ad from single-cell fastq
-  - single-cell preprocessing
-  - nextflow scrna pipeline
-  - 10x chromium fastq pipeline
-  - starsolo upstream processing
-  - alevin-fry fastq to counts
-  - run nextflow scrnaseq
-  - upstream single-cell pipeline
-  - fastq to h5ad single cell
-  - 10x genomics fastq pipeline
   version: 0.1.0
 ---
 
@@ -170,15 +173,15 @@ This wrapper targets nf-core/scrnaseq `4.1.0`. It is not a free-form passthrough
 
 Unsupported parameters are either hidden/institutional metadata, interactive help/version flags, or options that would weaken the wrapper's fixed validation/reproducibility policy.
 
-## Local-first Input Policy (restricted local-first mode)
+## Input & Reference Path Policy
 
-**This wrapper runs nf-core/scrnaseq 4.1.0 in a deliberately restricted, local-first mode — it is not a full-compatibility passthrough of every nf-core input/parameter path.** The upstream pipeline can consume remote test-data URLs in some examples (nf-core's CellRanger Multi usage examples use HTTPS FASTQ URLs), but this ClawBio wrapper rejects remote FASTQ URIs by default. Download FASTQs locally first. This prevents accidental cloud access or patient-data movement and keeps all processing local-first. There is no opt-in for remote FASTQs: if you need Nextflow-resolved remote inputs, run the upstream pipeline directly.
+This wrapper accepts **both local paths and remote URIs** (`s3://`, `gs://`, `https://`, `ftp://`, …) for samplesheet FASTQs and for reference/index inputs, matching the nf-core/scrnaseq schema and the sibling `nfcore-sarek-wrapper` / `nfcore-rnaseq-wrapper`. Remote inputs are passed through **verbatim** — Nextflow resolves and stages them in the execution context — so the wrapper validates only the FASTQ/FASTA basename and defers existence to Nextflow (`samplesheet_builder.py`, `preflight.py`). Local-first is preserved: the wrapper never *exfiltrates* data; it only reads the user-specified inputs.
 
-**This is a deliberate ClawBio wrapper policy, not a reproduction of nf-core's full input flexibility.** Two checks are intentionally stricter than the upstream schema (which types reference/FASTQ inputs as plain strings that Nextflow may resolve as URIs at runtime):
-- Remote FASTQ URIs in the samplesheet are rejected (`samplesheet_builder.py`).
-- Every supplied reference/index path (`--fasta`, `--gtf`, `--star-index`, …) must exist on the local filesystem at preflight (`preflight.py`), so a missing reference fails fast with a clear error instead of a late Nextflow error.
+**Local** paths are still validated eagerly at preflight so they fail fast with a clear error instead of a late Nextflow error:
+- A supplied local reference/index path (`--fasta`, `--gtf`, `--star-index`, …) that does not exist raises `MISSING_REFERENCE` (`preflight.py`).
+- A local FASTQ that does not exist (or is not a regular file) raises `MISSING_FASTQ` (`samplesheet_builder.py`).
 
-Both are local-first guarantees; environments that rely on Nextflow-resolved remote references should run the upstream pipeline directly.
+Readability is never pre-checked: Nextflow reads inputs in the true execution context (often a root container under the default Docker profile), so a launcher-side `os.access(R_OK)` probe would false-block valid runs (`errors.py`).
 
 ## CLI Reference
 

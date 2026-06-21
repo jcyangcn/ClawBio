@@ -743,12 +743,16 @@ def _check_threshold_bounds(args) -> None:
             details={"field": "pseudo_aligner_kmer_size", "value": kmer, "minimum": 1, "maximum": 31},
         )
     timeout_hours = getattr(args, "timeout_hours", None)
-    if timeout_hours is not None and timeout_hours <= 0:
+    if timeout_hours is not None and timeout_hours < 0:
         raise SkillError(
             stage="preflight",
             error_code=ErrorCode.INVALID_PRESET_CONFIGURATION,
-            message="timeout_hours must be greater than 0.",
-            fix="Set --timeout-hours to a positive number of hours (default: 12).",
+            message="timeout_hours must be >= 0 (0 disables the wall-clock cap).",
+            fix=(
+                "Set --timeout-hours to a positive number of hours (default: 12), "
+                "or 0 to disable the cap for long HPC/cloud runs whose walltime is "
+                "enforced by the scheduler."
+            ),
             details={"field": "timeout_hours", "value": timeout_hours, "minimum": 0},
         )
     hbm = getattr(args, "hisat2_build_memory", None)

@@ -78,6 +78,26 @@ def _args(tmp_path: Path) -> Namespace:
     )
 
 
+def test_reference_paths_accept_remote_uris():
+    """Remote reference URIs (s3://, gs://, https://) are passed through: Nextflow
+    resolves them at runtime, so existence is not pre-checked (parity with
+    nfcore-rnaseq/sarek and the nf-core schema)."""
+    preflight._check_reference_paths_exist(
+        {
+            "fasta": "s3://bucket/genome.fa",
+            "gtf": "https://example.org/genes.gtf",
+            "star_index": "gs://bucket/star/",
+        }
+    )
+
+
+def test_reference_paths_still_reject_missing_local(tmp_path):
+    """A *local* reference that does not exist still fails fast (MISSING_REFERENCE)."""
+    with pytest.raises(SkillError) as exc:
+        preflight._check_reference_paths_exist({"fasta": str(tmp_path / "nope.fa")})
+    assert exc.value.error_code == "MISSING_REFERENCE"
+
+
 def test_preflight_happy_path(tmp_path, monkeypatch):
     args = _args(tmp_path)
     Path(args.fasta).write_text(">chr1\nACGT\n", encoding="utf-8")

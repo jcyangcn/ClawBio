@@ -979,12 +979,12 @@ def test_extra_star_align_args_rejected_for_hisat2(tmp_path, monkeypatch):
 # ── Audit follow-up: F-02 timeout bounds ──────────────────────────────────────
 
 
-def test_timeout_hours_zero_rejected(tmp_path, monkeypatch):
+def test_timeout_hours_zero_accepted_disables_cap(tmp_path, monkeypatch):
+    """--timeout-hours 0 is accepted: it disables the wall-clock cap (parity with
+    nfcore-scrnaseq/sarek). Only negative values are rejected at preflight."""
     _mock_env(monkeypatch)
-    with pytest.raises(SkillError) as exc:
-        _run(_args(tmp_path, timeout_hours=0), _samplesheet(tmp_path))
-    assert exc.value.error_code == ErrorCode.INVALID_PRESET_CONFIGURATION
-    assert exc.value.details["field"] == "timeout_hours"
+    result = _run(_args(tmp_path, timeout_hours=0), _samplesheet(tmp_path))
+    assert result["ok"] is True
 
 
 def test_timeout_hours_negative_rejected(tmp_path, monkeypatch):
