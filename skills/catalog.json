@@ -2141,8 +2141,8 @@
     {
       "name": "phylogenetics-builder",
       "cli_alias": "phylo",
-      "description": "Build maximum-likelihood phylogenetic trees from aligned FASTA data using IQ-TREE 2.",
-      "version": "0.1.0",
+      "description": "End-to-end maximum-likelihood phylogenetic tree inference from raw or pre-aligned FASTA. Six MSA algorithms (MAFFT, MUSCLE, ClustalW, KAlign, T-Coffee, PRANK), trimAl trimming, ModelFinder model selection, IQ-TREE 2 and RAxML-NG engines, UFBoot/standard/triple bootstrap, midpoint and outgroup rooting.",
+      "version": "0.2.0",
       "status": "mvp",
       "has_script": true,
       "has_tests": true,
@@ -2152,18 +2152,52 @@
         "python>=3.10",
         "pandas>=2.0",
         "biopython>=1.80",
-        "matplotlib>=3.5"
+        "matplotlib>=3.5",
+        "ete3>=3.1"
       ],
-      "tags": [],
+      "tags": [
+        "phylogenetics",
+        "maximum-likelihood",
+        "iqtree2",
+        "raxml-ng",
+        "msa",
+        "mafft",
+        "modelfinder",
+        "bootstrap",
+        "molecular-evolution"
+      ],
       "trigger_keywords": [
         "phylogeny",
         "phylogenetic tree",
         "iqtree",
+        "iqtree2",
+        "IQ-TREE",
         "maximum likelihood tree",
         "fasta alignment",
-        "build tree"
+        "build tree",
+        "ModelFinder",
+        "model selection tree",
+        "bootstrap support",
+        "molecular phylogeny",
+        "UFBoot",
+        "RAxML",
+        "raxml-ng",
+        "mafft alignment",
+        "muscle alignment",
+        "clustalw",
+        "prank",
+        "kalign",
+        "tcoffee",
+        "t_coffee",
+        "multiple sequence alignment phylogeny",
+        "trimAl",
+        "midpoint root",
+        "outgroup rooting"
       ],
       "chaining_partners": [
+        "analyze-fasta",
+        "fastreer",
+        "dnasp",
         "profile-report"
       ]
     },
