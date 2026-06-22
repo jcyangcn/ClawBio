@@ -500,8 +500,8 @@ def _check_remote_inputs(args, samplesheet_summary: dict[str, object]) -> None:
         for path in samplesheet_summary.get(key, []) or []:
             if "://" in str(path):
                 remote.append(str(path))
-    for field in _EXPLICIT_REFERENCE_FIELDS:
-        value = getattr(args, field, None)
+    for ref_field in _EXPLICIT_REFERENCE_FIELDS:
+        value = getattr(args, ref_field, None)
         if value and "://" in str(value):
             remote.append(str(value))
     if not remote:

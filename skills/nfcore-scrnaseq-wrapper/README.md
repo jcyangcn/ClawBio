@@ -42,7 +42,7 @@ Use `--check` to run preflight without launching Nextflow.
 This wrapper targets nf-core/scrnaseq `4.1.0`. It is not a free-form passthrough. Parameters are grouped as:
 
 - **Supported upstream parameters:** input/output, aligner/preset, reference/index, skip, CellRanger, CellRanger ARC, CellRanger Multi, selected MultiQC/reporting options.
-- **Wrapper policy parameters:** `--preset`, `--check`, `--run-downstream`, `--skip-downstream`, `--expected-cells`, `--timeout-hours`, `--work-dir`, `--allow-dirty-pipeline`, `--require-local-pipeline`, `--allow-pipeline-version-override`, `--trust-config-params`, `--allow-conda-cellranger`, and `-c`/`--config`/`--nextflow-config`; these are ClawBio conveniences and are not nf-core parameters.
+- **Wrapper policy parameters:** `--preset`, `--check`, `--run-downstream`, `--skip-downstream`, `--expected-cells`, `--timeout-hours`, `--work-dir`, `--allow-remote-inputs`, `--allow-dirty-pipeline`, `--require-local-pipeline`, `--allow-pipeline-version-override`, `--trust-config-params`, `--allow-conda-cellranger`, and `-c`/`--config`/`--nextflow-config`; these are ClawBio conveniences and are not nf-core parameters.
 - **Deprecated compatibility aliases:** `skip_emptydrops` is accepted only as `--skip-emptydrops` and translated to `skip_cellbender: true`; the deprecated upstream parameter is never written.
 - **Intentionally unsupported upstream parameters:** `custom_config_version`, `custom_config_base`, `config_profile_name`, `config_profile_description`, `config_profile_contact`, `config_profile_url`, `version`, `plaintext_email`, `max_multiqc_email_size`, `hook_url`, `validate_params`, `pipelines_testdata_base_path`, `help`, `help_full`, `show_hidden`.
 

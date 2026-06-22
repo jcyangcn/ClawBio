@@ -211,10 +211,10 @@ def _check_remote_inputs(
         for path in samplesheet.get(key, []) or []:
             if "://" in str(path):
                 remote.append(str(path))
-    for field in REFERENCE_PATH_PARAMS:
-        if field == "igenomes_base":
+    for ref_field in REFERENCE_PATH_PARAMS:
+        if ref_field == "igenomes_base":
             continue  # public reference-mirror base, remote by design
-        value = params.get(field)
+        value = params.get(ref_field)
         if value and "://" in str(value):
             remote.append(str(value))
     if not remote:
