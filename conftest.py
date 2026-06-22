@@ -5,6 +5,7 @@ from pathlib import Path
 
 OPT_IN_FLAG = "--include-rna"
 RNA_TEST_DIRS = {
+    "skills/celltype-specificity-profiler/tests",
     "skills/diff-visualizer/tests",
     "skills/rnaseq-de/tests",
     "skills/scrna-embedding/tests",

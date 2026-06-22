@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated_by": "scripts/generate_catalog.py",
-  "skill_count": 89,
+  "skill_count": 90,
   "galaxy_tool_count": 8182,
   "skills": [
     {
@@ -384,6 +384,48 @@
         "image segmentation",
         "cell counting",
         "segmentation mask"
+      ],
+      "chaining_partners": []
+    },
+    {
+      "name": "celltype-specificity-profiler",
+      "cli_alias": null,
+      "description": "Given a gene and a single-cell atlas, compute how cell-type-specific its expression is — the tau specificity index, Sarle's expression bimodality coefficient, and the cell types that drive the signal; a pure analytic transform that chains downstream of scrna-embedding.",
+      "version": "0.1.0",
+      "status": "planned",
+      "has_script": true,
+      "has_tests": true,
+      "has_demo": true,
+      "demo_command": "python skills/celltype-specificity-profiler/profiler.py --demo",
+      "dependencies": [
+        "python>=3.10",
+        "scanpy",
+        "anndata",
+        "numpy>=1.23",
+        "scipy>=1.9",
+        "pandas>=2.0"
+      ],
+      "tags": [
+        "scrna",
+        "single-cell",
+        "specificity",
+        "tau",
+        "bimodality",
+        "target-prioritization",
+        "marker-gene",
+        "h5ad"
+      ],
+      "trigger_keywords": [
+        "cell-type specificity",
+        "cell type specificity",
+        "specificity index",
+        "tau index",
+        "tau specificity",
+        "bimodality",
+        "bimodality coefficient",
+        "cell-type-specific expression",
+        "expression specificity",
+        "marker gene specificity"
       ],
       "chaining_partners": []
     },

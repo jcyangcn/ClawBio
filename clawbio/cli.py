@@ -411,6 +411,19 @@ SKILLS = {
         },
         "accepts_genotypes": False,
     },
+    "celltype-specificity-profiler": {
+        "script": SKILLS_DIR / "celltype-specificity-profiler" / "profiler.py",
+        "demo_args": ["--demo"],
+        "description": "Cell-Type Specificity Profiler (per-gene tau specificity index + expression bimodality coefficient from an annotated single-cell atlas)",
+        "allowed_extra_flags": {
+            "--gene",
+            "--atlas",
+            "--cell-type-key",
+            "--tissue",
+            "--trial-prior",
+        },
+        "accepts_genotypes": False,
+    },
     "compare": {
         "script": SKILLS_DIR / "genome-compare" / "genome_compare.py",
         "demo_args": ["--demo"],
