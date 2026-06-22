@@ -98,6 +98,47 @@ def test_reference_paths_still_reject_missing_local(tmp_path):
     assert exc.value.error_code == "MISSING_REFERENCE"
 
 
+# --- --allow-remote-inputs gate (local-first by default) ---------------------
+
+def test_remote_fastq_rejected_by_default():
+    """Remote samplesheet inputs are rejected unless --allow-remote-inputs is set."""
+    with pytest.raises(SkillError) as exc:
+        preflight._check_remote_inputs(
+            Namespace(allow_remote_inputs=False),
+            {"fastq_paths": ["s3://bucket/sampleA_R1.fastq.gz"]},
+        )
+    assert exc.value.error_code == "REMOTE_INPUT_NOT_ALLOWED"
+    assert "s3://bucket/sampleA_R1.fastq.gz" in exc.value.details["remote_paths"]
+
+
+def test_remote_reference_rejected_by_default():
+    """Remote reference/index paths are rejected unless --allow-remote-inputs is set."""
+    with pytest.raises(SkillError) as exc:
+        preflight._check_remote_inputs(
+            Namespace(allow_remote_inputs=False, fasta="https://example.org/genome.fa"),
+            {"fastq_paths": []},
+        )
+    assert exc.value.error_code == "REMOTE_INPUT_NOT_ALLOWED"
+
+
+def test_remote_inputs_allowed_with_flag_warns(capsys):
+    """With --allow-remote-inputs, remote paths pass and a network-fetch WARNING is emitted."""
+    preflight._check_remote_inputs(
+        Namespace(allow_remote_inputs=True),
+        {"fastq_paths": ["gs://bucket/sampleA_R1.fastq.gz"]},
+    )
+    err = capsys.readouterr().err
+    assert "--allow-remote-inputs" in err and "gs://bucket/sampleA_R1.fastq.gz" in err
+
+
+def test_local_inputs_pass_the_gate():
+    """Local paths never trigger the remote-input gate."""
+    preflight._check_remote_inputs(
+        Namespace(allow_remote_inputs=False),
+        {"fastq_paths": ["/data/sampleA_R1.fastq.gz"]},
+    )
+
+
 def test_preflight_happy_path(tmp_path, monkeypatch):
     args = _args(tmp_path)
     Path(args.fasta).write_text(">chr1\nACGT\n", encoding="utf-8")

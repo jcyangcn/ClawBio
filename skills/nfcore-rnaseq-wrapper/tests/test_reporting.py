@@ -486,6 +486,7 @@ def test_commands_sh_replays_every_run_affecting_wrapper_flag(tmp_path):
         "-c",
         "--config",
         "--work-dir",
+        "--allow-remote-inputs",
     }
     missing = wrapper_flags - emitted - special
     assert missing == set(), f"wrapper flags not replayed in commands.sh: {sorted(missing)}"

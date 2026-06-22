@@ -467,6 +467,47 @@ _SYMBOLIC_REFERENCE_FIELDS = frozenset(SYMBOLIC_REFERENCE_FIELDS)
 _EXPLICIT_REFERENCE_FIELDS = ALL_REFERENCE_PATH_FIELDS
 
 
+def _check_remote_inputs(args, samplesheet_summary: dict[str, Any]) -> None:
+    """Local-first by default: reject remote input/reference URIs (s3://, gs://,
+    https://, ftp://, …) unless ``--allow-remote-inputs`` is set, in which case
+    warn that genetic data will be fetched over the network. The object-store
+    ``--work-dir`` is a separate, intentionally-remote setting and is not gated."""
+    remote: list[str] = []
+    for key in ("fastq_paths", "bam_paths", "cram_paths"):
+        for path in samplesheet_summary.get(key, []) or []:
+            if "://" in str(path):
+                remote.append(str(path))
+    for field in _EXPLICIT_REFERENCE_FIELDS:
+        value = getattr(args, field, None)
+        if value and "://" in str(value):
+            remote.append(str(value))
+    if not remote:
+        return
+    unique = sorted(set(remote))
+    if getattr(args, "allow_remote_inputs", False):
+        print(
+            "WARNING: --allow-remote-inputs is set; "
+            f"{len(unique)} input/reference path(s) will be fetched over the network, "
+            "so genetic data may leave the local machine: " + ", ".join(unique),
+            file=sys.stderr,
+        )
+        return
+    raise SkillError(
+        stage="preflight",
+        error_code=ErrorCode.REMOTE_INPUT_NOT_ALLOWED,
+        message=(
+            "Remote input/reference URIs are not allowed by default (local-first); "
+            f"detected {len(unique)} remote path(s)."
+        ),
+        fix=(
+            "Download the data locally and use local paths, or pass "
+            "--allow-remote-inputs to fetch them over the network at your own risk "
+            "(genetic data will leave the local machine)."
+        ),
+        details={"remote_paths": unique},
+    )
+
+
 def _check_references(args) -> dict[str, str]:
     resolved = _collect_reference_values(args)
     _reject_conflicting_reference_styles(resolved)
@@ -769,6 +810,7 @@ def run_preflight(
     samplesheet_summary: dict[str, Any],
 ) -> dict[str, object]:
     _warn_if_native_windows()
+    _check_remote_inputs(args, samplesheet_summary)
     _check_supported_preset(args.preset)
     _check_parameter_schema_compatibility(args)
     _check_protocol_compatibility(args)

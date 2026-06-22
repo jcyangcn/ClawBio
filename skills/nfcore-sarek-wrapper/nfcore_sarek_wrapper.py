@@ -465,6 +465,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Nextflow work directory. Defaults to <output>/upstream/work; may be an object-store URI for cloud executors.",
     )
+    parser.add_argument(
+        "--allow-remote-inputs",
+        action="store_true",
+        help=(
+            "Opt in to remote samplesheet inputs and reference paths (s3://, gs://, "
+            "https://, ftp://, …). Default is local-first: remote URIs are rejected so "
+            "genetic data and references stay on the local machine. When enabled, a "
+            "runtime warning lists the paths fetched over the network. (The iGenomes "
+            "mirror base and object-store --work-dir are not gated.)"
+        ),
+    )
     parser.add_argument("--params-file", default=None, help="Sarek-native --params-file (advanced)")
     parser.add_argument("--no-banner", action="store_true", help="Suppress console banner")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose logging")
@@ -605,6 +616,7 @@ def _run_wrapper(args: argparse.Namespace, output_dir: Path) -> int:
         repo_root=repo_root,
         resume=bool(args.resume),
         resume_manifest=resume_manifest,
+        allow_remote_inputs=bool(getattr(args, "allow_remote_inputs", False)),
     )
     _print(f"[preflight] passed (warnings: {len(preflight_result.warnings)})")
     if args.verbose:

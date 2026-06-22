@@ -309,6 +309,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Nextflow work directory. Defaults to <output>/upstream/work; may be an object-store URI for cloud executors.",
     )
     parser.add_argument(
+        "--allow-remote-inputs",
+        action="store_true",
+        help=(
+            "Opt in to remote samplesheet inputs and reference paths (s3://, gs://, "
+            "https://, ftp://, …). Default is local-first: remote URIs are rejected so "
+            "genetic data and references stay on the local machine. When enabled, a "
+            "runtime warning lists the paths fetched over the network."
+        ),
+    )
+    parser.add_argument(
         "--allow-conda-cellranger",
         action="store_true",
         help="Allow Cell Ranger presets with conda/mamba only when a trusted site config supplies Cell Ranger.",

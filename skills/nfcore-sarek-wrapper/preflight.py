@@ -195,6 +195,55 @@ class PreflightResult:
     notes: list[str] = field(default_factory=list)
 
 
+def _check_remote_inputs(
+    params: dict[str, Any],
+    samplesheet: dict[str, Any],
+    *,
+    allow_remote_inputs: bool,
+) -> None:
+    """Local-first by default: reject remote samplesheet inputs and user-supplied
+    reference paths (s3://, gs://, https://, ftp://, …) unless allow_remote_inputs
+    is set, in which case warn that genetic data is fetched over the network. The
+    object-store ``--work-dir`` and the public iGenomes mirror base (``igenomes_base``,
+    default ``s3://ngi-igenomes/``) are intentionally remote and are not gated."""
+    remote: list[str] = []
+    for key in ("fastq_paths", "bam_paths", "cram_paths"):
+        for path in samplesheet.get(key, []) or []:
+            if "://" in str(path):
+                remote.append(str(path))
+    for field in REFERENCE_PATH_PARAMS:
+        if field == "igenomes_base":
+            continue  # public reference-mirror base, remote by design
+        value = params.get(field)
+        if value and "://" in str(value):
+            remote.append(str(value))
+    if not remote:
+        return
+    unique = sorted(set(remote))
+    if allow_remote_inputs:
+        print(
+            "WARNING: --allow-remote-inputs is set; "
+            f"{len(unique)} input/reference path(s) will be fetched over the network, "
+            "so genetic data may leave the local machine: " + ", ".join(unique),
+            file=sys.stderr,
+        )
+        return
+    raise SkillError(
+        stage="preflight",
+        error_code=ErrorCode.REMOTE_INPUT_NOT_ALLOWED,
+        message=(
+            "Remote input/reference URIs are not allowed by default (local-first); "
+            f"detected {len(unique)} remote path(s)."
+        ),
+        fix=(
+            "Download the data locally and use local paths, or pass "
+            "--allow-remote-inputs to fetch them over the network at your own risk "
+            "(genetic data will leave the local machine)."
+        ),
+        details={"remote_paths": unique},
+    )
+
+
 def run_preflight(
     *,
     params: dict[str, Any],
@@ -204,6 +253,7 @@ def run_preflight(
     repo_root: Path,
     resume: bool = False,
     resume_manifest: dict | None = None,
+    allow_remote_inputs: bool = False,
 ) -> PreflightResult:
     """Run every preflight rule for the Sarek wrapper.
 
@@ -213,6 +263,9 @@ def run_preflight(
     """
     warnings_acc: list[str] = []
     notes_acc: list[str] = []
+
+    # Local-first gate: reject remote inputs/references unless opted in.
+    _check_remote_inputs(params, samplesheet, allow_remote_inputs=allow_remote_inputs)
 
     # §5.1 — cross-cutting checks ------------------------------------------
     _check_java()

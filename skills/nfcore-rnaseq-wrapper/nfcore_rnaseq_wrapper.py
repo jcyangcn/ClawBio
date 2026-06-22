@@ -153,6 +153,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Nextflow work directory. Defaults to <output>/upstream/work; may be an object-store URI for cloud executors.",
     )
+    parser.add_argument(
+        "--allow-remote-inputs",
+        action="store_true",
+        help=(
+            "Opt in to remote samplesheet inputs and reference paths (s3://, gs://, "
+            "https://, ftp://, …). Default is local-first: remote URIs are rejected so "
+            "genetic data and references stay on the local machine. When enabled, a "
+            "runtime warning lists the paths fetched over the network."
+        ),
+    )
     parser.add_argument("--resume", action="store_true", help="Attempt checksum-validated Nextflow resume")
     parser.add_argument(
         "--timeout-hours",

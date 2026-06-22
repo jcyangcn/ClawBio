@@ -175,7 +175,9 @@ Unsupported parameters are either hidden/institutional metadata, interactive hel
 
 ## Input & Reference Path Policy
 
-This wrapper accepts **both local paths and remote URIs** (`s3://`, `gs://`, `https://`, `ftp://`, …) for samplesheet FASTQs and for reference/index inputs, matching the nf-core/scrnaseq schema and the sibling `nfcore-sarek-wrapper` / `nfcore-rnaseq-wrapper`. Remote inputs are passed through **verbatim** — Nextflow resolves and stages them in the execution context — so the wrapper validates only the FASTQ/FASTA basename and defers existence to Nextflow (`samplesheet_builder.py`, `preflight.py`). Local-first is preserved: the wrapper never *exfiltrates* data; it only reads the user-specified inputs.
+**Local-first by default.** Samplesheet FASTQs and reference/index inputs must be local paths unless you explicitly opt in. Remote URIs (`s3://`, `gs://`, `https://`, `ftp://`, …) are **rejected** at preflight with `REMOTE_INPUT_NOT_ALLOWED`, so genetic data and references stay on the local machine and no accidental cloud fetch happens. This guarantee is enforced by the code, not just advertised (`preflight._check_remote_inputs`).
+
+**Opt-in for remote inputs.** Pass `--allow-remote-inputs` to permit remote samplesheet inputs and reference paths (parity with `nfcore-sarek-wrapper` / `nfcore-rnaseq-wrapper`, which share the same flag). When enabled, remote URIs are passed through **verbatim** (Nextflow resolves and stages them; only the FASTQ/FASTA basename is validated) and preflight emits a **runtime WARNING** listing every path that will be fetched over the network, so cloud access is always visible. The object-store `--work-dir` is a separate setting and is not gated.
 
 **Local** paths are still validated eagerly at preflight so they fail fast with a clear error instead of a late Nextflow error:
 - A supplied local reference/index path (`--fasta`, `--gtf`, `--star-index`, …) that does not exist raises `MISSING_REFERENCE` (`preflight.py`).
@@ -433,7 +435,7 @@ output_directory/
 
 ## Safety
 
-- **Local-first**: User FASTQs and outputs remain on the local filesystem.
+- **Local-first by default**: user FASTQs/references and outputs stay on the local filesystem. Remote input/reference URIs are rejected (`REMOTE_INPUT_NOT_ALLOWED`) unless `--allow-remote-inputs` is explicitly passed, which also logs a runtime warning naming every path fetched over the network.
 - **Strict preflight**: Nextflow is never invoked if validation fails.
 - **No hallucinated outputs**: Only artifacts confirmed on disk are reported.
 - **Disclaimer**: Every report includes the ClawBio medical disclaimer.

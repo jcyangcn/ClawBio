@@ -487,18 +487,18 @@ def test_work_dir_override_object_store_uri_preserved(module, tmp_path):
 
 def test_flag_surface_counts_match_docs(module):
     # Locks the numbers cited in README.md / CLAUDE.md / SKILL.md so they cannot
-    # silently drift: 154 Sarek passthrough params + 22 wrapper-only controls
-    # = 176 user-facing flags (excluding the auto-generated -h/--help).
-    # (Round-4 homogenization added --timeout-hours, --allow-pipeline-version-override,
-    # and --work-dir for parity with the sibling wrappers, bumping wrapper-only
-    # controls 19 → 22.)
+    # silently drift: 154 Sarek passthrough params + 23 wrapper-only controls
+    # = 177 user-facing flags (excluding the auto-generated -h/--help).
+    # (Homogenization added --timeout-hours, --allow-pipeline-version-override,
+    # --work-dir, and --allow-remote-inputs for parity with the sibling wrappers,
+    # bumping wrapper-only controls 19 → 23.)
     assert len(module._SAREK_PASSTHROUGH_PARAMS) == 154
     parser = module.build_parser()
     opts = [a for a in parser._actions if a.option_strings and a.dest != "help"]
-    assert len({a.dest for a in opts}) == 176
+    assert len({a.dest for a in opts}) == 177
     passthrough_dests = {dest for _flag, dest, *_rest in module._SAREK_PASSTHROUGH_PARAMS}
     wrapper_only = {a.dest for a in opts} - passthrough_dests
-    assert len(wrapper_only) == 22
+    assert len(wrapper_only) == 23
 
 
 def test_demo_strips_reference_extra_params(module):

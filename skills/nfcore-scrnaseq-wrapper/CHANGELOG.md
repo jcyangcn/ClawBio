@@ -8,16 +8,18 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Changed
 
-- **Remote input/reference URIs are now accepted.** Samplesheet FASTQs and
-  reference/index paths may be remote URIs (`s3://`, `gs://`, `https://`, …),
-  matching the nf-core/scrnaseq schema and the sibling sarek/rnaseq wrappers
-  (previously rejected as "local-first"). Remote values are passed through
-  verbatim — only the basename is validated; existence is deferred to Nextflow
-  staging — while local paths are still existence-checked at preflight
-  (`MISSING_FASTQ` / `MISSING_REFERENCE`). Local-first is preserved: the wrapper
-  only reads user-specified inputs and never exfiltrates data. Resolved FASTQ
-  values are now `Path | str` and remote URIs are written unchanged to the
-  normalized samplesheet and provenance (no `Path().as_posix()` `//`-collapse).
+- **Remote input/reference URIs are gated behind `--allow-remote-inputs`
+  (local-first by default).** Samplesheet FASTQs and reference/index paths must
+  be local unless the flag is passed; otherwise preflight rejects remote URIs
+  (`s3://`, `gs://`, `https://`, `ftp://`, …) with `REMOTE_INPUT_NOT_ALLOWED`, so
+  the "keeps processing local / prevents accidental cloud access" guarantee is
+  enforced by the code. With `--allow-remote-inputs` (a flag shared by all three
+  nf-core wrappers), remote values pass through verbatim — only the basename is
+  validated, existence is deferred to Nextflow staging — and preflight emits a
+  runtime warning naming every path fetched over the network. Local paths are
+  always existence-checked (`MISSING_FASTQ` / `MISSING_REFERENCE`). Resolved FASTQ
+  values are `Path | str` so remote URIs are written unchanged to the normalized
+  samplesheet and provenance (no `Path().as_posix()` `//`-collapse).
 - **SKILL.md frontmatter aligned to the canonical `SKILL-TEMPLATE` schema** so the
   machine catalog (`skills/catalog.json`) and the generator never drift: the
   `trigger_keywords` list now lives under `metadata.openclaw` (was a bare

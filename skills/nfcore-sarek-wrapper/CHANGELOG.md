@@ -8,6 +8,13 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Added
 
+- **`--allow-remote-inputs` opt-in (local-first by default).** Remote samplesheet
+  inputs and user-supplied reference paths (`s3://`, `gs://`, `https://`, `ftp://`,
+  …) are now rejected at preflight (`REMOTE_INPUT_NOT_ALLOWED`) unless the flag is
+  passed, in which case a runtime warning names every path fetched over the
+  network. The public iGenomes mirror base (`igenomes_base`) and the object-store
+  `--work-dir` are intentionally remote and are not gated. Shared verbatim with
+  `nfcore-scrnaseq/rnaseq`. (Flag surface 176 → 177.)
 - **Control-flag parity with the sibling wrappers.** Added `--work-dir`
   (Nextflow work directory override, accepts a local path or an object-store URI
   for cloud executors; was hardcoded to `<output>/upstream/work`),

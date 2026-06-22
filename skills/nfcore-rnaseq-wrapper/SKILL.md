@@ -211,6 +211,7 @@ python clawbio.py run rnaseq-pipeline \
 #   --work-dir PATH     Nextflow work dir (local path or object-store URI; default <output>/upstream/work)
 #   --nextflow-config / -c / --config   extra Nextflow config file(s), repeatable
 #   --allow-pipeline-version-override    run a non-3.26.0 --pipeline-version at your own risk
+#   --allow-remote-inputs               opt in to remote inputs/refs (default local-first)
 python clawbio.py run rnaseq-pipeline \
   --input samplesheet.csv --output ./rnaseq_run \
   --genome GRCh38 --aligner star_salmon \
@@ -342,6 +343,7 @@ output/
 - No patient data is bundled.
 - Demo mode uses upstream test profile data.
 - The wrapper does not upload data.
+- **Local-first by default**: remote samplesheet inputs and reference paths are rejected (`REMOTE_INPUT_NOT_ALLOWED`) unless `--allow-remote-inputs` is explicitly passed, which also logs a runtime warning naming every path fetched over the network. The object-store `--work-dir` is not gated.
 - The wrapper does not pass arbitrary unvalidated Nextflow *parameters* via `--params-file`: only the audited CLI surface is translated to `params.yaml`. `--nextflow-config` forwards user-supplied `-c` config file(s) for trusted runtime settings such as process, executor, profiles, labels, institutional module tuning, and `params.genomes` custom genome catalogues. Configs that define `params` in any form — block (`params { … }`), property (`params.x`), assignment (`params = …`), subscript (`params['x']`), or map-merge (`params << …`) — are rejected so they cannot bypass the audited parameter surface (the documented `params.genomes` catalogue is the sole exception). Every locally-resolvable `includeConfig` target is audited recursively under the same rule; includes the wrapper cannot read (remote URIs, `${…}`-interpolated paths, or missing files) are surfaced as preflight **warnings** rather than silently trusted, so unaudited surface is always visible.
 - `--resume` is rejected when the pipeline source/version, profile, aligner, pseudo-aligner, `--prokaryotic`/`--arm` modifiers, params checksum, or samplesheet checksum drift.
 

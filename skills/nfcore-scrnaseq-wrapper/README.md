@@ -50,7 +50,7 @@ Unsupported parameters are either hidden/institutional metadata, interactive hel
 
 ## Input & Reference Path Policy
 
-Both local paths and remote URIs (`s3://`, `gs://`, `https://`, …) are accepted for samplesheet FASTQs and reference/index inputs, matching nf-core/scrnaseq and the sibling sarek/rnaseq wrappers. Remote inputs are passed through verbatim (Nextflow stages them); only the basename is validated. Local references and FASTQs are still existence-checked at preflight so missing local paths fail fast. Local-first is preserved — the wrapper only reads user-specified inputs and never exfiltrates data.
+**Local-first by default.** Samplesheet FASTQs and reference/index inputs must be local paths; remote URIs (`s3://`, `gs://`, `https://`, `ftp://`, …) are rejected at preflight (`REMOTE_INPUT_NOT_ALLOWED`) so genetic data and references stay on the local machine. Pass `--allow-remote-inputs` to opt in — remote URIs are then passed through verbatim (Nextflow stages them; only the basename is validated) and a runtime warning lists every path fetched over the network. The same flag is shared by all three nf-core wrappers. Local references and FASTQs are always existence-checked at preflight so missing local paths fail fast.
 
 ## Protocol Policy
 
