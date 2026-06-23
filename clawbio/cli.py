@@ -560,13 +560,18 @@ SKILLS = {
         "max_output_files_listed": 50,
         "allowed_extra_flags": {
             "--check",
+            "-v",
+            "--verbose",
+            "--no-banner",
             "-c",
             "--config",
+            "--nextflow-config",
             "--profile",
             "--pipeline-version",
             "--allow-dirty-pipeline",
             "--require-local-pipeline",
             "--allow-pipeline-version-override",
+            "--allow-remote-inputs",
             "--trust-config-params",
             "--preset",
             "--aligner",
@@ -629,9 +634,13 @@ SKILLS = {
         },
         "allowed_extra_flags_without_values": {
             "--check",
+            "-v",
+            "--verbose",
+            "--no-banner",
             "--allow-dirty-pipeline",
             "--require-local-pipeline",
             "--allow-pipeline-version-override",
+            "--allow-remote-inputs",
             "--trust-config-params",
             "--resume",
             "--allow-conda-cellranger",
@@ -660,6 +669,9 @@ SKILLS = {
         "max_output_files_listed": 50,
         "allowed_extra_flags": {
             "--check",
+            "-v",
+            "--verbose",
+            "--no-banner",
             "--profile",
             "--pipeline-version",
             "--pipeline-local",
@@ -788,9 +800,17 @@ SKILLS = {
             "--umitools-dedup-stats",
             "--umitools-dedup-primary-only",
             "--nextflow-config",
+            "-c",
+            "--config",
+            "--work-dir",
+            "--allow-remote-inputs",
         },
         "allowed_extra_flags_without_values": {
             "--check",
+            "-v",
+            "--verbose",
+            "--no-banner",
+            "--allow-remote-inputs",
             "--resume",
             "--prokaryotic",
             "--rapid-quant",
@@ -855,9 +875,9 @@ SKILLS = {
         # Keep this allowlist aligned with nfcore_sarek_wrapper.build_parser().
         "allowed_extra_flags": set("""
             --check --resume --arm --gpu --spark-profile --mutect-profile
-            --run-downstream --downstream-skill --profile --nextflow-config
-            --pipeline-version --pipeline-local --params-file --no-banner
-            --verbose --extra-param --step --tools --skip-tools --aligner
+            --run-downstream --downstream-skill --profile --nextflow-config -c --config
+            --pipeline-version --allow-pipeline-version-override --pipeline-local --params-file --no-banner
+            --verbose --timeout-hours --work-dir --allow-remote-inputs --extra-param --step --tools --skip-tools --aligner
             --no-intervals --wes --joint-germline --joint-mutect2
             --only-paired-variant-calling --ignore-soft-clipped-bases
             --filter-vcfs --normalize-vcfs --snv-consensus-calling
