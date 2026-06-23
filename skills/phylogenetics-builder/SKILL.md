@@ -80,14 +80,7 @@ You are **Phylogenetics Builder**, a ClawBio agent for end-to-end maximum-likeli
 
 ## Why This Exists
 
-Maximum-likelihood phylogenetics requires correctly chaining at least five external tools (aligner → trimmer → model selector → tree engine → visualiser), each with tool-specific CLI quirks that are not interchangeable. The pipeline has accumulated many footguns:
-
-- MUSCLE v5 uses `-align`/`-output`; v3 used `-in`/`-out` — flags are not interchangeable.
-- ModelFinder (IQ-TREE) appends `+F` to model names; RAxML-NG rejects this notation.
-- UFBoot threshold is ≥ 95; applying the standard bootstrap cutoff of 70 is a common and consequential error.
-- PRANK appends `.best.fas` to output prefixes; scripts expecting `{prefix}.fasta` fail silently.
-
-This skill encapsulates the correct invocation for all supported tools and handles their output quirks automatically.
+Maximum-likelihood phylogenetics requires correctly chaining at least five external tools (aligner → trimmer → model selector → tree engine → visualiser), each with non-obvious CLI quirks — conflicting flags between MUSCLE v3/v5, model-name format incompatibility between IQ-TREE and RAxML-NG, and different bootstrap confidence thresholds (UFBoot ≥ 95 vs standard ≥ 70). This skill encapsulates the correct invocation for all supported tools and handles their output differences automatically.
 
 ## Trigger
 
@@ -109,9 +102,9 @@ This skill encapsulates the correct invocation for all supported tools and handl
 
 ## Scope
 
-**One skill, one task.** This skill infers a maximum-likelihood phylogenetic tree from sequences. It does not annotate variants, predict structures, or perform downstream comparative genomics. Each post-tree task chains to another skill.
+**One skill, one task.** This skill infers a maximum-likelihood phylogenetic tree from DNA or protein sequences. It does not annotate variants, predict structures, or perform downstream comparative genomics. Each post-tree task chains to another skill.
 
-## Core Capabilities
+Supported pipeline stages:
 
 - **6 MSA algorithms**: mafft (default), muscle, clustalw, kalign, tcoffee, prank
 - **Alignment trimming**: trimAl `-automated1` (removes gapped columns)
@@ -245,7 +238,7 @@ Triple support labels format: `{alrt}/{abayes}/{ufb}` — thresholds: alrt > 70,
 ```markdown
 # Phylogenetics Builder Report
 
-## Pipeline Summary
+### Pipeline Summary
 
 | Parameter | Value |
 |-----------|-------|
@@ -258,13 +251,13 @@ Triple support labels format: `{alrt}/{abayes}/{ufb}` — thresholds: alrt > 70,
 | Bootstrap | UFBoot (1 000 replicates) |
 | Rooting | unrooted |
 
-## Pipeline Steps
+### Pipeline Steps
 - `msa:mafft`
 - `trim:trimal`
 - `modelfinder:TIM3+F+G4`
 - `tree:iqtree2:ufboot`
 
-## Branch Lengths & Support Values
+### Branch Lengths & Support Values
 | Node / Taxon | Branch Length | Support |
 |:-------------|:-------------:|:-------:|
 | Homo_sapiens | 0.01000 | 100 |
