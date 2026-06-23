@@ -176,14 +176,15 @@ The demo runs on scanpy's bundled, **real** `pbmc3k` 10x dataset (2,638 cells, a
 
 1. Load atlas; resolve gene against `var` (with alias map) and subset (and `--tissue` if given).
 2. Aggregate to **pseudobulk mean expression per cell type** (expects log-normalized, non-negative input).
-3. **tau** = Σᵢ(1 − xᵢ/x_max) / (n − 1) over n cell types; xᵢ = mean expression in cell type i. NaN for n < 2.
+3. **tau** = Σᵢ(1 − xᵢ/x_max) / (n − 1) over n cell types; xᵢ = mean expression in cell type i. NaN for n < 2. Following Zhang et al. 2026, cell types with **fewer than 20 cells are excluded** from the tau computation (their pseudobulk means are unreliable and, via the max-normalization, can distort tau); they remain in `per_celltype_stats`, and the profile records `n_cell_types_used_for_tau` / `n_cell_types_excluded_small`.
 4. **Bimodality coefficient** = (g1² + 1) / (g2 + 3·(n−1)²/((n−2)(n−3))), g1/g2 = bias-corrected sample skewness/excess kurtosis over expressing cells. NaN for n < 4 or zero variance.
-5. Rank cell types by mean expression; if `--trial-prior`, binarize tau at the threshold and attach the published ORs.
+5. Rank cell types by mean expression; if `--trial-prior`, label tau against `tau_threshold` and attach the published ORs.
 
 **Key thresholds / parameters**:
-- `TAU_THRESHOLD = 0.7` — tau > 0.7 → "cell-type-specific" (source: Zhang et al. 2026).
+- `TAU_THRESHOLD = 0.69` — tau > 0.69 → "cell-type-specific". This is **not** a universal constant: Zhang et al. 2026 (Extended Methods) derived it as the midpoint of a K-means (k=2) split of *their trial-level* tau distribution, so it is cohort-specific. Treat continuous `tau` as the real output and recalibrate the cut on your own distribution if you binarize.
+- `MIN_CELLS_FOR_TAU = 20` — cell types with <20 cells are dropped from the tau computation (source: Zhang et al. 2026).
 - `LOW_EXPRESSION_FRACTION = 0.01` — gene expressed in <1% of cells flags an unreliable BC.
-- Trial-prior odds ratios: phase I→II OR 1.27, primary-endpoint OR 1.11 (source: Zhang et al. 2026).
+- Trial-prior odds ratios: phase I→II OR 1.27 (95% CI 1.22–1.33), primary-endpoint OR 1.11 (95% CI 1.09–1.14) — verified verbatim against Zhang et al. 2026 Results.
 
 ## Example Queries
 
@@ -201,9 +202,13 @@ The demo runs on scanpy's bundled, **real** `pbmc3k` 10x dataset (2,638 cells, a
   "skill": "celltype-specificity-profiler",
   "gene": "MS4A1",
   "atlas": "pbmc3k (10x, real; scanpy bundled)",
-  "tau": 0.9556,
+  "tau": 0.956,
+  "tau_threshold": 0.69,
+  "tau_threshold_note": "cohort-specific K-means(k=2) midpoint of the trial-level tau distribution in Zhang et al. 2026 (tau=0.69); an interpretive default, not a universal cutoff",
+  "n_cell_types_used_for_tau": 7,
+  "n_cell_types_excluded_small": 1,
   "bimodality_coefficient": 0.4936,
-  "interpretation": "cell-type-specific (tau > 0.7)",
+  "interpretation": "cell-type-specific (tau > 0.69)",
   "low_expression": false,
   "top_cell_types": [
     {"cell_type": "B cells", "mean_expr": 0.993, "pct_expressing": 0.8596},
@@ -255,6 +260,9 @@ No network access required in `--demo` mode after pbmc3k is cached on first fetc
 
 - **Sparse genes**: The model will want to trust the bimodality coefficient for any gene. Do not — a gene expressed in <1% of cells gives an unstable BC; the skill sets `low_expression: true` and the BC must be treated as unreliable.
 - **Annotation granularity drives tau**: The model will want to compare tau across atlases. Do not — coarse labels ("immune cell") inflate apparent ubiquity, fine labels raise tau. Always report the annotation level; never compare tau across atlases with different ontologies.
+- **The 0.69 threshold is cohort-specific**: The model will want to treat `tau > 0.69` as an absolute "specific" verdict. Do not — Zhang et al. 2026 obtained 0.69 from K-means (k=2) on *their* trial-level tau distribution, so the binary call is an interpretive convenience. Report the continuous `tau`, and recalibrate the cut on your own distribution if you must binarize.
+- **Per-atlas tau ≠ the paper's per-gene tau**: The model will want to compare a single run against the paper's published per-gene values. Do not — this skill returns tau *within the one matrix it is handed*, whereas Zhang et al. 2026 average per-tissue tau across all tissues where the gene is expressed (a job for the orchestrator calling this skill per tissue).
+- **Thin atlases under-power tau**: The model will want to trust tau from a small slice. Do not — cell types with <20 cells are dropped from the tau computation, so on a thin atlas several groups may be excluded; check `n_cell_types_used_for_tau` first.
 - **Log-normalized input required**: The model will want to feed whatever `X` is present. Do not — tau assumes non-negative expression. Z-scored matrices (with negatives) produce meaningless tau; the demo deliberately reads `.raw` (log-normalized) rather than the z-scored `.X`.
 - **Symbol/Ensembl mismatch**: The model will want to return zeros when a symbol is absent. Do not — the gene must resolve in `var`; a small alias map handles CD276 ↔ B7-H3, but novel/retired symbols fail loudly.
 - **`--trial-prior` is correlational**: The model will want to present odds ratios as predictive. Do not — they come from one observational study and are not a guarantee of trial success.

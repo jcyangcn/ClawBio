@@ -2,9 +2,13 @@
   "skill": "celltype-specificity-profiler",
   "gene": "MS4A1",
   "atlas": "pbmc3k (10x, real; scanpy bundled)",
-  "tau": 0.9556,
+  "tau": 0.956,
+  "tau_threshold": 0.69,
+  "tau_threshold_note": "cohort-specific K-means(k=2) midpoint of the trial-level tau distribution in Zhang et al. 2026 (tau=0.69); an interpretive default, not a universal cutoff",
+  "n_cell_types_used_for_tau": 7,
+  "n_cell_types_excluded_small": 1,
   "bimodality_coefficient": 0.4936,
-  "interpretation": "cell-type-specific (tau > 0.7)",
+  "interpretation": "cell-type-specific (tau > 0.69)",
   "low_expression": false,
   "top_cell_types": [
     {

@@ -25,10 +25,26 @@ from typing import Sequence
 import numpy as np
 
 SKILL_NAME = "celltype-specificity-profiler"
-TAU_THRESHOLD = 0.7
-LOW_EXPRESSION_FRACTION = 0.01
 
-# Trial-success priors from Zhang et al. 2026 (correlational, not causal).
+# tau cut for the cell-type-specific vs broadly-expressed call. Zhang et al. 2026
+# derived this as the midpoint of a K-means (k=2) split of their *trial-level* tau
+# distribution (tau = 0.69, Extended Methods) — a cohort-specific boundary, NOT a
+# universal threshold. Used here only as an interpretive default; tau itself is the
+# primary, source-independent output.
+TAU_THRESHOLD = 0.69
+TAU_THRESHOLD_NOTE = (
+    "cohort-specific K-means(k=2) midpoint of the trial-level tau distribution in "
+    "Zhang et al. 2026 (tau=0.69); an interpretive default, not a universal cutoff"
+)
+LOW_EXPRESSION_FRACTION = 0.01
+# Zhang et al. 2026 (Extended Methods) excludes cell types with <20 cells from tau,
+# since per-cell-type means from tiny populations are unreliable and, through the
+# max-normalization, can distort tau.
+MIN_CELLS_FOR_TAU = 20
+
+# Trial-success priors from Zhang et al. 2026 (correlational, not causal). Odds
+# ratios verified verbatim against the paper's Results: Phase I→II OR 1.27
+# (95% CI 1.22–1.33); primary-endpoint OR 1.11 (95% CI 1.09–1.14).
 TRIAL_PRIOR = {
     "note": "Odds ratios from Zhang et al. 2026 (bioRxiv 10.64898/2026.02.23.707551)",
     "phase_I_to_II_OR": 1.27,
@@ -178,8 +194,13 @@ def profile_gene(adata, gene: str, atlas_name: str, cell_type_key: str = "cell_t
     """Compute the full profile dict (without the trial_prior block)."""
     stats, col = _per_celltype_stats(adata, gene, cell_type_key)
 
-    means = [s["mean_expr"] for s in stats]
+    # tau is computed only over cell types with >= MIN_CELLS_FOR_TAU cells
+    # (Zhang et al. 2026). Smaller cell types are still reported in
+    # per_celltype_stats for transparency, just excluded from the tau means.
+    tau_stats = [s for s in stats if s["n_cells"] >= MIN_CELLS_FOR_TAU]
+    means = [s["mean_expr"] for s in tau_stats]
     tau = compute_tau(means)
+    n_excluded = len(stats) - len(tau_stats)
 
     expressing_vals = col[col > 0]
     bc = bimodality_coefficient(expressing_vals)
@@ -207,6 +228,10 @@ def profile_gene(adata, gene: str, atlas_name: str, cell_type_key: str = "cell_t
         "gene": gene,
         "atlas": atlas_name,
         "tau": round(tau, 4) if not np.isnan(tau) else None,
+        "tau_threshold": TAU_THRESHOLD,
+        "tau_threshold_note": TAU_THRESHOLD_NOTE,
+        "n_cell_types_used_for_tau": len(tau_stats),
+        "n_cell_types_excluded_small": n_excluded,
         "bimodality_coefficient": round(bc, 4) if not np.isnan(bc) else None,
         "interpretation": interpretation,
         "low_expression": bool(low_expression),

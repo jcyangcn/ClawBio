@@ -97,6 +97,9 @@ def test_end_to_end_demo(tmp_path):
         "gene",
         "atlas",
         "tau",
+        "tau_threshold",
+        "n_cell_types_used_for_tau",
+        "n_cell_types_excluded_small",
         "bimodality_coefficient",
         "interpretation",
         "low_expression",
@@ -111,6 +114,10 @@ def test_end_to_end_demo(tmp_path):
     assert profile["low_expression"] is False
     assert profile["top_cell_types"][0]["cell_type"] == "B cells"
     assert profile["trial_prior"]["phase_I_to_II_OR"] == 1.27
+    # pbmc3k has 8 louvain clusters; Megakaryocytes (~15 cells) is dropped from
+    # tau under the Zhang et al. 2026 <20-cell exclusion.
+    assert profile["n_cell_types_excluded_small"] == 1
+    assert profile["n_cell_types_used_for_tau"] == 7
 
     # side-car files
     assert (out / "per_celltype.csv").exists()
@@ -137,4 +144,4 @@ def test_demo_tau_in_expected_range(tmp_path):
     profile = json.loads((out / "profile.json").read_text())
     # MS4A1 is B-cell restricted in pbmc3k -> very high tau.
     assert profile["tau"] >= 0.85
-    assert profile["interpretation"] == "cell-type-specific (tau > 0.7)"
+    assert profile["interpretation"] == "cell-type-specific (tau > 0.69)"
