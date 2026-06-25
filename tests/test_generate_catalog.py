@@ -30,3 +30,27 @@ def test_build_catalog_populates_cli_aliases_from_package_registry():
     assert catalog["fastreer"]["demo_command"] == "python clawbio.py run fastreer --demo"
     assert catalog["analyze-fasta"]["cli_alias"] == "analyze-fasta"
     assert catalog["analyze-fasta"]["demo_command"] == "python clawbio.py run analyze-fasta --demo"
+
+
+def test_build_catalog_adds_objective_maturity_tiers():
+    generate_catalog = _load_generate_catalog_module()
+
+    catalog = {entry["name"]: entry for entry in generate_catalog.build_catalog()}
+
+    assert catalog["pharmgx-reporter"]["maturity_tier"] == "ci-validated"
+    assert catalog["pharmgx-reporter"]["maturity_evidence"] == {
+        "has_skill_md": True,
+        "has_script": True,
+        "has_tests": True,
+        "has_demo": True,
+        "cli_registered": True,
+        "ci_tested": True,
+        "benchmark_validated": False,
+    }
+
+    assert catalog["fastreer"]["maturity_tier"] == "cli-registered"
+    assert catalog["fastreer"]["maturity_evidence"]["cli_registered"] is True
+    assert catalog["fastreer"]["maturity_evidence"]["ci_tested"] is False
+
+    assert catalog["claw-semantic-sim"]["maturity_tier"] == "spec-only"
+    assert catalog["claw-semantic-sim"]["maturity_evidence"]["has_script"] is False
