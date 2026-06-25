@@ -294,6 +294,29 @@ def compute_maturity(
 
     return tier, evidence
 
+
+def select_demo_script(skill_dir: Path, folder_name: str) -> Path | None:
+    """Choose a deterministic fallback demo script for non-CLI catalog entries."""
+    scripts = sorted(
+        f
+        for f in skill_dir.glob("*.py")
+        if f.name not in {"__init__.py", "api.py"} and not f.name.startswith("test_")
+    )
+    if not scripts:
+        return None
+
+    preferred_names = (
+        f"{folder_name.replace('-', '_')}.py",
+        "cli.py",
+        "__main__.py",
+    )
+    by_name = {script.name: script for script in scripts}
+    for preferred_name in preferred_names:
+        if preferred_name in by_name:
+            return by_name[preferred_name]
+
+    return scripts[0]
+
 # Skill folders excluded from the public catalog (local-only / gitignored)
 EXCLUDED_FOLDERS = {"pr-audit", "wes-clinical-report-es"}
 
@@ -427,9 +450,9 @@ def build_catalog() -> list[dict]:
         if cli_alias and cli_alias in registered_aliases:
             demo_command = f"python clawbio.py run {cli_alias} --demo"
         elif has_script:
-            scripts = [f for f in skill_dir.glob("*.py") if f.name != "__init__.py" and f.name != "api.py"]
-            if scripts:
-                demo_command = f"python {scripts[0].relative_to(CLAWBIO_DIR)} --demo"
+            script = select_demo_script(skill_dir, folder_name)
+            if script is not None:
+                demo_command = f"python {script.relative_to(CLAWBIO_DIR)} --demo"
         has_demo = demo_command is not None
         cli_registered = bool(cli_alias and cli_alias in registered_aliases)
         ci_tested = folder_name in ci_tested_folders

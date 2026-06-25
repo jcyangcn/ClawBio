@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml"><img src="https://github.com/ClawBio/ClawBio/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="#quick-start"><img src="https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=white" alt="Python 3.10+"></a>
+  <a href="#quick-start"><img src="https://img.shields.io/badge/python-3.11+-blue?logo=python&logoColor=white" alt="Python 3.11+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
   <a href="https://clawhub.ai"><img src="https://img.shields.io/badge/ClawHub-88_skills-orange" alt="ClawHub Skills"></a>
   <a href="https://doi.org/10.5281/zenodo.19420648"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.19420648.svg" alt="DOI"></a>
@@ -180,7 +180,9 @@ The exact contents can vary by skill, and some replays also require the original
 
 ## Skills
 
-A curated cross-section of ClawBio's 88 skills. The full machine-readable catalog (with status flags, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
+A curated cross-section of ClawBio's 88 skills. The full machine-readable catalog (with status flags, objective `maturity_tier` evidence, trigger keywords, demo commands, and chaining partners) lives in [`skills/catalog.json`](skills/catalog.json); browse the directory at [`skills/`](skills/) to see every skill folder.
+
+Catalog maturity tiers are computed from repository evidence: `spec-only` (SKILL.md only), `scripted` (has runnable code), `tested` (has skill tests), `cli-registered` (available via `python clawbio.py run`), `ci-validated` (explicitly tested in CI), and `bench-validated` (reserved for skills with blocking scientific benchmark validation).
 
 | Skill | Scale | Description |
 |-------|-------|-------------|

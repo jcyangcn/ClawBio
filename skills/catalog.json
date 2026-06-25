@@ -122,7 +122,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/archaic-introgression/pipeline.py --demo",
+      "demo_command": "python skills/archaic-introgression/archaic_introgression.py --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [
@@ -673,7 +673,7 @@
       "has_script": true,
       "has_tests": false,
       "has_demo": true,
-      "demo_command": "python skills/clawpathy-autoresearch/judge.py --demo",
+      "demo_command": "python skills/clawpathy-autoresearch/__main__.py --demo",
       "dependencies": [],
       "tags": [
         "meta",
@@ -714,7 +714,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-trial-finder/constants.py --demo",
+      "demo_command": "python skills/clinical-trial-finder/clinical_trial_finder.py --demo",
       "dependencies": [
         "python>=3.11"
       ],
@@ -2957,7 +2957,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/pubmed-summariser/pubmed_api.py --demo",
+      "demo_command": "python skills/pubmed-summariser/pubmed_summariser.py --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [

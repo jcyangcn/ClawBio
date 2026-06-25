@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 
 
@@ -54,3 +55,35 @@ def test_build_catalog_adds_objective_maturity_tiers():
 
     assert catalog["claw-semantic-sim"]["maturity_tier"] == "spec-only"
     assert catalog["claw-semantic-sim"]["maturity_evidence"]["has_script"] is False
+
+
+def test_checked_in_catalog_is_current():
+    generate_catalog = _load_generate_catalog_module()
+    root = Path(__file__).resolve().parents[1]
+    catalog_path = root / "skills" / "catalog.json"
+
+    checked_in = json.loads(catalog_path.read_text(encoding="utf-8"))
+    generated_skills = generate_catalog.build_catalog()
+
+    assert checked_in["skill_count"] == len(generated_skills)
+    assert checked_in["skills"] == generated_skills
+
+
+def test_fallback_demo_script_selection_is_deterministic():
+    generate_catalog = _load_generate_catalog_module()
+    root = Path(__file__).resolve().parents[1]
+
+    assert (
+        generate_catalog.select_demo_script(
+            root / "skills" / "clinical-trial-finder",
+            "clinical-trial-finder",
+        ).name
+        == "clinical_trial_finder.py"
+    )
+    assert (
+        generate_catalog.select_demo_script(
+            root / "skills" / "turingdb-graph",
+            "turingdb-graph",
+        ).name
+        == "turingdb_graph.py"
+    )
