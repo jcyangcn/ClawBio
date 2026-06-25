@@ -120,7 +120,7 @@
   </nav>
   <a href="/benchmarks.html" style="display:block;background:linear-gradient(90deg,#238636,#1f6feb);color:#fff;text-align:center;padding:0.7rem 1rem;font-size:0.95rem;font-weight:600;text-decoration:none;">📊 Public Benchmark Leaderboard | 168/182 passing (92.3%) | Up from 80/140 (57.1%) at original audit | Every failure documented &rarr;</a>
   <section class="hero">
-    <div class="hero-badge">📊 Publicly benchmarked · 991 stars · 88 skills · 43 contributors · 3,063 tests</div>
+    <div class="hero-badge">📊 Publicly benchmarked · 1,002 stars · 88 skills · 43 contributors · 3,063 tests</div>
     <h1>The first <em>bioinformatics-native</em><br>AI agent skill library</h1>
     <p>ClawBio is where biological AI gets its skills: a curated, reproducible, open repository any agent can call.</p>
     <div style="max-width:440px;margin:0 auto 2rem;">
@@ -297,7 +297,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr style="border-bottom:1px solid var(--border);background:rgba(63,185,80,0.05);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/ClawBio/ClawBio" target="_blank" style="color:var(--accent);">ClawBio</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">991</td><td style="padding:0.6rem 1rem;text-align:right;">217</td><td style="padding:0.6rem 1rem;text-align:right;">88</td></tr>
+            <tr style="border-bottom:1px solid var(--border);background:rgba(63,185,80,0.05);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/ClawBio/ClawBio" target="_blank" style="color:var(--accent);">ClawBio</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">1,002</td><td style="padding:0.6rem 1rem;text-align:right;">218</td><td style="padding:0.6rem 1rem;text-align:right;">88</td></tr>
             <tr style="border-bottom:1px solid var(--border);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/FreedomIntelligence/OpenClaw-Medical-Skills" target="_blank" style="color:var(--accent2);">OpenClaw-Medical-Skills</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">1,037</td><td style="padding:0.6rem 1rem;text-align:right;">123</td><td style="padding:0.6rem 1rem;text-align:right;">869</td></tr>
             <tr style="border-bottom:1px solid var(--border);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/GPTomics/bioSkills" target="_blank" style="color:var(--accent2);">bioSkills</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">331</td><td style="padding:0.6rem 1rem;text-align:right;">52</td><td style="padding:0.6rem 1rem;text-align:right;">425</td></tr>
             <tr style="border-bottom:1px solid var(--border);"><td style="padding:0.6rem 1rem;"><a href="https://github.com/wu-yc/LabClaw" target="_blank" style="color:var(--accent2);">LabClaw</a></td><td style="padding:0.6rem 1rem;text-align:center;color:var(--accent);">&#10003;</td><td style="padding:0.6rem 1rem;text-align:right;">317</td><td style="padding:0.6rem 1rem;text-align:right;">54</td><td style="padding:0.6rem 1rem;text-align:right;">211</td></tr>
@@ -314,6 +314,27 @@
       <div class="section-label">Recent Updates</div>
       <div class="section-title">Latest from the community</div>
       <div style="display:grid;gap:0.75rem;max-width:700px;">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
+          <span style="font-size:1.5rem;flex-shrink:0;">🌳</span>
+          <div>
+            <div style="font-weight:600;font-size:0.95rem;"><strong>phylogenetics-builder v0.2.0:</strong> full ML phylogenetic pipeline replacing the stub. Adds 6 aligners (mafft, muscle, clustalw, kalign, tcoffee, prank), trimAl column masking, ModelFinder model selection, IQ-TREE2/RAxML-NG inference, 3 bootstrap modes, outgroup and midpoint rooting, and a 70-test suite. Fixes a wrong primate topology in the prior demo tree and a midpoint-rooting bug in the Bio.Phylo fallback. Demo now ships a 12-taxon 500 bp synthetic primate alignment. Contributed by @ilypopv.</div>
+            <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.15rem;">PR #308 · merged · 23 June 2026</div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
+          <span style="font-size:1.5rem;flex-shrink:0;">🔧</span>
+          <div>
+            <div style="font-weight:600;font-size:0.95rem;"><strong>nf-core wrapper homogenisation:</strong> the three nf-core wrappers (scrnaseq 4.1.0, sarek 3.8.1, rnaseq 3.26.0) aligned to a single consistent architecture with unified validation policy, error handling, exit codes, control-flag surface (<code style="background:var(--bg3);padding:0.1rem 0.3rem;border-radius:3px;font-size:0.82rem;">--timeout-hours</code>, <code style="background:var(--bg3);padding:0.1rem 0.3rem;border-radius:3px;font-size:0.82rem;">--work-dir</code>, <code style="background:var(--bg3);padding:0.1rem 0.3rem;border-radius:3px;font-size:0.82rem;">--verbose</code>), and staged logging. Fixes cross-skill module shadowing that broke combined pytest sessions. 1,168 combined tests passing. Contributed by Danilo Monge (@danilomonge).</div>
+            <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.15rem;">PR #304 · merged · 23 June 2026</div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
+          <span style="font-size:1.5rem;flex-shrink:0;">🔬</span>
+          <div>
+            <div style="font-weight:600;font-size:0.95rem;"><strong>Fix: clinical-variant-reporter uses versioned Ensembl transcript accessions.</strong> VEP REST API calls now include version suffixes (e.g. <code style="background:var(--bg3);padding:0.1rem 0.3rem;border-radius:3px;font-size:0.82rem;">ENST00000357654.9</code>) per HGVS v21.1. Demo evidence cache updated with current Ensembl versions. 37 tests passing. Contributed by Cam Lloyd (@camlloyd).</div>
+            <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.15rem;">PR #302 · merged · 23 June 2026</div>
+          </div>
+        </div>
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
           <span style="font-size:1.5rem;flex-shrink:0;">🔒</span>
           <div>

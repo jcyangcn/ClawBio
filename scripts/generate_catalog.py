@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-generate_catalog.py — Build skills/catalog.json from SKILL.md + clawbio.py
+generate_catalog.py — Build skills/catalog.json from SKILL.md + clawbio/cli.py
 ==========================================================================
 Parses YAML frontmatter from each skill's SKILL.md and cross-references the
-SKILLS dict in clawbio.py to produce a machine-readable skill index.
+SKILLS dict in clawbio/cli.py to produce a machine-readable skill index.
 
 Usage:
     python scripts/generate_catalog.py
@@ -11,6 +11,7 @@ Usage:
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import sys
@@ -23,6 +24,7 @@ from pathlib import Path
 CLAWBIO_DIR = Path(__file__).resolve().parents[1]
 SKILLS_DIR = CLAWBIO_DIR / "skills"
 CATALOG_PATH = SKILLS_DIR / "catalog.json"
+CI_WORKFLOW_PATH = CLAWBIO_DIR / ".github" / "workflows" / "ci.yml"
 
 sys.path.insert(0, str(CLAWBIO_DIR))
 
@@ -170,54 +172,150 @@ def _normalize_dependencies(value: object) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Gather registered skills from clawbio.py SKILLS dict
+# Gather registered skills from clawbio/cli.py SKILLS dict
 # ---------------------------------------------------------------------------
 
 
-def load_skills_registry() -> set:
-    """Parse CLI aliases from clawbio.py SKILLS dict keys without importing.
+CLAWBIO_CLI_PATH = CLAWBIO_DIR / "clawbio" / "cli.py"
 
-    clawbio.py requires Python 3.10+ (``str | None`` syntax), so we parse
-    the SKILLS dict keys with a regex instead of importing the module.
+
+def _extract_path_parts(node: ast.AST) -> list[str]:
+    """Extract string path fragments from Path-style ``/`` expressions."""
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+        return _extract_path_parts(node.left) + _extract_path_parts(node.right)
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return [node.value]
+    return []
+
+
+def _iter_static_skill_registry_entries() -> list[tuple[str, str | None]]:
+    """Return ``(alias, folder)`` pairs from the static CLI ``SKILLS`` dict.
+
+    The CLI module has optional descriptor augmentation and imports runtime
+    helpers, so catalog generation reads the source AST instead of importing it.
     """
-    source = (CLAWBIO_DIR / "clawbio.py").read_text(encoding="utf-8")
-    # Match top-level keys like:  "pharmgx": { or "scrna-embedding": {
-    return set(re.findall(r'^\s{4}"([\w-]+)":\s*\{', source, re.MULTILINE))
+    source = CLAWBIO_CLI_PATH.read_text(encoding="utf-8")
+    module = ast.parse(source, filename=str(CLAWBIO_CLI_PATH))
+    entries: list[tuple[str, str | None]] = []
+
+    for node in module.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(target, ast.Name) and target.id == "SKILLS" for target in node.targets):
+            continue
+        if not isinstance(node.value, ast.Dict):
+            continue
+
+        for key_node, value_node in zip(node.value.keys, node.value.values):
+            if not isinstance(key_node, ast.Constant) or not isinstance(key_node.value, str):
+                continue
+            alias = key_node.value
+            folder: str | None = None
+            if isinstance(value_node, ast.Dict):
+                for entry_key, entry_value in zip(value_node.keys, value_node.values):
+                    if isinstance(entry_key, ast.Constant) and entry_key.value == "script":
+                        path_parts = _extract_path_parts(entry_value)
+                        if path_parts:
+                            folder = path_parts[0]
+                        break
+            entries.append((alias, folder))
+        break
+
+    return entries
+
+
+def load_skills_registry() -> set[str]:
+    """Parse CLI aliases from the package CLI ``SKILLS`` dict."""
+    return {alias for alias, _folder in _iter_static_skill_registry_entries()}
 
 
 # ---------------------------------------------------------------------------
 # Determine skill folder → CLI alias mapping
 # ---------------------------------------------------------------------------
 
-# Map skill folder names to their CLI alias in SKILLS dict.
-# The SKILLS dict keys are short aliases; script paths reveal the folder name.
-FOLDER_TO_ALIAS = {
-    "pharmgx-reporter": "pharmgx",
-    "equity-scorer": "equity",
-    "nutrigx": "nutrigx",
-    "scrna-orchestrator": "scrna",
-    "scrna-embedding": "scrna-embedding",
-    "claw-metagenomics": "metagenomics",
-    "genome-compare": "compare",
+# Aliases that cannot be inferred from CLI script paths.
+FOLDER_TO_ALIAS_OVERRIDES = {
+    # The photo workflow routes through the PGx reporter after image
+    # identification, so its CLI alias points at a different script folder.
     "drug-photo": "drugphoto",
-    "gwas-prs": "prs",
-    "clinpgx": "clinpgx",
-    "gwas-lookup": "gwas",
-    "bigquery-public": "bigquery",
-    "profile-report": "profile",
-    "galaxy-bridge": "galaxy",
-    "bioconductor-bridge": "bioc",
-    "nfcore-scrnaseq-wrapper": "scrnaseq-pipeline",
-    "nfcore-rnaseq-wrapper": "rnaseq-pipeline",
-    "nfcore-sarek-wrapper": "sarek-pipeline",
-    "rnaseq-de": "rnaseq",
-    "diff-visualizer": "diffviz",
-    "sample-qc-triage": "sample-qc",
-    "crispr-screen-triage": "crispr-triage",
-    "marker-dominance-mapper": "marker-map",
-    "llm-biobank-bench": "llm-bench",
-    "phylogenetics-builder": "phylo",
 }
+
+
+def load_folder_to_alias() -> dict[str, str]:
+    """Map skill folder names to their primary CLI aliases."""
+    folder_to_alias: dict[str, str] = {}
+    for alias, folder in _iter_static_skill_registry_entries():
+        if folder:
+            folder_to_alias.setdefault(folder, alias)
+    folder_to_alias.update(FOLDER_TO_ALIAS_OVERRIDES)
+    return folder_to_alias
+
+
+def load_ci_tested_skill_folders() -> set[str]:
+    """Return skill folders with explicit pytest coverage in the CI workflow."""
+    if not CI_WORKFLOW_PATH.exists():
+        return set()
+    source = CI_WORKFLOW_PATH.read_text(encoding="utf-8")
+    return set(re.findall(r"pytest\s+skills/([^/\s]+)/tests(?:/|\s)", source))
+
+
+def compute_maturity(
+    *,
+    has_script: bool,
+    has_tests: bool,
+    has_demo: bool,
+    cli_registered: bool,
+    ci_tested: bool,
+    benchmark_validated: bool = False,
+) -> tuple[str, dict[str, bool]]:
+    """Compute an objective maturity tier from observable repository evidence."""
+    evidence = {
+        "has_skill_md": True,
+        "has_script": has_script,
+        "has_tests": has_tests,
+        "has_demo": has_demo,
+        "cli_registered": cli_registered,
+        "ci_tested": ci_tested,
+        "benchmark_validated": benchmark_validated,
+    }
+
+    if benchmark_validated:
+        tier = "bench-validated"
+    elif ci_tested:
+        tier = "ci-validated"
+    elif cli_registered:
+        tier = "cli-registered"
+    elif has_tests:
+        tier = "tested"
+    elif has_script:
+        tier = "scripted"
+    else:
+        tier = "spec-only"
+
+    return tier, evidence
+
+
+def select_demo_script(skill_dir: Path, folder_name: str) -> Path | None:
+    """Choose a deterministic fallback demo script for non-CLI catalog entries."""
+    scripts = sorted(
+        f
+        for f in skill_dir.glob("*.py")
+        if f.name not in {"__init__.py", "api.py"} and not f.name.startswith("test_")
+    )
+    if not scripts:
+        return None
+
+    preferred_names = (
+        f"{folder_name.replace('-', '_')}.py",
+        "cli.py",
+        "__main__.py",
+    )
+    by_name = {script.name: script for script in scripts}
+    for preferred_name in preferred_names:
+        if preferred_name in by_name:
+            return by_name[preferred_name]
+
+    return scripts[0]
 
 # Skill folders excluded from the public catalog (local-only / gitignored)
 EXCLUDED_FOLDERS = {"pr-audit", "wes-clinical-report-es"}
@@ -316,6 +414,8 @@ CHAINING: dict[str, list[str]] = {
 def build_catalog() -> list[dict]:
     """Build a list of skill entries for the catalog."""
     registered_aliases = load_skills_registry()
+    folder_to_alias = load_folder_to_alias()
+    ci_tested_folders = load_ci_tested_skill_folders()
     entries: list[dict] = []
 
     for skill_dir in sorted(SKILLS_DIR.iterdir()):
@@ -333,7 +433,7 @@ def build_catalog() -> list[dict]:
         skill_meta = normalize_skill_metadata(yaml_data)
 
         # Determine CLI alias
-        cli_alias = FOLDER_TO_ALIAS.get(folder_name)
+        cli_alias = folder_to_alias.get(folder_name)
 
         # Check for Python scripts and tests
         has_script = any(
@@ -350,12 +450,22 @@ def build_catalog() -> list[dict]:
         if cli_alias and cli_alias in registered_aliases:
             demo_command = f"python clawbio.py run {cli_alias} --demo"
         elif has_script:
-            scripts = [f for f in skill_dir.glob("*.py") if f.name != "__init__.py" and f.name != "api.py"]
-            if scripts:
-                demo_command = f"python {scripts[0].relative_to(CLAWBIO_DIR)} --demo"
+            script = select_demo_script(skill_dir, folder_name)
+            if script is not None:
+                demo_command = f"python {script.relative_to(CLAWBIO_DIR)} --demo"
+        has_demo = demo_command is not None
+        cli_registered = bool(cli_alias and cli_alias in registered_aliases)
+        ci_tested = folder_name in ci_tested_folders
 
         # Status
         status = "mvp" if folder_name in MVP_FOLDERS else "planned"
+        maturity_tier, maturity_evidence = compute_maturity(
+            has_script=has_script,
+            has_tests=has_tests,
+            has_demo=has_demo,
+            cli_registered=cli_registered,
+            ci_tested=ci_tested,
+        )
 
         tags = [str(tag) for tag in skill_meta.get("tags", [])]
         deps = _normalize_dependencies(skill_meta.get("dependencies"))
@@ -367,9 +477,11 @@ def build_catalog() -> list[dict]:
             "description": skill_meta.get("description", ""),
             "version": str(skill_meta.get("version", "0.1.0")),
             "status": status,
+            "maturity_tier": maturity_tier,
+            "maturity_evidence": maturity_evidence,
             "has_script": has_script,
             "has_tests": has_tests,
-            "has_demo": demo_command is not None,
+            "has_demo": has_demo,
             "demo_command": demo_command,
             "dependencies": deps,
             "tags": tags,
