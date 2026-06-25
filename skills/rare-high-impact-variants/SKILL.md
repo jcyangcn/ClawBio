@@ -10,7 +10,11 @@ license: MIT
 inputs:
   - name: input_file
     type: file
-    format: [vcf, csv, tsv, txt]
+    format:
+      - vcf
+      - csv
+      - tsv
+      - txt
     description: Primary input data file
     required: true
 
@@ -28,7 +32,13 @@ dependencies:
   python: ">=3.11"
   packages: []
 
-tags: [count, rare, high-impact, loss-of-function, variant-burden, lof]
+tags:
+  - count
+  - rare
+  - high-impact
+  - loss-of-function
+  - variant-burden
+  - lof
 
 demo_data:
   - path: demo_input.txt
@@ -46,7 +56,9 @@ metadata:
       config: []
     always: false
     homepage: https://github.com/ClawBio/ClawBio
-    os: [macos, linux]
+    os:
+      - macos
+      - linux
     install:
       - kind: pip
         package: pandas
