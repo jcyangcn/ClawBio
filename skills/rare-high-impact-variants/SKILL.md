@@ -30,7 +30,6 @@ outputs:
 
 dependencies:
   python: ">=3.11"
-  packages: []
 
 tags:
   - count
@@ -52,8 +51,6 @@ metadata:
     requires:
       bins:
         - python3
-      env: []
-      config: []
     always: false
     homepage: https://github.com/ClawBio/ClawBio
     os:
@@ -62,7 +59,6 @@ metadata:
     install:
       - kind: pip
         package: pandas
-        bins: []
     trigger_keywords:
       - count
       - rare,
