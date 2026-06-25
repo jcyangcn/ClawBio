@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-generate_catalog.py — Build skills/catalog.json from SKILL.md + clawbio.py
+generate_catalog.py — Build skills/catalog.json from SKILL.md + clawbio/cli.py
 ==========================================================================
 Parses YAML frontmatter from each skill's SKILL.md and cross-references the
-SKILLS dict in clawbio.py to produce a machine-readable skill index.
+SKILLS dict in clawbio/cli.py to produce a machine-readable skill index.
 
 Usage:
     python scripts/generate_catalog.py
@@ -11,6 +11,7 @@ Usage:
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import sys
@@ -170,54 +171,83 @@ def _normalize_dependencies(value: object) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Gather registered skills from clawbio.py SKILLS dict
+# Gather registered skills from clawbio/cli.py SKILLS dict
 # ---------------------------------------------------------------------------
 
 
-def load_skills_registry() -> set:
-    """Parse CLI aliases from clawbio.py SKILLS dict keys without importing.
+CLAWBIO_CLI_PATH = CLAWBIO_DIR / "clawbio" / "cli.py"
 
-    clawbio.py requires Python 3.10+ (``str | None`` syntax), so we parse
-    the SKILLS dict keys with a regex instead of importing the module.
+
+def _extract_path_parts(node: ast.AST) -> list[str]:
+    """Extract string path fragments from Path-style ``/`` expressions."""
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+        return _extract_path_parts(node.left) + _extract_path_parts(node.right)
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return [node.value]
+    return []
+
+
+def _iter_static_skill_registry_entries() -> list[tuple[str, str | None]]:
+    """Return ``(alias, folder)`` pairs from the static CLI ``SKILLS`` dict.
+
+    The CLI module has optional descriptor augmentation and imports runtime
+    helpers, so catalog generation reads the source AST instead of importing it.
     """
-    source = (CLAWBIO_DIR / "clawbio.py").read_text(encoding="utf-8")
-    # Match top-level keys like:  "pharmgx": { or "scrna-embedding": {
-    return set(re.findall(r'^\s{4}"([\w-]+)":\s*\{', source, re.MULTILINE))
+    source = CLAWBIO_CLI_PATH.read_text(encoding="utf-8")
+    module = ast.parse(source, filename=str(CLAWBIO_CLI_PATH))
+    entries: list[tuple[str, str | None]] = []
+
+    for node in module.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(target, ast.Name) and target.id == "SKILLS" for target in node.targets):
+            continue
+        if not isinstance(node.value, ast.Dict):
+            continue
+
+        for key_node, value_node in zip(node.value.keys, node.value.values):
+            if not isinstance(key_node, ast.Constant) or not isinstance(key_node.value, str):
+                continue
+            alias = key_node.value
+            folder: str | None = None
+            if isinstance(value_node, ast.Dict):
+                for entry_key, entry_value in zip(value_node.keys, value_node.values):
+                    if isinstance(entry_key, ast.Constant) and entry_key.value == "script":
+                        path_parts = _extract_path_parts(entry_value)
+                        if path_parts:
+                            folder = path_parts[0]
+                        break
+            entries.append((alias, folder))
+        break
+
+    return entries
+
+
+def load_skills_registry() -> set[str]:
+    """Parse CLI aliases from the package CLI ``SKILLS`` dict."""
+    return {alias for alias, _folder in _iter_static_skill_registry_entries()}
 
 
 # ---------------------------------------------------------------------------
 # Determine skill folder → CLI alias mapping
 # ---------------------------------------------------------------------------
 
-# Map skill folder names to their CLI alias in SKILLS dict.
-# The SKILLS dict keys are short aliases; script paths reveal the folder name.
-FOLDER_TO_ALIAS = {
-    "pharmgx-reporter": "pharmgx",
-    "equity-scorer": "equity",
-    "nutrigx": "nutrigx",
-    "scrna-orchestrator": "scrna",
-    "scrna-embedding": "scrna-embedding",
-    "claw-metagenomics": "metagenomics",
-    "genome-compare": "compare",
+# Aliases that cannot be inferred from CLI script paths.
+FOLDER_TO_ALIAS_OVERRIDES = {
+    # The photo workflow routes through the PGx reporter after image
+    # identification, so its CLI alias points at a different script folder.
     "drug-photo": "drugphoto",
-    "gwas-prs": "prs",
-    "clinpgx": "clinpgx",
-    "gwas-lookup": "gwas",
-    "bigquery-public": "bigquery",
-    "profile-report": "profile",
-    "galaxy-bridge": "galaxy",
-    "bioconductor-bridge": "bioc",
-    "nfcore-scrnaseq-wrapper": "scrnaseq-pipeline",
-    "nfcore-rnaseq-wrapper": "rnaseq-pipeline",
-    "nfcore-sarek-wrapper": "sarek-pipeline",
-    "rnaseq-de": "rnaseq",
-    "diff-visualizer": "diffviz",
-    "sample-qc-triage": "sample-qc",
-    "crispr-screen-triage": "crispr-triage",
-    "marker-dominance-mapper": "marker-map",
-    "llm-biobank-bench": "llm-bench",
-    "phylogenetics-builder": "phylo",
 }
+
+
+def load_folder_to_alias() -> dict[str, str]:
+    """Map skill folder names to their primary CLI aliases."""
+    folder_to_alias: dict[str, str] = {}
+    for alias, folder in _iter_static_skill_registry_entries():
+        if folder:
+            folder_to_alias.setdefault(folder, alias)
+    folder_to_alias.update(FOLDER_TO_ALIAS_OVERRIDES)
+    return folder_to_alias
 
 # Skill folders excluded from the public catalog (local-only / gitignored)
 EXCLUDED_FOLDERS = {"pr-audit", "wes-clinical-report-es"}
@@ -316,6 +346,7 @@ CHAINING: dict[str, list[str]] = {
 def build_catalog() -> list[dict]:
     """Build a list of skill entries for the catalog."""
     registered_aliases = load_skills_registry()
+    folder_to_alias = load_folder_to_alias()
     entries: list[dict] = []
 
     for skill_dir in sorted(SKILLS_DIR.iterdir()):
@@ -333,7 +364,7 @@ def build_catalog() -> list[dict]:
         skill_meta = normalize_skill_metadata(yaml_data)
 
         # Determine CLI alias
-        cli_alias = FOLDER_TO_ALIAS.get(folder_name)
+        cli_alias = folder_to_alias.get(folder_name)
 
         # Check for Python scripts and tests
         has_script = any(

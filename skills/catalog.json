@@ -6,14 +6,14 @@
   "skills": [
     {
       "name": "affinity-proteomics",
-      "cli_alias": null,
+      "cli_alias": "affprot",
       "description": "Unified analysis pipeline for affinity-based proteomics platforms — Olink (PEA, NPX) and SomaLogic SomaScan (SOMAmer, RFU). Platform-aware QC, normalisation, differential abundance, volcano plots, heatmaps, and PCA.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/affinity-proteomics/affinity_proteomics.py --demo",
+      "demo_command": "python clawbio.py run affprot --demo",
       "dependencies": [],
       "tags": [
         "proteomics",
@@ -40,14 +40,14 @@
     },
     {
       "name": "analyze-fasta",
-      "cli_alias": null,
+      "cli_alias": "analyze-fasta",
       "description": "Analyze a single FASTA file (nucleotide or protein), compute sequence-level metrics (GC, ORFs, MW, pI, GRAVY, secondary-structure fractions) with Biopython, and write a Markdown report plus structured JSON for downstream chaining.",
       "version": "0.1.0",
       "status": "mvp",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/analyze-fasta/analyze_fasta.py --demo",
+      "demo_command": "python clawbio.py run analyze-fasta --demo",
       "dependencies": [
         "python>=3.10",
         "biopython>=1.80"
@@ -92,7 +92,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/archaic-introgression/archaic_introgression.py --demo",
+      "demo_command": "python skills/archaic-introgression/pipeline.py --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [
@@ -200,7 +200,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/bigquery-public/bigquery_backends.py --demo",
+      "demo_command": "python clawbio.py run bigquery --demo",
       "dependencies": [],
       "tags": [
         "bigquery",
@@ -246,7 +246,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/bioconductor-bridge/bioconductor_bridge.py --demo",
+      "demo_command": "python clawbio.py run bioc --demo",
       "dependencies": [],
       "tags": [
         "bioconductor",
@@ -281,14 +281,14 @@
     },
     {
       "name": "bioqc-mcp",
-      "cli_alias": null,
+      "cli_alias": "bioqc",
       "description": "Automated sequencing quality control and advanced visualization wrapping FastQC, MultiQC, and custom chart generation. Exposes an MCP stdio server for live AI integration alongside a ClawBio CLI runner.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/bioqc-mcp/bioqc_mcp.py --demo",
+      "demo_command": "python clawbio.py run bioqc --demo",
       "dependencies": [
         "python>=3.11"
       ],
@@ -425,7 +425,7 @@
       "has_script": true,
       "has_tests": false,
       "has_demo": true,
-      "demo_command": "python skills/claw-metagenomics/metagenomics_profiler.py --demo",
+      "demo_command": "python clawbio.py run metagenomics --demo",
       "dependencies": [],
       "tags": [
         "metagenomics",
@@ -513,7 +513,7 @@
       "has_script": true,
       "has_tests": false,
       "has_demo": true,
-      "demo_command": "python skills/clawpathy-autoresearch/dispatcher.py --demo",
+      "demo_command": "python skills/clawpathy-autoresearch/judge.py --demo",
       "dependencies": [],
       "tags": [
         "meta",
@@ -544,7 +544,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-trial-finder/opentargets.py --demo",
+      "demo_command": "python skills/clinical-trial-finder/constants.py --demo",
       "dependencies": [
         "python>=3.11"
       ],
@@ -571,14 +571,14 @@
     },
     {
       "name": "clinical-variant-reporter",
-      "cli_alias": null,
+      "cli_alias": "acmg",
       "description": "Classify germline variants from VCF/BCF files according to the ACMG/AMP 2015 28-criteria evidence framework and generate clinical-grade interpretation reports with per-variant evidence audit trails and ACMG SF v3.2 secondary findings screening.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinical-variant-reporter/clinical_variant_reporter.py --demo",
+      "demo_command": "python clawbio.py run acmg --demo",
       "dependencies": [],
       "tags": [
         "acmg",
@@ -614,7 +614,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/clinpgx/clinpgx.py --demo",
+      "demo_command": "python clawbio.py run clinpgx --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [
@@ -638,7 +638,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/crispr-screen-triage/crispr_screen_triage.py --demo",
+      "demo_command": "python clawbio.py run crispr-triage --demo",
       "dependencies": [
         "python>=3.10"
       ],
@@ -660,14 +660,14 @@
     },
     {
       "name": "data-extractor",
-      "cli_alias": null,
+      "cli_alias": "data-extract",
       "description": "Extract numerical data from scientific figure images using Claude vision + OpenCV calibration. Supports 26+ plot types including bar charts, scatter plots, forest plots, Kaplan-Meier curves, box plots, and more.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/data-extractor/data_extractor_api.py --demo",
+      "demo_command": "python clawbio.py run data-extract --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [],
@@ -711,7 +711,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/diff-visualizer/diff_visualizer.py --demo",
+      "demo_command": "python clawbio.py run diffviz --demo",
       "dependencies": [],
       "tags": [
         "differential-expression",
@@ -736,14 +736,14 @@
     },
     {
       "name": "dnasp",
-      "cli_alias": null,
+      "cli_alias": "dnasp",
       "description": "Full reimplementation of DnaSP 6 for population genetics analysis of aligned DNA sequences. Covers nucleotide diversity, haplotype statistics, neutrality tests (Tajima's D, Fu & Li's D*/F*, R2), linkage disequilibrium (D, D', R², ZnS, Za, ZZ), minimum recombination (Rm), mismatch distribution, InDel polymorphism, between-population divergence (Dxy, Da, fixed/shared sites), outgroup-based Fu & Li D/F tests (fuliout), the HKA multi-locus neutrality test (hka), the McDonald-Kreitman test (mk), Ka/Ks (dN/dS) via the Nei-Gojobori (1986) method (kaks), Fu's Fs test (fufs), the site frequency spectrum (sfs, folded and outgroup-unfolded), transition/transversion ratio (tstv), and codon usage bias  -  RSCU (Sharp & Li 1987) and ENC (Wright 1990) (codon). Accepts FASTA or NEXUS input; outputs DnaSP-compatible TSV and a Markdown report.",
       "version": "0.4.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/dnasp/dnasp.py --demo",
+      "demo_command": "python clawbio.py run dnasp --demo",
       "dependencies": [
         "python>=3.10",
         "matplotlib>=3.7"
@@ -815,8 +815,8 @@
       "status": "mvp",
       "has_script": false,
       "has_tests": false,
-      "has_demo": false,
-      "demo_command": null,
+      "has_demo": true,
+      "demo_command": "python clawbio.py run drugphoto --demo",
       "dependencies": [],
       "tags": [
         "pharmacogenomics",
@@ -836,14 +836,14 @@
     },
     {
       "name": "drug-repurposing-screen",
-      "cli_alias": null,
+      "cli_alias": "repurposing",
       "description": "Objective-driven pooled viability screen analysis: QC, hit calling, context-selectivity, biomarker sweep, and ranked repurposing candidates. Format-agnostic via schema.yaml + objective.yaml; includes offline demo.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/drug-repurposing-screen/screen_engine.py --demo",
+      "demo_command": "python clawbio.py run repurposing --demo",
       "dependencies": [
         "python>=3.10",
         "numpy>=1.24",
@@ -873,14 +873,14 @@
     },
     {
       "name": "eqtl-catalogue-region-fetch",
-      "cli_alias": null,
+      "cli_alias": "eqtl-region",
       "description": "Fetch a region of cis-eQTL summary statistics from EBI eQTL Catalogue v7+\nvia tabix-on-FTP. Use when an agent needs eQTL beta / SE / p-value for\nevery variant in a window around a gene's TSS for one specific dataset\n(study × tissue × quantification method). Input: dataset_id, chromosome,\nstart, end, optional molecular_trait_id. Output: harmonised TSV slice.\n",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/eqtl-catalogue-region-fetch/eqtl_catalogue_region_fetch.py --demo",
+      "demo_command": "python clawbio.py run eqtl-region --demo",
       "dependencies": [
         "python>=3.10",
         "pysam>=0.22",
@@ -913,7 +913,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/equity-scorer/equity_scorer.py --demo",
+      "demo_command": "python clawbio.py run equity --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [
@@ -929,14 +929,14 @@
     },
     {
       "name": "fastreer",
-      "cli_alias": null,
+      "cli_alias": "fastreer",
       "description": "Phylogenetic distance matrices and trees from VCF or FASTA data using the fastreeR hybrid Java/Python toolkit (VCF2TREE, VCF2DIST, DIST2TREE, FASTA2DIST).",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/fastreer/fastreer.py --demo",
+      "demo_command": "python clawbio.py run fastreer --demo",
       "dependencies": [
         "python>=3.10",
         "fastreer>=2.2.0"
@@ -1012,14 +1012,14 @@
     },
     {
       "name": "flow-bio",
-      "cli_alias": null,
+      "cli_alias": "flow",
       "description": "Flow.bio API bridge — authenticate, browse pipelines/samples/projects, search, upload data, launch pipeline executions, and check run status on any Flow instance.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/flow-bio/flow_bio.py --demo",
+      "demo_command": "python clawbio.py run flow --demo",
       "dependencies": [
         "python>=3.10",
         "requests>=2.28"
@@ -1056,7 +1056,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/galaxy-bridge/generate_galaxy_catalog.py --demo",
+      "demo_command": "python clawbio.py run galaxy --demo",
       "dependencies": [],
       "tags": [
         "galaxy",
@@ -1094,7 +1094,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/genome-compare/genome_compare.py --demo",
+      "demo_command": "python clawbio.py run compare --demo",
       "dependencies": [],
       "tags": [
         "genome-comparison",
@@ -1379,14 +1379,14 @@
     },
     {
       "name": "gwas-catalog-region-fetch",
-      "cli_alias": null,
+      "cli_alias": "gwas-region",
       "description": "Fetch a region of GWAS summary statistics from the NHGRI-EBI GWAS Catalog\nharmonised collection via tabix-on-FTP. Use when an agent needs GWAS beta /\nSE / p-value for every variant in a window for one specific study (GCST\naccession). Input: accession, chromosome, start, end. Output: harmonised\nTSV slice in canonical format.\n",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/gwas-catalog-region-fetch/gwas_catalog_region_fetch.py --demo",
+      "demo_command": "python clawbio.py run gwas-region --demo",
       "dependencies": [
         "python>=3.10",
         "pysam>=0.22",
@@ -1419,7 +1419,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/gwas-lookup/gwas_lookup.py --demo",
+      "demo_command": "python clawbio.py run gwas --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [
@@ -1437,14 +1437,14 @@
     },
     {
       "name": "gwas-pipeline",
-      "cli_alias": null,
+      "cli_alias": "gwas-pipe",
       "description": "End-to-end GWAS automation wrapping PLINK2 for genotype QC and REGENIE for two-step whole-genome regression association testing. Produces Manhattan plots, QQ plots, clumped lead variants, and structured summary statistics.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/gwas-pipeline/gwas_pipeline.py --demo",
+      "demo_command": "python clawbio.py run gwas-pipe --demo",
       "dependencies": [],
       "tags": [
         "gwas",
@@ -1477,7 +1477,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/gwas-prs/gwas_prs.py --demo",
+      "demo_command": "python clawbio.py run prs --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [
@@ -1519,14 +1519,14 @@
     },
     {
       "name": "illumina-bridge",
-      "cli_alias": null,
+      "cli_alias": "illumina",
       "description": "Import DRAGEN-exported Illumina result bundles into ClawBio for local tertiary analysis and downstream routing.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/illumina-bridge/illumina_providers.py --demo",
+      "demo_command": "python clawbio.py run illumina --demo",
       "dependencies": [],
       "tags": [
         "illumina",
@@ -1580,14 +1580,14 @@
     },
     {
       "name": "ld-1000g-region-compute",
-      "cli_alias": null,
+      "cli_alias": "ld-region",
       "description": "Compute pairwise r² between a lead variant and every variant in a window\nusing the 1000 Genomes Phase 3 GRCh38 reference panel, ancestry-stratified.\nUse when an agent needs LD coloring for a regional plot or LD pruning\naround a candidate causal variant. Single client (on-demand region fetch\nfrom EBI 1000G FTP); no multi-GB cold-start.\n",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/ld-1000g-region-compute/ld_1000g_region_compute.py --demo",
+      "demo_command": "python clawbio.py run ld-region --demo",
       "dependencies": [
         "python>=3.10",
         "pysam>=0.22",
@@ -1649,14 +1649,14 @@
     },
     {
       "name": "locuscompare-region-render",
-      "cli_alias": null,
+      "cli_alias": "locuscompare-region",
       "description": "Render a 4-panel regional LocusCompare diagnostic for one (lead variant,\nexposure study, outcome study) tuple - overlays GWAS Manhattan, QTL Manhattan,\nGENCODE gene track, and cross-trait scatter colored by LD r². Use when an\nagent needs visual confirmation that two GWAS / QTL signals share the same\ncausal variant (the Liu 2019 LocusCompare convention). Inputs: lead variant +\ntwo pre-fetched harmonised sumstats slices (or eQTL Catalogue / GWAS Catalog\nidentifiers for bundled fetch). Output: PNG + JSON manifest.\n",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/locuscompare-region-render/cli.py --demo",
+      "demo_command": "python clawbio.py run locuscompare-region --demo",
       "dependencies": [
         "python>=3.10",
         "numpy>=1.24",
@@ -1698,7 +1698,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/marker-dominance-mapper/marker_dominance_mapper.py --demo",
+      "demo_command": "python clawbio.py run marker-map --demo",
       "dependencies": [
         "python>=3.10"
       ],
@@ -1719,14 +1719,14 @@
     },
     {
       "name": "mendelian-randomisation",
-      "cli_alias": null,
+      "cli_alias": "mr",
       "description": "Two-sample Mendelian Randomisation from GWAS summary statistics with IVW, MR-Egger, weighted median/mode, and full sensitivity analysis (Cochran Q, Egger intercept, Steiger, F-statistic, leave-one-out).",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/mendelian-randomisation/mendelian_randomisation.py --demo",
+      "demo_command": "python clawbio.py run mr --demo",
       "dependencies": [
         "python>=3.10",
         "numpy>=1.24",
@@ -1759,14 +1759,14 @@
     },
     {
       "name": "methylation-clock",
-      "cli_alias": null,
+      "cli_alias": "methylation",
       "description": "Compute epigenetic age from DNA methylation arrays using PyAging clocks from GEO accessions or local files.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/methylation-clock/methylation_clock.py --demo",
+      "demo_command": "python clawbio.py run methylation --demo",
       "dependencies": [],
       "tags": [
         "epigenetics",
@@ -1880,7 +1880,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/nfcore-rnaseq-wrapper/pipeline_source.py --demo",
+      "demo_command": "python clawbio.py run rnaseq-pipeline --demo",
       "dependencies": [
         "python>=3.10"
       ],
@@ -1919,7 +1919,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/nfcore-sarek-wrapper/pipeline_source.py --demo",
+      "demo_command": "python clawbio.py run sarek-pipeline --demo",
       "dependencies": [
         "python>=3.11"
       ],
@@ -1966,7 +1966,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/nfcore-scrnaseq-wrapper/pipeline_source.py --demo",
+      "demo_command": "python clawbio.py run scrnaseq-pipeline --demo",
       "dependencies": [
         "python>=3.11",
         "pyyaml"
@@ -2012,7 +2012,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/nutrigx/parse_input.py --demo",
+      "demo_command": "python clawbio.py run nutrigx --demo",
       "dependencies": [],
       "tags": [
         "nutrigenomics",
@@ -2073,14 +2073,14 @@
     },
     {
       "name": "pathway-enricher",
-      "cli_alias": null,
+      "cli_alias": "pathway-enricher",
       "description": "Gene-set pathway enrichment analysis using Enrichr — queries KEGG, GO (BP/MF/CC), Reactome, WikiPathways, MSigDB, and Disease Ontology. Produces ranked pathway tables, interactive bubble charts, and a reproducible Markdown report.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/pathway-enricher/pathway_enricher.py --demo",
+      "demo_command": "python clawbio.py run pathway-enricher --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [],
@@ -2095,7 +2095,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/pharmgx-reporter/pharmgx_reporter.py --demo",
+      "demo_command": "python clawbio.py run pharmgx --demo",
       "dependencies": [],
       "tags": [
         "pharmacogenomics",
@@ -2127,7 +2127,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/phylogenetics-builder/phylogenetics_builder.py --demo",
+      "demo_command": "python clawbio.py run phylo --demo",
       "dependencies": [
         "python>=3.10",
         "pandas>=2.0",
@@ -2162,7 +2162,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/profile-report/profile_report.py --demo",
+      "demo_command": "python clawbio.py run profile --demo",
       "dependencies": [],
       "tags": [
         "profile",
@@ -2240,14 +2240,14 @@
     },
     {
       "name": "protocols-io",
-      "cli_alias": null,
+      "cli_alias": "protocols-io",
       "description": "Search, browse, and retrieve scientific protocols from protocols.io via REST API. Client token authentication for private protocols. Use when user mentions protocols.io, lab protocols, DOI lookup, protocol search, protocol steps, or scientific methods.",
       "version": "0.2.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/protocols-io/protocols_io.py --demo",
+      "demo_command": "python clawbio.py run protocols-io --demo",
       "dependencies": [],
       "tags": [
         "protocols",
@@ -2277,7 +2277,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/pubmed-summariser/pubmed_summariser.py --demo",
+      "demo_command": "python skills/pubmed-summariser/pubmed_api.py --demo",
       "dependencies": [],
       "tags": [],
       "trigger_keywords": [
@@ -2294,14 +2294,14 @@
     },
     {
       "name": "rare-disease-rnaseq",
-      "cli_alias": null,
+      "cli_alias": "rdoutlier",
       "description": "Blood RNA-seq expression-outlier detection for rare-disease diagnostics. Cases scored against a control reference panel; outliers ranked and filtered by a haploinsufficient disease-gene panel.",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/rare-disease-rnaseq/rare_disease_rnaseq.py --demo",
+      "demo_command": "python clawbio.py run rdoutlier --demo",
       "dependencies": [],
       "tags": [
         "rna-seq",
@@ -2399,7 +2399,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/rnaseq-de/rnaseq_de.py --demo",
+      "demo_command": "python clawbio.py run rnaseq --demo",
       "dependencies": [],
       "tags": [
         "rna-seq",
@@ -2436,7 +2436,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/sample-qc-triage/sample_qc_triage.py --demo",
+      "demo_command": "python clawbio.py run sample-qc --demo",
       "dependencies": [
         "python>=3.10"
       ],
@@ -2466,7 +2466,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/scrna-embedding/scrna_embedding.py --demo",
+      "demo_command": "python clawbio.py run scrna-embedding --demo",
       "dependencies": [],
       "tags": [
         "scrna",
@@ -2503,7 +2503,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/scrna-orchestrator/scrna_orchestrator.py --demo",
+      "demo_command": "python clawbio.py run scrna --demo",
       "dependencies": [],
       "tags": [
         "scrna",
@@ -2687,7 +2687,7 @@
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/turingdb-graph/http_server.py --demo",
+      "demo_command": "python skills/turingdb-graph/turingdb_graph.py --demo",
       "dependencies": [
         "python>=3.11",
         "turingdb>=1.29",
@@ -2744,14 +2744,14 @@
     },
     {
       "name": "ukb-ppp-region-fetch",
-      "cli_alias": null,
+      "cli_alias": "ukb-ppp-region",
       "description": "Fetch a regional slice of plasma pQTL summary statistics from the UK\nBiobank Pharma Proteomics Project (UKB-PPP; Sun 2023 Nature) for a\nspecific (protein, ancestry) measurement. Use when an agent needs\nper-variant beta / SE / p-value around a coloc-lead variant for\ndownstream colocalisation, Mendelian randomisation, or regional\nplotting against a pQTL exposure. The canonical use case is the\ncis-window around the protein's coding gene TSS, but UKB-PPP releases\nfull-genome summary stats per protein so any GRCh38 window (including\ntrans loci) is supported when the user supplies an explicit\n(chromosome, start_bp, end_bp). Input: protein_label (HGNC or\nUniProt), ancestry, chromosome, start_bp, end_bp. Output: harmonised\nTSV slice + manifest + human-readable report.\n",
       "version": "0.1.0",
       "status": "planned",
       "has_script": true,
       "has_tests": true,
       "has_demo": true,
-      "demo_command": "python skills/ukb-ppp-region-fetch/ukb_ppp_region_fetch.py --demo",
+      "demo_command": "python clawbio.py run ukb-ppp-region --demo",
       "dependencies": [
         "python>=3.10",
         "synapseclient>=3.0",
