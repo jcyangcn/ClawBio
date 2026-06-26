@@ -202,7 +202,15 @@ def load_image(path: str, z_projection: str = "max") -> tuple[np.ndarray, int]:
         # Microscopy stacks can come as C×Z×H×W (CZI) or Z×C×H×W (ND2).
         # For 2D segmentation, reduce Z by max projection while preserving channels.
         if arr.shape[0] <= 20 and arr.shape[1] <= 20:
-            channel_axis = 0 if arr.shape[0] <= arr.shape[1] else 1
+            if arr.shape[0] <= arr.shape[1]:
+                raise ValueError(
+                    f"Cannot infer channel vs Z axis for 4D image shape {arr.shape} at {path}: "
+                    "both leading dimensions are <= 20 and the first is not larger than the second. "
+                    "Provide CZI/ND2/TIFF axis metadata, "
+                    "or use a stack where Z and C differ enough for the size heuristic "
+                    "(Z > C for Z×C×Y×X, or C > Z for C×Z×Y×X)."
+                )
+            channel_axis = 1
         elif arr.shape[0] <= 20:
             channel_axis = 0
         elif arr.shape[1] <= 20:

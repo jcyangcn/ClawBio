@@ -722,6 +722,37 @@ class TestLoadImage:
         assert n == 4
         np.testing.assert_array_equal(arr, source)
 
+    def test_load_4d_heuristic_raises_when_z_le_c_and_no_metadata(self, tmp_path):
+        import types
+
+        path = tmp_path / "img.czi"
+        path.write_bytes(b"")
+        source = np.zeros((3, 4, 16, 16), dtype=np.uint16)  # Z, C, Y, X — Z <= C
+
+        class _FakeCziFile:
+            axes = "BTZYX"
+
+            def __init__(self, image):
+                self.image = image
+
+            def asarray(self):
+                return source
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        fake_czi = types.ModuleType("czifile")
+        fake_czi.CziFile = _FakeCziFile
+
+        with patch.dict("sys.modules", {"czifile": fake_czi}):
+            with pytest.raises(ValueError, match="Cannot infer channel vs Z axis"):
+                cell_detection.load_image(str(path), z_projection="max")
+            with pytest.raises(ValueError, match="Cannot infer channel vs Z axis"):
+                cell_detection.load_image(str(path), z_projection="none")
+
 
 # ---------------------------------------------------------------------------
 # TestDemoImageEdgeCells
