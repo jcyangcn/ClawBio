@@ -1153,6 +1153,13 @@ SKILLS = {
         "allowed_extra_flags": set(),
         "accepts_genotypes": False,
     },
+    "cnv-acmg": {
+        "script": SKILLS_DIR / "cnv-acmg-classifier" / "cnv_acmg_classifier.py",
+        "demo_args": ["--demo"],
+        "description": "CNV/SV ACMG classifier (ClinGen 2019 / Riggs 2020 dosage point framework)",
+        "allowed_extra_flags": {"--dosage-map", "--gene-model"},
+        "accepts_genotypes": False,
+    },
     "fastreer": {
         "script": SKILLS_DIR / "fastreer" / "fastreer.py",
         "demo_args": ["--demo"],
