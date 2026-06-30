@@ -6,6 +6,24 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ## [Unreleased] — 0.1.0
 
+### Fixed
+
+- **`clawbio run rnaseq-pipeline` now forwards `-c`/`--config` Nextflow config
+  files.** The launcher (`clawbio/cli.py`) accepted `-c`/`--config` but forwarded
+  only `--nextflow-config`, silently dropping configs supplied with the short or
+  `--config` spelling. The three spellings are now a single repeatable option and
+  every entry is forwarded as `--nextflow-config` (which the wrapper accepts as an
+  alias), so config files reach Nextflow regardless of spelling.
+- **`--timeout-hours` and `--allow-pipeline-version-override` are now forwardable.**
+  Both are real wrapper flags (and were already exposed for the sibling pipelines)
+  but were absent from the launcher allowlist, so the extra-args filter dropped
+  them before they reached the wrapper. `--allow-pipeline-version-override` is also
+  recorded as value-free so the filter cannot consume the following token.
+- **Output directory inside the repository now raises the dedicated
+  `OUTPUT_DIR_INSIDE_REPO` code** instead of the misleading
+  `OUTPUT_DIR_NOT_WRITABLE` (which implied a permissions problem), matching
+  nfcore-sarek and nfcore-scrnaseq.
+
 ### Added
 
 - **`--allow-remote-inputs` opt-in (local-first by default).** Remote samplesheet

@@ -37,6 +37,7 @@ from schemas import (
     NEXTFLOW_MIN_VERSION,
     NEXTFLOW_MIN_VERSION_DISPLAY,
     PRESET_REQUIREMENTS,
+    PROJECT_ROOT,
     SUPPORTED_PRESETS,
     SUPPORTED_PROFILES,
     SYMBOLIC_REFERENCE_FIELDS,
@@ -407,7 +408,26 @@ _ALLOWED_REPRO_FILES = frozenset(
 )
 
 
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
 def _check_output_dir(output_dir: Path, *, resume: bool) -> None:
+    # Refuse to write pipeline outputs inside the ClawBio source tree — large
+    # upstream artifacts would pollute the repository. Parity with nfcore-rnaseq /
+    # nfcore-sarek. Checked before mkdir so no directory is created on rejection.
+    if _is_relative_to(output_dir.expanduser().resolve(), PROJECT_ROOT.resolve()):
+        raise SkillError(
+            stage="preflight",
+            error_code=ErrorCode.OUTPUT_DIR_INSIDE_REPO,
+            message="Output directory cannot be inside the ClawBio source tree.",
+            fix="Choose an output directory outside the repository, for example under your analysis workspace.",
+            details={"output_dir": str(output_dir), "project_root": str(PROJECT_ROOT.resolve())},
+        )
     if output_dir.exists() and not output_dir.is_dir():
         raise SkillError(
             stage="preflight",

@@ -6,6 +6,18 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ## [Unreleased] — 0.1.0
 
+### Fixed
+
+- **`clawbio run scrnaseq-pipeline` now forwards `--nextflow-config`.** The launcher
+  (`clawbio/cli.py`) forwarded only `-c`/`--config`, silently dropping configs
+  supplied via `--nextflow-config`. All three spellings are now a single repeatable
+  option, normalised and forwarded as `--nextflow-config` (the wrapper accepts them
+  as aliases).
+- **Output directory inside the ClawBio source tree is now rejected** at preflight
+  with the dedicated `OUTPUT_DIR_INSIDE_REPO` code, matching nfcore-rnaseq and
+  nfcore-sarek. Previously this wrapper alone permitted writing multi-gigabyte
+  pipeline outputs into the repository checkout.
+
 ### Changed
 
 - **Remote input/reference URIs are gated behind `--allow-remote-inputs`

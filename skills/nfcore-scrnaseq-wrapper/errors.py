@@ -44,6 +44,10 @@ class ErrorCode:
     REMOTE_INPUT_NOT_ALLOWED = "REMOTE_INPUT_NOT_ALLOWED"
     OUTPUT_DIR_NOT_EMPTY = "OUTPUT_DIR_NOT_EMPTY"
     OUTPUT_DIR_NOT_WRITABLE = "OUTPUT_DIR_NOT_WRITABLE"
+    # Writing pipeline outputs inside the ClawBio source tree would pollute the
+    # repository, so it is refused with a dedicated, self-describing code (parity
+    # with nfcore-sarek / nfcore-rnaseq) rather than the generic _NOT_WRITABLE.
+    OUTPUT_DIR_INSIDE_REPO = "OUTPUT_DIR_INSIDE_REPO"
     MISSING_REFERENCE = "MISSING_REFERENCE"
     CONFLICTING_REFERENCES = "CONFLICTING_REFERENCES"
     INVALID_PRESET_CONFIGURATION = "INVALID_PRESET_CONFIGURATION"

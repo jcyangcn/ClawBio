@@ -6,6 +6,18 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ## [Unreleased] — 0.1.0
 
+### Fixed
+
+- **`clawbio run sarek-pipeline` now forwards `-c`/`--config` Nextflow config
+  files.** The launcher (`clawbio/cli.py`) accepted `-c`/`--config` but forwarded
+  only `--nextflow-config`, silently dropping configs supplied with the short or
+  `--config` spelling. All three spellings are now normalised and forwarded as
+  `--nextflow-config` (the wrapper accepts them as aliases).
+- **`--allow-remote-inputs` and `--allow-pipeline-version-override` are recorded as
+  value-free in the launcher allowlist.** Both are `store_true` wrapper flags but
+  were listed only among value-taking flags, so the extra-args filter could consume
+  the following token as a spurious value. They are now in the without-values set.
+
 ### Added
 
 - **`--allow-remote-inputs` opt-in (local-first by default).** Remote samplesheet

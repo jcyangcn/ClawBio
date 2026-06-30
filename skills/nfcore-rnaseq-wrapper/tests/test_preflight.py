@@ -245,7 +245,9 @@ def test_output_dir_inside_repo_is_rejected(tmp_path, monkeypatch):
     inside = _SKILL_DIR / "tmp-test-output"
     with pytest.raises(SkillError) as exc:
         _run(_args(tmp_path, output=str(inside)), _samplesheet(tmp_path))
-    assert exc.value.error_code == ErrorCode.OUTPUT_DIR_NOT_WRITABLE
+    # A dedicated, self-describing code (matching nfcore-sarek/scrnaseq) rather than
+    # the generic OUTPUT_DIR_NOT_WRITABLE, which wrongly implies a permissions issue.
+    assert exc.value.error_code == ErrorCode.OUTPUT_DIR_INSIDE_REPO
 
 
 def test_reference_accepts_genome_shortcut(tmp_path, monkeypatch):

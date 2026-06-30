@@ -1003,3 +1003,84 @@ def test_detect_repo_root_finds_clawbio_py(module):
     root = module._detect_repo_root()
     # Should be a Path; may or may not contain clawbio.py depending on layout
     assert isinstance(root, Path)
+
+
+# ── clawbio runner allowlist stays in sync with the wrapper CLI ────────────────
+# A flag must be in clawbio.cli.SKILLS["sarek-pipeline"]["allowed_extra_flags"]
+# (and, when value-free, also in allowed_extra_flags_without_values) or the
+# extra-args filter silently drops it / swallows the following token.
+
+
+def _sarek_pipeline_allowlist() -> tuple[set[str], set[str]]:
+    from clawbio.cli import SKILLS
+
+    entry = SKILLS.get("sarek-pipeline", {})
+    return (
+        set(entry.get("allowed_extra_flags") or ()),
+        set(entry.get("allowed_extra_flags_without_values") or ()),
+    )
+
+
+def _wrapper_option_flags(module) -> tuple[set[str], set[str]]:
+    """Return (all option strings, value-free option strings) for the wrapper parser."""
+    import argparse
+
+    parser = module.build_parser()
+    all_opts: set[str] = set()
+    no_value: set[str] = set()
+    for action in parser._actions:
+        for opt in action.option_strings:
+            all_opts.add(opt)
+            if (
+                isinstance(
+                    action,
+                    (
+                        argparse._StoreTrueAction,
+                        argparse._StoreFalseAction,
+                        argparse._CountAction,
+                        argparse._HelpAction,
+                    ),
+                )
+                or action.nargs == 0
+            ):
+                no_value.add(opt)
+    return all_opts, no_value
+
+
+def test_clawbio_allow_remote_inputs_is_value_free_for_sarek_pipeline():
+    """--allow-remote-inputs is a store_true wrapper flag; it must live in the
+    boolean (value-free) set, otherwise the extra-args filter treats it as
+    value-taking and consumes the following argument as its value."""
+    allowed, booleans = _sarek_pipeline_allowlist()
+    assert "--allow-remote-inputs" in allowed
+    assert "--allow-remote-inputs" in booleans
+
+
+def test_clawbio_allow_pipeline_version_override_is_value_free_for_sarek_pipeline():
+    """--allow-pipeline-version-override is store_true and must be value-free too."""
+    allowed, booleans = _sarek_pipeline_allowlist()
+    assert "--allow-pipeline-version-override" in allowed
+    assert "--allow-pipeline-version-override" in booleans
+
+
+def test_sarek_pipeline_allowlist_consistent_with_wrapper(module):
+    """The clawbio runner allowlist must stay coherent with the wrapper parser:
+
+    * every allow-listed flag is a real wrapper flag, and
+    * the value/boolean classification matches the wrapper so the extra-args
+      filter neither drops a value nor swallows the next token.
+    """
+    values, booleans = _sarek_pipeline_allowlist()
+    allowed = values | booleans
+    all_opts, no_value = _wrapper_option_flags(module)
+
+    assert allowed <= all_opts, f"allowlist flags absent from wrapper: {sorted(allowed - all_opts)}"
+    boolean_allowed = no_value & allowed
+    assert boolean_allowed <= booleans, (
+        "value-free wrapper flags missing from the without-values set: "
+        f"{sorted(boolean_allowed - booleans)}"
+    )
+    assert booleans <= no_value, (
+        "flags marked value-free but the wrapper expects a value: "
+        f"{sorted(booleans - no_value)}"
+    )

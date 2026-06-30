@@ -420,7 +420,7 @@ def _check_output_dir(output_dir: Path, *, resume: bool) -> None:
     if _is_relative_to(output_dir, PROJECT_ROOT.resolve()):
         raise SkillError(
             stage="preflight",
-            error_code=ErrorCode.OUTPUT_DIR_NOT_WRITABLE,
+            error_code=ErrorCode.OUTPUT_DIR_INSIDE_REPO,
             message="Output directory cannot be inside the ClawBio source tree.",
             fix="Choose an output directory outside the repository, for example under your analysis workspace.",
             details={"output_dir": str(output_dir), "project_root": str(PROJECT_ROOT.resolve())},
