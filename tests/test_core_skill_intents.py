@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from clawbio.cli import SKILLS
-from clawbio.skill_intents import load_skill_intent_descriptors, plan_skill_intent
+from clawbio.skill_intents import (
+    load_skill_intent_descriptors,
+    plan_skill_intent,
+    skill_intent_tool_summary,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -26,7 +31,18 @@ def test_core_descriptors_are_discoverable():
     descriptors = {descriptor["skill"]: descriptor for descriptor in loaded}
 
     assert len(descriptor_paths) == len(set(descriptor_paths))
-    assert {"gwas", "clinpgx", "pharmgx", "prs", "profile"} <= set(descriptors)
+    assert {
+        "gwas",
+        "clinpgx",
+        "pharmgx",
+        "prs",
+        "profile",
+        "fastreer",
+        "bioqc",
+        "analyze-fasta",
+        "phylo",
+        "cnv-acmg",
+    } <= set(descriptors)
 
 
 def test_gwas_descriptor_extracts_rsid_argument():
@@ -74,3 +90,33 @@ def test_profile_and_prs_demo_descriptors_route_explicit_demos():
     assert prs.status == "planned"
     assert prs.skill == "prs"
     assert prs.executions[0].argv[-1] == "--demo"
+
+
+def test_next_batch_demo_descriptors_route_explicit_demos():
+    cases = [
+        ("run the fastreer demo", "fastreer"),
+        ("run the bioqc demo", "bioqc"),
+        ("run the analyze-fasta demo", "analyze-fasta"),
+        ("run the phylo demo", "phylo"),
+        ("run the cnv acmg demo", "cnv-acmg"),
+    ]
+
+    for text, skill in cases:
+        weak = _plan(text.replace(" demo", ""), requested_skill=skill, requested_mode="demo")
+        explicit = _plan(text, requested_skill=skill, requested_mode="demo")
+
+        assert weak.status == "needs_input"
+        assert weak.intent_id == "legacy_fallback"
+        assert explicit.status == "planned"
+        assert explicit.skill == skill
+        assert explicit.intent_id == "demo_report"
+        assert explicit.executions[0].skill == skill
+        assert explicit.executions[0].argv[-1] == "--demo"
+
+
+def test_descriptor_tool_summary_remains_valid_json():
+    summary = skill_intent_tool_summary(SKILLS, PROJECT_ROOT)
+    payload = json.loads(summary)
+
+    assert isinstance(payload, list)
+    assert {item["skill"] for item in payload} & {"gwas", "clinpgx", "pharmgx"}

@@ -311,7 +311,7 @@ def skill_intent_tool_summary(
             summaries.append(item)
     if not summaries:
         return ""
-    return _cap_prompt_summary(json.dumps(summaries, separators=(",", ":"), sort_keys=True))
+    return _cap_prompt_summary_items(summaries)
 
 
 def skill_intent_prompt_guidance(
@@ -1307,6 +1307,22 @@ def _cap_prompt_summary(summary: str) -> str:
     if len(summary) <= PROMPT_SUMMARY_MAX_CHARS:
         return summary
     return summary[: PROMPT_SUMMARY_MAX_CHARS - 3].rstrip() + "..."
+
+
+def _cap_prompt_summary_items(summaries: list[dict[str, Any]]) -> str:
+    """Serialize descriptor summaries without truncating JSON mid-token."""
+    kept: list[dict[str, Any]] = []
+    for item in summaries:
+        candidate = [*kept, item]
+        encoded = json.dumps(candidate, separators=(",", ":"), sort_keys=True)
+        if len(encoded) > PROMPT_SUMMARY_MAX_CHARS:
+            break
+        kept = candidate
+    if not kept and summaries:
+        # Fall back to a minimal valid JSON summary for an unusually large item.
+        first = {"skill": summaries[0].get("skill"), "intents": []}
+        kept = [first]
+    return json.dumps(kept, separators=(",", ":"), sort_keys=True) if kept else ""
 
 
 def _is_relative_to(path: Path, base: Path) -> bool:
