@@ -216,7 +216,10 @@ def load_skill_intent_descriptors(
             continue
         data = _read_descriptor(skill_dir, alias)
         if data:
-            seen_paths.add(str(data["_descriptor_path"]))
+            descriptor_path = str(data["_descriptor_path"])
+            if descriptor_path in seen_paths:
+                continue
+            seen_paths.add(descriptor_path)
             descriptors.append(data)
 
     root = Path(project_root) if project_root else _project_root_from_registry(skill_registry)
@@ -308,7 +311,7 @@ def skill_intent_tool_summary(
             summaries.append(item)
     if not summaries:
         return ""
-    return _cap_prompt_summary(json.dumps(summaries, separators=(",", ":"), sort_keys=True))
+    return _cap_prompt_summary_items(summaries)
 
 
 def skill_intent_prompt_guidance(
@@ -706,11 +709,12 @@ def _plan_descriptor_route(
         argv = [sys.executable, str(project_root / "clawbio.py"), "run", step_skill]
         input_payload = None
         slot_values: dict[str, str] = {}
-        if isinstance(step.get("input_template"), dict):
+        if step.get("slots") is not None:
             slot_values, step_missing_slots = _extract_step_slots(text, step)
             if step_missing_slots:
                 missing_slots.update(step_missing_slots)
                 continue
+        if isinstance(step.get("input_template"), dict):
             input_payload = _fill_template(step["input_template"], slot_values)
             input_path = _materialize_request_payload(input_payload, descriptor_skill, intent_id, text)
         else:
@@ -733,7 +737,8 @@ def _plan_descriptor_route(
             argv.append("--demo")
         elif input_path:
             argv.extend(["--input", str(input_path)])
-        safe_args, arg_warnings = _safe_argv_list(step.get("args"), step_skill, skill_registry)
+        raw_args = _fill_template(step.get("args"), slot_values)
+        safe_args, arg_warnings = _safe_argv_list(raw_args, step_skill, skill_registry)
         warnings.extend(arg_warnings)
         contract_alerts.extend(
             _contract_alert(
@@ -1302,6 +1307,22 @@ def _cap_prompt_summary(summary: str) -> str:
     if len(summary) <= PROMPT_SUMMARY_MAX_CHARS:
         return summary
     return summary[: PROMPT_SUMMARY_MAX_CHARS - 3].rstrip() + "..."
+
+
+def _cap_prompt_summary_items(summaries: list[dict[str, Any]]) -> str:
+    """Serialize descriptor summaries without truncating JSON mid-token."""
+    kept: list[dict[str, Any]] = []
+    for item in summaries:
+        candidate = [*kept, item]
+        encoded = json.dumps(candidate, separators=(",", ":"), sort_keys=True)
+        if len(encoded) > PROMPT_SUMMARY_MAX_CHARS:
+            break
+        kept = candidate
+    if not kept and summaries:
+        # Fall back to a minimal valid JSON summary for an unusually large item.
+        first = {"skill": summaries[0].get("skill"), "intents": []}
+        kept = [first]
+    return json.dumps(kept, separators=(",", ":"), sort_keys=True) if kept else ""
 
 
 def _is_relative_to(path: Path, base: Path) -> bool:
