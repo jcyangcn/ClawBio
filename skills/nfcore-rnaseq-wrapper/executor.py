@@ -13,12 +13,33 @@ sys.path.insert(0, str(_SKILL_DIR))
 sys.modules.pop("_isolated_imports", None)
 from _isolated_imports import purge_foreign_bare_modules
 
-purge_foreign_bare_modules("errors")
+purge_foreign_bare_modules("errors", "schemas")
 
 from errors import ErrorCode, SkillError
+from schemas import is_under_tmp
 
 
 _PROCESS_TERMINATION_GRACE_SECONDS = 10
+
+
+def _macos_tmp_failure_hint(output_dir: Path) -> str:
+    """Extra fix hint when a run fails with --output under /tmp on macOS.
+
+    Colima/Docker on macOS does not share /tmp into the VM, a frequent cause of
+    '.command.run: No such file or directory' mid-run. Preflight already WARNs about
+    this; we repeat the actionable hint on failure so the cause is obvious. Empty
+    string on other platforms or when --output is not under /tmp. Mirrors the
+    nfcore-scrnaseq executor hint so the three wrappers behave the same on macOS.
+    """
+    if sys.platform != "darwin":
+        return ""
+    if not is_under_tmp(output_dir):
+        return ""
+    return (
+        " On macOS, --output is under /tmp, which Docker/Colima does not share into its VM; "
+        "this commonly surfaces as '.command.run: No such file or directory'. "
+        "Move --output to a path under your HOME directory and re-run."
+    )
 
 
 def execute_nextflow(
@@ -82,7 +103,10 @@ def execute_nextflow(
             stage="execution",
             error_code=ErrorCode.EXECUTION_FAILED,
             message="Nextflow execution failed.",
-            fix="Inspect logs/stdout.txt and logs/stderr.txt, then correct the failing input or environment.",
+            fix=(
+                "Inspect logs/stdout.txt and logs/stderr.txt, then correct the failing input or environment."
+                + _macos_tmp_failure_hint(output_dir)
+            ),
             details={
                 "exit_code": exit_code,
                 "stdout": str(stdout_path),

@@ -640,7 +640,35 @@ def test_macos_docker_tmp_warning(tmp_path, monkeypatch):
     # macOS (sandbox/permissions prevent creating /tmp subdirs in CI/test env).
     monkeypatch.setattr(preflight, "check_output_dir_available", lambda *a, **kw: None)
     result = _run(_args(tmp_path, output="/tmp/clawbio-rnaseq-test"), _samplesheet(tmp_path))
-    assert any("/tmp" in warning for warning in result["warnings"])
+    tmp_warnings = [w for w in result["warnings"] if "/tmp" in w]
+    assert tmp_warnings, result["warnings"]
+    msg = " ".join(tmp_warnings)
+    # Must describe the real failure mode (a hard '.command.run: No such file or
+    # directory' because Colima does not share /tmp into its VM) and give the
+    # actionable fix — parity with nfcore-sarek / nfcore-scrnaseq, not the old
+    # misleading "may be slow / VirtioFS" wording.
+    assert "No such file or directory" in msg
+    assert "home" in msg.lower()
+    assert "slow" not in msg.lower()
+
+
+def test_macos_docker_tmp_warning_resolves_private_tmp(tmp_path, monkeypatch):
+    """Detection is resolve-based (is_under_tmp), so the macOS-canonical
+    /private/tmp is caught just like /tmp."""
+    _mock_env(monkeypatch)
+    monkeypatch.setattr(preflight.sys, "platform", "darwin")
+    monkeypatch.setattr(preflight, "check_output_dir_available", lambda *a, **kw: None)
+    result = _run(_args(tmp_path, output="/private/tmp/clawbio-rnaseq-test"), _samplesheet(tmp_path))
+    assert any("No such file or directory" in w for w in result["warnings"])
+
+
+def test_macos_docker_non_tmp_output_has_no_tmp_warning(tmp_path, monkeypatch):
+    """A normal (non-/tmp) output directory must not trigger the /tmp guard."""
+    _mock_env(monkeypatch)
+    monkeypatch.setattr(preflight.sys, "platform", "darwin")
+    out = tmp_path / "out"
+    result = _run(_args(tmp_path, output=str(out)), _samplesheet(tmp_path))
+    assert not any("No such file or directory" in w for w in result["warnings"])
 
 
 def test_email_on_fail_invalid_rejected(tmp_path, monkeypatch):

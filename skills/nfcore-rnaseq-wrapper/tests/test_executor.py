@@ -81,6 +81,31 @@ def test_execute_nextflow_raises_on_nonzero_exit_and_keeps_logs(tmp_path, monkey
     assert (tmp_path / "logs" / "stderr.txt").exists()
 
 
+def test_execute_nextflow_failure_appends_macos_tmp_hint(tmp_path, monkeypatch):
+    """On macOS, a failed run with --output under /tmp must append the actionable
+    Colima / 'No such file or directory' hint to the fix (parity with
+    nfcore-scrnaseq), so the silent cause of the failure is surfaced."""
+    proc = _MockProc(returncode=1)
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **kw: proc)
+    monkeypatch.setattr(executor_module.sys, "platform", "darwin")
+    monkeypatch.setattr(executor_module, "is_under_tmp", lambda _p: True, raising=False)
+    with pytest.raises(SkillError) as exc:
+        execute_nextflow(["nextflow", "run", "test"], cwd=tmp_path, output_dir=tmp_path, timeout_seconds=60)
+    assert "No such file or directory" in exc.value.fix
+    assert "home" in exc.value.fix.lower()
+
+
+def test_execute_nextflow_failure_no_tmp_hint_when_not_under_tmp(tmp_path, monkeypatch):
+    """The macOS /tmp hint must not appear for a non-/tmp output directory."""
+    proc = _MockProc(returncode=1)
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **kw: proc)
+    monkeypatch.setattr(executor_module.sys, "platform", "darwin")
+    monkeypatch.setattr(executor_module, "is_under_tmp", lambda _p: False, raising=False)
+    with pytest.raises(SkillError) as exc:
+        execute_nextflow(["nextflow", "run", "test"], cwd=tmp_path, output_dir=tmp_path, timeout_seconds=60)
+    assert "No such file or directory" not in exc.value.fix
+
+
 def test_execute_nextflow_starts_new_session_on_posix(tmp_path, monkeypatch):
     proc = _MockProc(returncode=0)
     popen_kwargs = {}

@@ -23,6 +23,15 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
   `OUTPUT_DIR_INSIDE_REPO` code** instead of the misleading
   `OUTPUT_DIR_NOT_WRITABLE` (which implied a permissions problem), matching
   nfcore-sarek and nfcore-scrnaseq.
+- **macOS + Docker `/tmp` guard is now accurate and robust (demo-mode parity).**
+  The preflight warning previously said output under `/tmp` "may be slow or
+  unreliable due to VirtioFS behavior", which mis-describes the actual failure:
+  Colima does not share `/tmp` into its VM, so a `/tmp` work-dir hard-fails with
+  `.command.run: No such file or directory`. The warning now states the real
+  cause and fix (move `--output` under HOME), uses a resolve-based
+  `is_under_tmp` check (shared in `schemas.py`) instead of a brittle string
+  prefix, and the executor appends the same actionable hint to `EXECUTION_FAILED`
+  — matching nfcore-sarek and nfcore-scrnaseq.
 
 ### Added
 

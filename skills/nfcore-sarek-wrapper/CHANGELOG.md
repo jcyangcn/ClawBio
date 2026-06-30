@@ -17,6 +17,12 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
   value-free in the launcher allowlist.** Both are `store_true` wrapper flags but
   were listed only among value-taking flags, so the extra-args filter could consume
   the following token as a spurious value. They are now in the without-values set.
+- **macOS + Docker `/tmp` post-failure hint (demo-mode parity).** When a run fails
+  with `--output` under `/tmp` on macOS, the executor now appends the actionable
+  Colima / `.command.run: No such file or directory` hint to `EXECUTION_FAILED`,
+  matching nfcore-scrnaseq (the preflight WARNING already existed). The
+  `is_under_tmp` check is consolidated into `schemas.py` as the single source of
+  truth shared by preflight and the executor.
 
 ### Added
 

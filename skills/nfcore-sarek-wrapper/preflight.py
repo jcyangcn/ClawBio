@@ -43,6 +43,7 @@ from schemas import (
     DEFAULT_IGENOMES_BASE,
     JAVA_MIN_VERSION,
     NEXTFLOW_MIN_VERSION,
+    is_under_tmp,
     SUPPORTED_ALIGNERS,
     SUPPORTED_ASCAT_GENOME,
     SUPPORTED_GATK_PCR_INDEL_MODEL,
@@ -564,22 +565,6 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
     return True
 
 
-def _is_under_tmp(path: Path) -> bool:
-    """True when ``path`` resolves to (or inside) /tmp or /private/tmp."""
-    try:
-        resolved = path.expanduser().resolve()
-    except OSError:
-        return False
-    for base in (Path("/tmp"), Path("/private/tmp")):
-        try:
-            base_resolved = base.resolve()
-        except OSError:
-            continue
-        if resolved == base_resolved or base_resolved in resolved.parents:
-            return True
-    return False
-
-
 def _check_macos_docker_tmp(profile: str, output_dir: Path) -> list[str]:
     """Warn when a macOS + Docker run writes under /tmp.
 
@@ -591,7 +576,7 @@ def _check_macos_docker_tmp(profile: str, output_dir: Path) -> list[str]:
     """
     if sys.platform != "darwin" or "docker" not in _profile_tokens(profile):
         return []
-    if _is_under_tmp(output_dir):
+    if is_under_tmp(output_dir):
         return [
             "Output directory is under /tmp. On macOS with Colima, Docker "
             "containers cannot see files written to /tmp (the VM uses its own "

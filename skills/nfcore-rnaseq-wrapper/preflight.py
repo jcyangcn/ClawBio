@@ -35,6 +35,7 @@ from schemas import (
     JAVA_MIN_VERSION,
     NEXTFLOW_MIN_VERSION,
     PROJECT_ROOT,
+    is_under_tmp,
     SUPPORTED_ALIGNERS,
     SUPPORTED_IGENOMES_NAMES,
     SUPPORTED_PSEUDO_ALIGNERS,
@@ -1594,9 +1595,21 @@ def _collect_demo_warnings(args, warnings: list[str]) -> None:
 def _collect_platform_warnings(args, output_dir: Path, warnings: list[str]) -> None:
     profile_parts = {p.strip() for p in getattr(args, "profile", "").split(",") if p.strip()}
     if sys.platform == "darwin" and "docker" in profile_parts:
-        output_text = output_dir.as_posix()
-        if output_text.startswith("/tmp/") or output_text.startswith("/private/tmp/"):
-            warnings.append("On macOS Docker, output under /tmp may be slow or unreliable due to VirtioFS behavior.")
+        # Colima (a common macOS Docker runtime) only shares the user HOME into
+        # its VM; /tmp and /private/tmp live on the VM's own filesystem and are
+        # NOT shared with the host, so Nextflow's work-dir files are invisible to
+        # containers and the run fails with '.command.run: No such file or
+        # directory'. Use a resolve-based check and the accurate message so this
+        # matches the nfcore-sarek / nfcore-scrnaseq guards (not the old, wrong
+        # "may be slow / VirtioFS" wording, which describes a non-existent failure
+        # mode and would not steer the user away from /tmp).
+        if is_under_tmp(output_dir):
+            warnings.append(
+                "Output directory is under /tmp. On macOS with Colima, Docker "
+                "containers cannot see files written to /tmp (the VM uses its own "
+                "separate /tmp). Move --output under your home directory to avoid "
+                "'No such file or directory' errors."
+            )
         _warn_macos_star_index_memory(args, warnings)
 
 
