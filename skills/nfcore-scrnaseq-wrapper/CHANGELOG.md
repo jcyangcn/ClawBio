@@ -17,6 +17,13 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
   with the dedicated `OUTPUT_DIR_INSIDE_REPO` code, matching nfcore-rnaseq and
   nfcore-sarek. Previously this wrapper alone permitted writing multi-gigabyte
   pipeline outputs into the repository checkout.
+- **`--demo` under `NXF_OFFLINE` now fails fast with a clear message.** Demo mode
+  runs nf-core's upstream `-profile test`, whose FASTQs and references are remote
+  GitHub URLs; on an offline/sandboxed host the nf-schema plugin previously aborted
+  with a cryptic `does not exist`. Preflight now detects `NXF_OFFLINE` + demo and
+  raises `DEMO_REQUIRES_NETWORK` with an actionable fix. Docs (SKILL.md, AGENTS.md)
+  clarify that `--demo` downloads only nf-core public test data — no user/genetic
+  data is uploaded — so it is compatible with the local-first guarantee.
 
 ### Changed
 

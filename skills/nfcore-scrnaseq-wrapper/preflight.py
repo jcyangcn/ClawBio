@@ -823,12 +823,42 @@ def _normalize_protocol_token(protocol: str) -> str:
     return re.sub(r"[\s_-]+", "", protocol.lower())
 
 
+def _check_demo_network(args) -> None:
+    """--demo runs nf-core's upstream ``-profile test``, whose inputs (test FASTQs and
+    reference FASTA/GTF) are remote GitHub URLs by design. Under ``NXF_OFFLINE`` the
+    nf-schema plugin aborts during parameter validation with a confusing
+    ``does not exist`` before any work starts, so fail early with an actionable message
+    instead. Downloading nf-core's PUBLIC test data does not conflict with the
+    local-first guarantee, which governs USER genetic data (never uploaded)."""
+    if not getattr(args, "demo", False):
+        return
+    offline = str(os.environ.get("NXF_OFFLINE", "")).strip().lower()
+    if offline in {"true", "1", "yes", "on"}:
+        raise SkillError(
+            stage="preflight",
+            error_code=ErrorCode.DEMO_REQUIRES_NETWORK,
+            message=(
+                "--demo runs the upstream nf-core `-profile test`, which downloads its test "
+                "datasets and reference files from GitHub, but NXF_OFFLINE is set — Nextflow "
+                "would abort during parameter validation because the remote test inputs cannot "
+                "be reached."
+            ),
+            fix=(
+                "Unset NXF_OFFLINE to run the demo (it fetches only nf-core's public test data — "
+                "no user or genetic data is uploaded), or run a real analysis with your own local "
+                "--input samplesheet and references, which is fully offline."
+            ),
+            details={"NXF_OFFLINE": os.environ.get("NXF_OFFLINE")},
+        )
+
+
 def run_preflight(
     args,
     *,
     pipeline_source: dict[str, object],
     samplesheet_summary: dict[str, Any],
 ) -> dict[str, object]:
+    _check_demo_network(args)
     _warn_if_native_windows()
     _check_remote_inputs(args, samplesheet_summary)
     _check_supported_preset(args.preset)

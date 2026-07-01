@@ -1207,6 +1207,52 @@ def test_run_preflight_happy_path(tmp_path, stub_binaries):
     assert isinstance(result, PreflightResult)
 
 
+# --- --demo offline gate (nf-core -profile test is remote by design) ---------
+
+def test_check_demo_network_offline_test_profile_raises(monkeypatch):
+    """--demo composes the upstream `-profile test`, whose inputs/references are
+    remote GitHub URLs; under NXF_OFFLINE it must fail fast with a clear
+    DEMO_REQUIRES_NETWORK error instead of a cryptic Nextflow abort."""
+    import preflight as _pf
+
+    monkeypatch.setenv("NXF_OFFLINE", "true")
+    with pytest.raises(SkillError) as exc:
+        _pf._check_demo_network({"profile": "docker,test"})
+    assert exc.value.error_code == ErrorCode.DEMO_REQUIRES_NETWORK
+
+
+def test_check_demo_network_offline_real_run_not_blocked(monkeypatch):
+    """A real (non-test-profile) run is fully local; NXF_OFFLINE must not block it."""
+    import preflight as _pf
+
+    monkeypatch.setenv("NXF_OFFLINE", "true")
+    _pf._check_demo_network({"profile": "docker"})
+
+
+def test_check_demo_network_test_profile_online_not_blocked(monkeypatch):
+    """A test-profile run with network available must not trip the guard."""
+    import preflight as _pf
+
+    monkeypatch.delenv("NXF_OFFLINE", raising=False)
+    _pf._check_demo_network({"profile": "docker,test"})
+
+
+def test_run_preflight_demo_offline_raises(tmp_path, stub_binaries, monkeypatch):
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    params = make_params(step="mapping", aligner="bwa-mem", profile="docker,test", tools=["haplotypecaller"])
+    monkeypatch.setenv("NXF_OFFLINE", "true")
+    with pytest.raises(SkillError) as exc:
+        run_preflight(
+            params=params,
+            samplesheet=make_samplesheet(analysis_mode="germline"),
+            pipeline_source=make_pipeline_source(),
+            output_dir=tmp_path / "results",
+            repo_root=repo_root,
+        )
+    assert exc.value.error_code == ErrorCode.DEMO_REQUIRES_NETWORK
+
+
 # --- --allow-remote-inputs gate (local-first by default) ---------------------
 
 def test_remote_samplesheet_input_rejected_by_default():

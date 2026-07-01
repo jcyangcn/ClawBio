@@ -265,6 +265,9 @@ def run_preflight(
     warnings_acc: list[str] = []
     notes_acc: list[str] = []
 
+    # --demo requires network (nf-core's remote -profile test). Fail fast under NXF_OFFLINE.
+    _check_demo_network(params)
+
     # Local-first gate: reject remote inputs/references unless opted in.
     _check_remote_inputs(params, samplesheet, allow_remote_inputs=allow_remote_inputs)
 
@@ -1501,6 +1504,35 @@ def _uses_upstream_test_profile(params: dict[str, Any]) -> bool:
         if part.strip()
     }
     return any(part == "test" or part.startswith("test_") for part in profiles)
+
+
+def _check_demo_network(params: dict[str, Any]) -> None:
+    """--demo composes nf-core's upstream ``-profile test``, whose inputs (test FASTQs
+    and reference FASTA/GTF) are remote GitHub URLs by design. Under ``NXF_OFFLINE`` the
+    nf-schema plugin aborts during parameter validation with a confusing
+    ``does not exist`` before any work starts, so fail early with an actionable message
+    instead. Downloading nf-core's PUBLIC test data does not conflict with the
+    local-first guarantee, which governs USER genetic data (never uploaded)."""
+    if not _uses_upstream_test_profile(params):
+        return
+    offline = str(os.environ.get("NXF_OFFLINE", "")).strip().lower()
+    if offline in {"true", "1", "yes", "on"}:
+        raise SkillError(
+            stage="preflight",
+            error_code=ErrorCode.DEMO_REQUIRES_NETWORK,
+            message=(
+                "--demo runs the upstream nf-core `-profile test`, which downloads its test "
+                "datasets and reference files from GitHub, but NXF_OFFLINE is set — Nextflow "
+                "would abort during parameter validation because the remote test inputs cannot "
+                "be reached."
+            ),
+            fix=(
+                "Unset NXF_OFFLINE to run the demo (it fetches only nf-core's public test data — "
+                "no user or genetic data is uploaded), or run a real analysis with your own local "
+                "--input samplesheet and references, which is fully offline."
+            ),
+            details={"NXF_OFFLINE": os.environ.get("NXF_OFFLINE")},
+        )
 
 
 def _check_flag_compatibility(*, params: dict[str, Any], tools: list[str]) -> list[str]:

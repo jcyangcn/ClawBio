@@ -23,6 +23,13 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
   `OUTPUT_DIR_INSIDE_REPO` code** instead of the misleading
   `OUTPUT_DIR_NOT_WRITABLE` (which implied a permissions problem), matching
   nfcore-sarek and nfcore-scrnaseq.
+- **`--demo` under `NXF_OFFLINE` now fails fast with a clear message.** Demo mode
+  runs nf-core's upstream `-profile test`, whose FASTQs and references are remote
+  GitHub URLs; on an offline/sandboxed host the nf-schema plugin previously aborted
+  with a cryptic `does not exist`. Preflight now detects `NXF_OFFLINE` + demo and
+  raises `DEMO_REQUIRES_NETWORK` with an actionable fix. Docs (SKILL.md, AGENTS.md)
+  clarify that `--demo` downloads only nf-core public test data — no user/genetic
+  data is uploaded — so it is compatible with the local-first guarantee.
 - **macOS + Docker `/tmp` guard is now accurate and robust (demo-mode parity).**
   The preflight warning previously said output under `/tmp` "may be slow or
   unreliable due to VirtioFS behavior", which mis-describes the actual failure:

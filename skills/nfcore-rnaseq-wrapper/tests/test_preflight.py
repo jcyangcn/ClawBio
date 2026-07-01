@@ -671,6 +671,32 @@ def test_macos_docker_non_tmp_output_has_no_tmp_warning(tmp_path, monkeypatch):
     assert not any("No such file or directory" in w for w in result["warnings"])
 
 
+def test_demo_under_nxf_offline_is_rejected(tmp_path, monkeypatch):
+    """--demo runs nf-core's remote `-profile test`; under NXF_OFFLINE it cannot
+    fetch its test data, so preflight must fail fast with a clear, actionable
+    DEMO_REQUIRES_NETWORK error instead of a cryptic Nextflow 'does not exist'."""
+    _mock_env(monkeypatch)
+    monkeypatch.setenv("NXF_OFFLINE", "true")
+    with pytest.raises(SkillError) as exc:
+        _run(_args(tmp_path, demo=True), _samplesheet(tmp_path))
+    assert exc.value.error_code == ErrorCode.DEMO_REQUIRES_NETWORK
+
+
+def test_demo_without_nxf_offline_not_blocked(tmp_path, monkeypatch):
+    """A demo with network available (no NXF_OFFLINE) must not trip the guard."""
+    _mock_env(monkeypatch)
+    monkeypatch.delenv("NXF_OFFLINE", raising=False)
+    _run(_args(tmp_path, demo=True), _samplesheet(tmp_path))
+
+
+def test_nxf_offline_real_run_not_blocked(tmp_path, monkeypatch):
+    """A real (non-demo) run is fully local, so NXF_OFFLINE must not block it —
+    the guard is specific to --demo's remote test profile."""
+    _mock_env(monkeypatch)
+    monkeypatch.setenv("NXF_OFFLINE", "true")
+    _run(_args(tmp_path, demo=False), _samplesheet(tmp_path))
+
+
 def test_email_on_fail_invalid_rejected(tmp_path, monkeypatch):
     _mock_env(monkeypatch)
     with pytest.raises(SkillError):

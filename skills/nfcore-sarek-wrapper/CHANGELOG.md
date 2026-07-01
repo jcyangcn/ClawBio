@@ -17,6 +17,13 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
   value-free in the launcher allowlist.** Both are `store_true` wrapper flags but
   were listed only among value-taking flags, so the extra-args filter could consume
   the following token as a spurious value. They are now in the without-values set.
+- **`--demo` under `NXF_OFFLINE` now fails fast with a clear message.** Demo mode
+  composes nf-core's upstream `-profile test`, whose FASTQs and references are remote
+  GitHub URLs; on an offline/sandboxed host the nf-schema plugin previously aborted
+  with a cryptic `does not exist`. Preflight now detects `NXF_OFFLINE` + the test
+  profile and raises `DEMO_REQUIRES_NETWORK` with an actionable fix. Docs (SKILL.md,
+  AGENTS.md) clarify that `--demo` downloads only nf-core public test data — no
+  user/genetic data is uploaded — so it is compatible with the local-first guarantee.
 - **macOS + Docker `/tmp` post-failure hint (demo-mode parity).** When a run fails
   with `--output` under `/tmp` on macOS, the executor now appends the actionable
   Colima / `.command.run: No such file or directory` hint to `EXECUTION_FAILED`,
