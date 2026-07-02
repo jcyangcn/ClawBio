@@ -52,6 +52,11 @@ def test_run_studio_demo(tmp_path):
     payload = json.loads((out_dir / "result.json").read_text())
     assert payload["samples"][0]["organs"]["Heart"]["predicted_age_years"] > 0
 
+    report_text = (out_dir / "report.md").read_text()
+    assert "filtered partial-model predictions" in report_text
+    assert "Raw delta" in report_text
+    assert "Input Sanity" in report_text
+
 
 def test_cli_demo_smoke(tmp_path):
     out_dir = tmp_path / "cli_out"
@@ -77,3 +82,20 @@ def test_cli_demo_smoke(tmp_path):
     assert proc.returncode == 0, proc.stderr
     assert (out_dir / "report.md").exists()
     assert "Organ Aging Studio complete" in proc.stdout
+
+
+def test_cli_requires_input_or_demo(tmp_path):
+    script = SKILL_DIR / "organ_aging_studio.py"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--output",
+            str(tmp_path / "out"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert proc.returncode != 0
+    assert "Provide --input or use --demo" in proc.stderr

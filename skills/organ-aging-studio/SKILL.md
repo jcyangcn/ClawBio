@@ -42,7 +42,6 @@ metadata:
     packages:
       - pandas>=2.0
       - numpy>=1.24
-      - matplotlib>=3.7
       - requests>=2.28
   demo_data:
     - path: ../proteomics-clock/data/demo_olink_npx.csv.gz
@@ -104,6 +103,7 @@ predicted_age = intercept + Σ (protein_NPX × coefficient)
 | Hard to explain to clinicians / judges | `report.md` + `protein_contributions.csv` + JSON for agents |
 
 Built on the same pinned [organAging](https://github.com/ludgergoeminne/organAging) coefficients as `proteomics-clock`. **No invented weights.**
+Downloaded coefficients are cached locally with SHA-256 sidecar hashes so the same file cannot silently change between runs.
 
 ## Core Capabilities
 
@@ -111,6 +111,18 @@ Built on the same pinned [organAging](https://github.com/ludgergoeminne/organAgi
 2. **Gen1 / Gen2** — chronological age models or mortality hazard → years (Gompertz)
 3. **Protein filters** — `--top-n`, `--min-abs-coef`, single `--sample-id`
 4. **Structured outputs** — Markdown report, JSON, contribution table, replay `commands.sh`
+
+## Scope
+
+One skill, one task. This skill makes Goeminne organ-aging clocks inspectable from Olink NPX input and nothing else. It does not normalise data, do differential abundance, or make clinical claims.
+
+## Workflow
+
+1. **Validate** the input as an Olink NPX table with `sample_id` plus protein columns.
+2. **Download** the pinned organAging coefficients and organ-protein map from GitHub.
+3. **Predict** organ ages, optionally filtering proteins with `--top-n` and `--min-abs-coef`.
+4. **Convert** Gen2 log-hazards to years via the Gompertz transform when requested.
+5. **Write** `report.md`, `result.json`, `protein_contributions.csv`, and a replayable `commands.sh`.
 
 ## Input Formats
 
@@ -166,19 +178,28 @@ python skills/organ-aging-studio/organ_aging_studio.py \
 
 | File | Contents |
 |------|----------|
-| `report.md` | Per-organ predicted age, delta vs chronological age, protein counts |
+| `report.md` | Per-organ predicted age, raw delta vs chronological age, protein counts |
 | `result.json` | Full nested JSON for agents |
 | `tables/protein_contributions.csv` | Long-format NPX × coef × contribution |
 | `commands.sh` | Replay command |
 
 Example summary row (synthetic demo):
 
-| Organ | Predicted age | Chronological | Delta |
-|-------|---------------|---------------|-------|
+| Organ | Predicted age | Chronological | Raw delta |
+|-------|---------------|---------------|-----------|
 | Heart | ~67 yr | 66 yr | +1 yr |
 | Brain | ~42 yr | 66 yr | −24 yr |
 
 > Demo NPX is **synthetic** — do not use it to validate correlation with age. For real Olink data, see `data/PROVENANCE.md`.
+> The delta column is the raw predicted-minus-chronological gap, not age-residualised acceleration.
+
+## Gotchas
+
+- **Olink NPX is already log2-scaled**: Do not log-transform the input again.
+- **Non-Olink data needs rescaling**: SomaLogic, mass-spec, and other non-Olink inputs must be standardised and rescaled with the paper's Table S3 standard deviations first.
+- **Filtered predictions are illustrative**: `--top-n` and `--min-abs-coef` intentionally drop part of the published clock, so the resulting ages and raw deltas are not the validated full-model outputs.
+- **Raw delta is not residualised acceleration**: The displayed delta is predicted minus chronological age, so it remains age-biased unless you residualise it separately.
+- **Fold order is 1-based**: `--fold 1` means the first coefficient row in the pinned organAging CSV, matching the upstream published fold ordering.
 
 ## Real-world data (download separately)
 
@@ -195,7 +216,7 @@ Large cohorts are **not** bundled. See [`data/PROVENANCE.md`](data/PROVENANCE.md
 - Must state demo data is synthetic when using `--demo`
 - Must refuse clinical diagnosis language
 
-## Safety Rules
+## Safety
 
 - Educational / research use only — **not a medical device**
 - Do not run on identifiable patient data without consent

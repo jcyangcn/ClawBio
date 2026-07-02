@@ -25,9 +25,9 @@ if str(_PROTEOMICS_CLOCK_DIR) not in sys.path:
     sys.path.insert(0, str(_PROTEOMICS_CLOCK_DIR))
 
 from proteomics_clock import (  # noqa: E402
-    DEFAULT_ORGANS,
     DISCLAIMER,
     CITATION,
+    assess_input_npx_scale,
     download_coefficients,
     download_organ_proteins,
     load_input,
@@ -101,10 +101,12 @@ def compute_organ_age(
         "predicted_age_years": round(predicted, 2),
         "chronological_age_years": chrono_age,
         "age_delta_years": delta,
+        "raw_delta_years": delta,
         "intercept": round(intercept, 4),
         "n_proteins_used": len(contributions),
         "n_proteins_available": len(active),
         "n_proteins_in_model": len(protein_coefs),
+        "is_partial_prediction": len(active) < len(protein_coefs),
         "contributions": contributions,
     }
 
@@ -132,6 +134,8 @@ def run_studio(
             raise ValueError(f"sample_id '{sample_id}' not found in input")
         df = subset
 
+    input_warnings = assess_input_npx_scale(df)
+
     coefficients = download_coefficients(organs, generation, fold)
     organ_protein_map = download_organ_proteins()
 
@@ -141,6 +145,7 @@ def run_studio(
         "fold": fold,
         "organs": organs,
         "filters": {"top_n": top_n, "min_abs_coef": min_abs_coef},
+        "input_sanity_warnings": input_warnings,
         "samples": [],
     }
 
@@ -203,6 +208,9 @@ def run_studio(
 
 
 def build_report(results: dict[str, Any]) -> str:
+    filters = results.get("filters", {})
+    filters_active = bool(filters.get("top_n") or (filters.get("min_abs_coef") or 0.0) > 0)
+    input_warnings = results.get("input_sanity_warnings", [])
     lines = [
         "# Organ Aging Studio Report",
         "",
@@ -216,12 +224,20 @@ def build_report(results: dict[str, Any]) -> str:
         "",
     ]
 
+    if filters_active:
+        lines.extend(
+            [
+                "> Interpretation note: `--top-n` and/or `--min-abs-coef` were used, so these are filtered partial-model predictions rather than the validated full published clock.",
+                "",
+            ]
+        )
+
     for sample in results["samples"]:
         sid = sample["sample_id"]
         lines.append(f"### Sample `{sid}`")
         lines.append("")
-        lines.append("| Organ | Predicted age | Chronological | Delta | Proteins used |")
-        lines.append("|-------|---------------|---------------|-------|---------------|")
+        lines.append("| Organ | Predicted age | Chronological | Raw delta | Proteins used |")
+        lines.append("|-------|---------------|---------------|-----------|---------------|")
         for organ, data in sample["organs"].items():
             chrono = data["chronological_age_years"]
             chrono_s = f"{chrono:.1f}" if chrono is not None else "—"
@@ -235,6 +251,18 @@ def build_report(results: dict[str, Any]) -> str:
 
     lines.extend(
         [
+            "## Input Sanity",
+            "",
+        ]
+    )
+
+    if input_warnings:
+        lines.extend([f"- {warning}" for warning in input_warnings])
+    else:
+        lines.append("- No obvious unit issues detected.")
+
+    lines.extend(
+        [
             "## How prediction works",
             "",
             "```",
@@ -242,6 +270,7 @@ def build_report(results: dict[str, Any]) -> str:
             "```",
             "",
             "Coefficients are downloaded from the pinned [organAging](https://github.com/ludgergoeminne/organAging) repository.",
+            "Delta values are the raw predicted-minus-chronological gap, not age-residualised acceleration.",
             "",
             DISCLAIMER,
         ]
@@ -284,10 +313,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    args = build_parser().parse_args()
-    input_path = DEMO_DATA if args.demo else Path(args.input)
+    parser = build_parser()
+    args = parser.parse_args()
     if not args.demo and not args.input:
-        build_parser().error("Provide --input or use --demo")
+        parser.error("Provide --input or use --demo")
+    input_path = DEMO_DATA if args.demo else Path(args.input)
 
     organs = parse_organ_list(args.organs)
     result = run_studio(
