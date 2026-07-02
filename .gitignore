@@ -18,7 +18,6 @@ skills/pharmgx-reporter/report/
 skills/genome-compare/data/manuel_corpas_23andme.txt
 skills/pr-audit/
 data/
-pyaging_data/
 !skills/methylation-clock/data/
 !skills/methylation-clock/data/GSE139307_small.csv.gz
 !skills/rare-disease-rnaseq/data/
