@@ -24,6 +24,23 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
   raises `DEMO_REQUIRES_NETWORK` with an actionable fix. Docs (SKILL.md, AGENTS.md)
   clarify that `--demo` downloads only nf-core public test data — no user/genetic
   data is uploaded — so it is compatible with the local-first guarantee.
+- **nf-core-native snake_case flag spellings are now accepted via the launcher.**
+  nf-core parameters are snake_case while the wrapper exposes them as hyphenated
+  flags. A user copying an upstream nf-core command previously had the token
+  silently dropped by the launcher's INT-001 allowlist filter, which matches exact
+  (hyphenated) tokens. `clawbio run scrnaseq-pipeline` now canonicalises `_`↔`-`
+  when matching the allowlist and forwards the wrapper's canonical hyphen spelling
+  (which its parser already accepts). Scoped to the three nf-core pipeline skills;
+  other skills keep exact-match filtering.
+- **Environment post-failure hints on `EXECUTION_FAILED`.** When a run fails, the
+  executor scans the captured Nextflow logs and appends an actionable hint on a
+  known environment signature — diagnosed from the actual error text, so no
+  resource thresholds are invented. `Process requirement exceeds available memory`
+  yields a hint to cap resources via a `-c` config using `process.resourceLimits`;
+  `Network is unreachable` / a Java connection exception (common on IPv6-only /
+  NAT64 hosts, where the JVM prefers IPv4) yields a hint to verify outbound
+  DNS/HTTPS and set `NXF_OPTS='-Djava.net.preferIPv6Addresses=true'`. Shared
+  verbatim across the three wrappers.
 
 ### Changed
 

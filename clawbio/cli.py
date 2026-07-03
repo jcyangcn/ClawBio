@@ -1355,6 +1355,24 @@ def _promote_structured_result_fields(result: dict, out_dir: Path | None) -> Non
             result["report_md"] = report_md
 
 
+_NFCORE_PIPELINE_SKILLS = {"scrnaseq-pipeline", "rnaseq-pipeline", "sarek-pipeline"}
+
+
+def _canonical_extra_flag(flag: str) -> str:
+    """Normalise a long CLI flag to its hyphenated spelling.
+
+    nf-core parameters are snake_case (``--skip_tools``) while the pipeline
+    wrappers expose them as hyphenated flags (``--skip-tools``). Mapping the two
+    to a single canonical form lets the INT-001 allowlist recognise an
+    nf-core-native command copied from the upstream docs without enumerating
+    every underscore variant. Only the long-flag name is touched; short flags and
+    values are returned unchanged.
+    """
+    if flag.startswith("--"):
+        return "--" + flag[2:].replace("_", "-")
+    return flag
+
+
 def run_skill(
     skill_name: str,
     input_path: str | None = None,
@@ -1477,21 +1495,34 @@ def run_skill(
         allowed = skill_info.get("allowed_extra_flags", set())
         flags_without_values = skill_info.get("allowed_extra_flags_without_values", set())
         blocked = {"--input", "--output", "--demo"}
+        # nf-core parameters are snake_case; the pipeline wrappers expose them as
+        # hyphenated flags. For those skills, treat the two spellings as
+        # equivalent so an nf-core-native command is not silently dropped, and
+        # forward the wrapper's canonical hyphen spelling (which its parser
+        # already accepts). Other skills keep exact-match behaviour unchanged.
+        canonicalize = skill_name in _NFCORE_PIPELINE_SKILLS
+
+        def _key(token: str) -> str:
+            name = token.split("=", 1)[0]
+            return _canonical_extra_flag(name) if canonicalize else name
+
         filtered = []
         i = 0
         while i < len(extra_args):
-            flag = extra_args[i].split("=")[0]
+            token = extra_args[i]
+            flag = _key(token)
             if flag in blocked:
-                i += 2 if "=" not in extra_args[i] and i + 1 < len(extra_args) else i + 1
+                i += 2 if "=" not in token and i + 1 < len(extra_args) else i + 1
                 continue
             if flag in allowed:
-                filtered.append(extra_args[i])
+                _name, sep, value = token.partition("=")
+                filtered.append(f"{flag}={value}" if sep else flag)
                 if (
-                    "=" not in extra_args[i]
+                    not sep
                     and flag not in flags_without_values
                     and i + 1 < len(extra_args)
-                    and extra_args[i + 1].split("=")[0] not in allowed
-                    and extra_args[i + 1].split("=")[0] not in blocked
+                    and _key(extra_args[i + 1]) not in allowed
+                    and _key(extra_args[i + 1]) not in blocked
                 ):
                     filtered.append(extra_args[i + 1])
                     i += 1

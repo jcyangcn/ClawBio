@@ -30,9 +30,31 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
   matching nfcore-scrnaseq (the preflight WARNING already existed). The
   `is_under_tmp` check is consolidated into `schemas.py` as the single source of
   truth shared by preflight and the executor.
+- **nf-core-native snake_case flag spellings are now accepted.** nf-core's own
+  parameters are snake_case (`--skip_tools`, `--fasta_fai`, …) while the wrapper
+  exposes them as hyphenated flags (`--skip-tools`, `--fasta-fai`). A user copying
+  an upstream nf-core command previously had the token silently dropped: the
+  launcher's INT-001 allowlist filter matches exact tokens (all hyphenated), and
+  the wrapper parser only registered the hyphen spelling. Now `clawbio run
+  sarek-pipeline` canonicalises `_`↔`-` when matching the allowlist and forwards
+  the wrapper's canonical hyphen spelling, and the wrapper parser registers the
+  nf-core-native `--<param>` spelling as an alias of every schema passthrough flag
+  — so `--skip_tools baserecalibrator` reaches the pipeline whether invoked via the
+  launcher or the wrapper directly. The canonicalisation is scoped to the three
+  nf-core pipeline skills; other skills keep exact-match filtering.
 
 ### Added
 
+- **Environment post-failure hints on `EXECUTION_FAILED`.** When a run fails, the
+  executor scans the captured Nextflow logs and appends an actionable hint if it
+  finds a known environment signature — diagnosed from the actual error text, so no
+  resource thresholds are invented. `Process requirement exceeds available memory`
+  (nf-core's default request larger than the host) yields a hint to cap resources
+  via a `-c` config using `process.resourceLimits`; `Network is unreachable` / a
+  Java connection exception (common on IPv6-only / NAT64 hosts, where the JVM
+  prefers IPv4) yields a hint to verify outbound DNS/HTTPS and to set
+  `NXF_OPTS='-Djava.net.preferIPv6Addresses=true'`. Shared verbatim across the three
+  wrappers.
 - **`--allow-remote-inputs` opt-in (local-first by default).** Remote samplesheet
   inputs and user-supplied reference paths (`s3://`, `gs://`, `https://`, `ftp://`,
   …) are now rejected at preflight (`REMOTE_INPUT_NOT_ALLOWED`) unless the flag is

@@ -39,9 +39,28 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
   `is_under_tmp` check (shared in `schemas.py`) instead of a brittle string
   prefix, and the executor appends the same actionable hint to `EXECUTION_FAILED`
   — matching nfcore-sarek and nfcore-scrnaseq.
+- **nf-core-native snake_case flag spellings are now accepted via the launcher.**
+  nf-core parameters are snake_case (`--gene_bed`, `--transcript_fasta`, …) while
+  the wrapper exposes them as hyphenated flags. A user copying an upstream nf-core
+  command previously had the token silently dropped by the launcher's INT-001
+  allowlist filter, which matches exact (hyphenated) tokens. `clawbio run
+  rnaseq-pipeline` now canonicalises `_`↔`-` when matching the allowlist and
+  forwards the wrapper's canonical hyphen spelling (which its parser already
+  accepts). Scoped to the three nf-core pipeline skills; other skills keep
+  exact-match filtering.
 
 ### Added
 
+- **Environment post-failure hints on `EXECUTION_FAILED`.** When a run fails, the
+  executor scans the captured Nextflow logs and appends an actionable hint if it
+  finds a known environment signature — diagnosed from the actual error text, so no
+  resource thresholds are invented. `Process requirement exceeds available memory`
+  (nf-core's default request larger than the host, e.g. `MAKE_TRANSCRIPTS_FASTA`)
+  yields a hint to cap resources via a `-c` config using `process.resourceLimits`;
+  `Network is unreachable` / a Java connection exception (common on IPv6-only /
+  NAT64 hosts, where the JVM prefers IPv4) yields a hint to verify outbound
+  DNS/HTTPS and to set `NXF_OPTS='-Djava.net.preferIPv6Addresses=true'`. Shared
+  verbatim across the three wrappers.
 - **`--allow-remote-inputs` opt-in (local-first by default).** Remote samplesheet
   inputs and reference paths (`s3://`, `gs://`, `https://`, `ftp://`, …) are now
   rejected at preflight (`REMOTE_INPUT_NOT_ALLOWED`) unless the flag is passed, in

@@ -240,6 +240,30 @@ def test_input_false_normalized_to_none(module):
     assert args.input is None
 
 
+def test_nfcore_native_underscore_spelling_accepted(module):
+    # nf-core's own parameter is `--skip_tools` (snake_case). The wrapper exposes
+    # it as `--skip-tools`, but a user copying an upstream nf-core command types
+    # the underscore form. Both spellings must land in the same dest so direct
+    # wrapper invocation is not surprised by the native spelling.
+    hyphen = module.build_parser().parse_args([
+        "--output", "out", "--skip-tools", "baserecalibrator",
+    ])
+    underscore = module.build_parser().parse_args([
+        "--output", "out", "--skip_tools", "baserecalibrator",
+    ])
+    assert hyphen.skip_tools == "baserecalibrator"
+    assert underscore.skip_tools == "baserecalibrator"
+
+
+def test_nfcore_native_underscore_spelling_for_value_reference(module):
+    # Generalises beyond skip_tools: a schema passthrough with a value
+    # (`--fasta_fai`) must also accept the nf-core-native underscore spelling.
+    args = module.build_parser().parse_args([
+        "--output", "out", "--fasta_fai", "ref.fasta.fai",
+    ])
+    assert args.fasta_fai == "ref.fasta.fai"
+
+
 def test_mutect_profile_rejected_outside_demo(module):
     # The `mutect` profile only includeConfig conf/test_mutect2.config, whose sole
     # effect is `--normal-sample normal` on MUTECT2_PAIRED — correct ONLY for the

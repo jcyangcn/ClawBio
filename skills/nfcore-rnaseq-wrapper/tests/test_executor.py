@@ -216,3 +216,45 @@ def test_terminate_process_tree_falls_back_to_sigkill_when_sigterm_times_out(mon
     # proc.kill() (last-resort fallback) must NOT have been called —
     # killpg(SIGKILL) should have succeeded.
     assert proc.killed is False
+
+
+def test_memory_limit_failure_hint(tmp_path):
+    """A run that fails because a process exceeds host memory must append an
+    actionable hint pointing at Nextflow resourceLimits (Issue: nf-core defaults
+    request more memory than a small host provides)."""
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    sig = "Process requirement exceeds available memory -- req: 72 GB; avail: 62.8 GB"
+    with pytest.raises(SkillError) as exc:
+        execute_nextflow(
+            ["sh", "-c", f"echo '{sig}' 1>&2; exit 1"],
+            cwd=output_dir, output_dir=output_dir, timeout_seconds=30,
+        )
+    assert "resourceLimits" in exc.value.fix
+
+
+def test_network_unreachable_failure_hint(tmp_path):
+    """A run that fails with an unreachable network must append the IPv6/NAT64
+    NXF_OPTS hint (Issue: IPv6-only / NAT64 hosts where the JVM prefers IPv4)."""
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    sig = "Network is unreachable (connect failed)"
+    with pytest.raises(SkillError) as exc:
+        execute_nextflow(
+            ["sh", "-c", f"echo '{sig}' 1>&2; exit 1"],
+            cwd=output_dir, output_dir=output_dir, timeout_seconds=30,
+        )
+    assert "preferIPv6Addresses" in exc.value.fix
+
+
+def test_no_environment_hint_without_signature(tmp_path):
+    """A generic failure with no known signature must not append the env hints."""
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    with pytest.raises(SkillError) as exc:
+        execute_nextflow(
+            ["sh", "-c", "echo boom 1>&2; exit 1"],
+            cwd=output_dir, output_dir=output_dir, timeout_seconds=30,
+        )
+    assert "resourceLimits" not in exc.value.fix
+    assert "preferIPv6Addresses" not in exc.value.fix

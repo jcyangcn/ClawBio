@@ -519,10 +519,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     for cli_flag, dest, ptype, default, help_text, group_key in _SAREK_PASSTHROUGH_PARAMS:
         g = _group(group_key, _GROUP_TITLES.get(group_key, group_key))
+        # Accept the nf-core-native snake_case spelling (``--<dest>``) alongside the
+        # hyphenated wrapper flag, so a command copied from the upstream nf-core
+        # docs is not rejected. ``dest`` is exactly the nf-core parameter name.
+        native = f"--{dest}"
+        option_strings = [cli_flag] if native == cli_flag else [cli_flag, native]
         if ptype is bool:
-            g.add_argument(cli_flag, dest=dest, action="store_true", default=default, help=help_text)
+            g.add_argument(*option_strings, dest=dest, action="store_true", default=default, help=help_text)
         else:
-            g.add_argument(cli_flag, dest=dest, type=ptype, default=default, help=help_text)
+            g.add_argument(*option_strings, dest=dest, type=ptype, default=default, help=help_text)
 
     return parser
 
