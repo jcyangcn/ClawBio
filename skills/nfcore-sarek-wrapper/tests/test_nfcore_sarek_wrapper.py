@@ -936,9 +936,10 @@ def test_main_skill_error_bubbles_up_with_nonzero_exit(module, monkeypatch, tmp_
     assert rc == 1
 
 
-def test_main_error_result_json_written_under_reproducibility(module, monkeypatch, tmp_path):
-    # On error the result.json marker must land in reproducibility/, keeping the
-    # output root to two children (no stray top-level result.json).
+def test_main_error_result_json_written_at_output_root(module, monkeypatch, tmp_path):
+    # On error the result.json marker must land at the output root, next to where
+    # a successful run writes result.json (parity with nfcore-rnaseq/scrnaseq), so
+    # consumers read <output>/result.json regardless of outcome.
     _patch_heavy(monkeypatch, module)
 
     def boom(**kw):
@@ -954,12 +955,13 @@ def test_main_error_result_json_written_under_reproducibility(module, monkeypatc
     out = tmp_path / "out"
     rc = module.main(["--output", str(out), "--demo", "--no-banner"])
     assert rc == 1
-    err = out / "reproducibility" / "result.json"
+    err = out / "result.json"
     assert err.exists()
     payload = json.loads(err.read_text())
     assert payload["ok"] is False
+    assert payload["status"] == "error"
     assert payload["error_code"] == "MISSING_JAVA"
-    assert not (out / "result.json").exists()
+    assert not (out / "reproducibility" / "result.json").exists()
 
 
 def test_main_unexpected_error_returns_1(module, monkeypatch, tmp_path):

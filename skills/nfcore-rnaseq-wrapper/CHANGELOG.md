@@ -8,6 +8,14 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **`result.json` carries the shared `ok`/`status` contract.** A successful run's
+  envelope now includes `status: "ok"` and `ok: true`, and a failed run includes
+  `status: "error"` alongside the existing `ok: false` — a minimal discriminator
+  shared with nfcore-sarek/scrnaseq. Implemented via opt-in `status`/`ok`
+  parameters on the shared `clawbio.common.report.write_result_json` helper, so
+  the ~40 other skills that use it are unaffected (the keys appear only when a
+  caller passes them).
+
 - **`clawbio run rnaseq-pipeline` now forwards `-c`/`--config` Nextflow config
   files.** The launcher (`clawbio/cli.py`) accepted `-c`/`--config` but forwarded
   only `--nextflow-config`, silently dropping configs supplied with the short or

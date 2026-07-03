@@ -107,10 +107,10 @@ def execute_nextflow(
     # timeout_seconds=None disables the wall-clock cap entirely (long HPC/cloud
     # runs whose walltime is enforced by the scheduler); proc.wait(timeout=None)
     # blocks until completion.
-    # Logs live inside the reproducibility bundle so the output root keeps to
-    # exactly two children (upstream/, reproducibility/) and execution logs are
-    # excluded from checksums.sha256 (the whole reproducibility/ tree is).
-    logs_dir = output_dir / "reproducibility" / "logs"
+    # Execution logs live at <output_dir>/logs/ — the same location as the
+    # nfcore-rnaseq and nfcore-scrnaseq wrappers, so all three share one output
+    # layout. The `logs` directory is excluded from checksums.sha256.
+    logs_dir = output_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
     stdout_path = logs_dir / "stdout.txt"
     stderr_path = logs_dir / "stderr.txt"

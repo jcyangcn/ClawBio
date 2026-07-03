@@ -715,7 +715,9 @@ def _run_wrapper(args: argparse.Namespace, output_dir: Path) -> int:
         pipeline_source_kind=str(pipeline_source["source_kind"]),
         resume_used=bool(args.resume),
         arm=bool(args.arm),
-        profile=args.profile,
+        profile=composed_profile,
+        java_version=getattr(preflight_result, "java_version", "") or None,
+        nextflow_version=getattr(preflight_result, "nextflow_version", "") or None,
         elapsed_seconds=elapsed,
     )
 
@@ -1475,6 +1477,7 @@ def _handle_skill_error(output_dir: Path, exc: SkillError, *, verbose: bool) -> 
 
 def _handle_unexpected_error(output_dir: Path, exc: Exception, *, verbose: bool) -> int:
     payload = {
+        "status": "error",
         "ok": False,
         "stage": "internal",
         "error_code": ErrorCode.UNEXPECTED_ERROR,
@@ -1502,16 +1505,9 @@ def _write_error_result_if_safe(output_dir: Path, payload: dict[str, Any]) -> No
     if code in {ErrorCode.OUTPUT_DIR_NOT_EMPTY, ErrorCode.OUTPUT_DIR_NOT_WRITABLE}:
         return
     text = json.dumps(payload, indent=2, default=str)
-    # Co-locate the error marker with the rest of the bundle so the output root
-    # keeps to two children (upstream/, reproducibility/). Fall back to the
-    # output root only if the bundle directory cannot be created.
-    try:
-        repro_dir = output_dir / "reproducibility"
-        repro_dir.mkdir(parents=True, exist_ok=True)
-        write_text_lf(repro_dir / "result.json", text)
-        return
-    except OSError:
-        pass
+    # The failure marker lives at the output root, next to where a successful
+    # run writes result.json, so consumers read <output>/result.json regardless
+    # of outcome (parity with nfcore-rnaseq/scrnaseq).
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
         write_text_lf(output_dir / "result.json", text)

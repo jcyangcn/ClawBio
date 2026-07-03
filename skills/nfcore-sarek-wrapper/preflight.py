@@ -194,6 +194,8 @@ class PreflightResult:
 
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    java_version: str = ""
+    nextflow_version: str = ""
 
 
 def _check_remote_inputs(
@@ -272,8 +274,8 @@ def run_preflight(
     _check_remote_inputs(params, samplesheet, allow_remote_inputs=allow_remote_inputs)
 
     # §5.1 — cross-cutting checks ------------------------------------------
-    _check_java()
-    _check_nextflow()
+    java_version = _check_java()
+    nextflow_version = _check_nextflow()
     profile = str(params.get("profile") or "")
     _check_profile_string(profile)
 
@@ -339,7 +341,12 @@ def run_preflight(
             manifest=resume_manifest,
         )
 
-    return PreflightResult(warnings=warnings_acc, notes=notes_acc)
+    return PreflightResult(
+        warnings=warnings_acc,
+        notes=notes_acc,
+        java_version=java_version,
+        nextflow_version=nextflow_version,
+    )
 
 
 # --- §5.1: Java -----------------------------------------------------------
@@ -376,8 +383,8 @@ def _pad_version(t: tuple[int, ...], length: int = 3) -> tuple[int, ...]:
     return t + (0,) * max(0, length - len(t))
 
 
-def _check_java() -> None:
-    """Java >=17 must be present on PATH."""
+def _check_java() -> str:
+    """Java >=17 must be present on PATH. Returns the detected version string."""
     java_path = shutil.which("java")
     if not java_path:
         raise SkillError(
@@ -405,11 +412,13 @@ def _check_java() -> None:
             fix=f"Install Java {JAVA_MIN_VERSION} or newer.",
             details={"detected_version": ".".join(map(str, version)), "min": JAVA_MIN_VERSION},
         )
+    return ".".join(map(str, version))
 
 
 # --- §5.1: Nextflow -------------------------------------------------------
 
-def _check_nextflow() -> None:
+def _check_nextflow() -> str:
+    """Nextflow >= minimum must be present. Returns the detected version string."""
     minimum = ".".join(map(str, NEXTFLOW_MIN_VERSION))
     nextflow_path = shutil.which("nextflow")
     if not nextflow_path:
@@ -447,6 +456,7 @@ def _check_nextflow() -> None:
                 "min_version": minimum,
             },
         )
+    return ".".join(map(str, version))
 
 
 # --- §5.1: Profile & backends --------------------------------------------

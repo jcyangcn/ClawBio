@@ -189,7 +189,7 @@ same Sarek surface; common flags parsed by ClawBio are forwarded unchanged.
 4. **Build params**: assemble the effective `params.yaml` from CLI flags + extras + step-dependent defaults; clear all reference flags when `--demo` is set.
 5. **Execute Nextflow**: launch with composed profile, `-params-file params.yaml`, deterministic `-work-dir`, streamed stdout/stderr.
 6. **Parse outputs**: detect aligned/recalibrated CRAMs, per-tool VCFs (§1–§6 layout), annotated VCFs, MultiQC, and pipeline_info.
-7. **Write provenance + report**: under `reproducibility/`, emit `report.md`, `result.json`, `commands.sh`, `params.yaml`, the normalized samplesheet, `environment.yml`, `checksums.sha256`, and seven JSON files (`manifest.json`, `parameters.json`, `samplesheet.json`, `pipeline_source.json`, `tool_versions.json`, `outputs.json`, `compatibility_policy.json`).
+7. **Write provenance + report**: emit `report.md` and `result.json` at the output root (matching nfcore-rnaseq/scrnaseq), and under `reproducibility/` emit `commands.sh`, `params.yaml`, the normalized samplesheet, `environment.yml`, `checksums.sha256`, and seven JSON files (`manifest.json`, `parameters.json`, `samplesheet.json`, `pipeline_source.json`, `tool_versions.json`, `outputs.json`, `compatibility_policy.json`).
 
 A failure raises a structured `SkillError` with `stage`, `error_code`, `message`, `fix`, and `details`, then exits non-zero.
 
@@ -264,7 +264,7 @@ python clawbio.py run sarek-pipeline \
 python clawbio.py run sarek-pipeline --demo --output /tmp/sarek_demo
 ```
 
-Expected output: upstream `nf-core/sarek -profile test` outputs (synthetic small dataset) under `upstream/results/`, plus the ClawBio `reproducibility/` bundle (`report.md`, `result.json`, params/commands/samplesheet snapshots, provenance JSON, `environment.yml`, `checksums.sha256`).
+Expected output: upstream `nf-core/sarek -profile test` outputs (synthetic small dataset) under `upstream/results/`, `report.md` and `result.json` at the output root, and the ClawBio `reproducibility/` bundle (params/commands/samplesheet snapshots, provenance JSON, `environment.yml`, `checksums.sha256`).
 
 ## Algorithm / Methodology
 
@@ -320,9 +320,10 @@ output/                                       # the --output directory
 │   │   ├── pipeline_info/
 │   │   └── reports/
 │   └── work/                                 # Nextflow work directory
-└── reproducibility/                          # all ClawBio artifacts land here
-    ├── report.md                             # human-readable run summary
-    ├── result.json                           # machine-readable run summary
+├── report.md                                # human-readable run summary (output root)
+├── result.json                              # machine-readable run summary (output root)
+├── logs/                                    # Nextflow stdout.txt / stderr.txt (real runs only; excluded from checksums)
+└── reproducibility/                          # replay + provenance bundle
     ├── samplesheet.valid.csv                 # or samplesheet.demo.csv in --demo mode
     ├── params.yaml
     ├── commands.sh
@@ -336,10 +337,14 @@ output/                                       # the --output directory
     ├── tool_versions.json
     ├── outputs.json                          # omitted if outputs parsing was skipped
     ├── manifest.json
-    ├── logs/                                 # Nextflow stdout.txt / stderr.txt (real runs only)
     ├── macos_docker.config                   # written only on macOS + docker backend
     └── sarek_downstream_handoff.{sh,json}    # written only when --run-downstream is set
 ```
+
+`report.md`, `result.json`, and `logs/` sit at the output root — the same layout
+as the nfcore-rnaseq and nfcore-scrnaseq wrappers — so a consumer finds
+`<output>/result.json` for any of the three pipelines. The `reproducibility/`
+directory holds the portable replay + provenance bundle.
 
 ## Output Structure
 

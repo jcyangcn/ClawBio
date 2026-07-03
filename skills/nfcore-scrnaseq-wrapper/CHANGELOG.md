@@ -8,6 +8,18 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **`--demo` no longer reports `Samples: 0`.** The reported sample count trusted a
+  local samplesheet count of `0` instead of falling back to the samples detected
+  in the outputs. Under `--demo` the upstream `-profile test` supplies samples
+  remotely (so the local count is 0) while the run still produces real samples;
+  the count now uses a positive local count when present and otherwise falls back
+  to `samples_detected`.
+- **`result.json` carries the shared `ok`/`status` contract.** A successful run's
+  envelope now includes `status: "ok"` and `ok: true`, and a failed run includes
+  `status: "error"` alongside the existing `ok: false` — a minimal discriminator
+  shared with nfcore-sarek/rnaseq (via the opt-in `status`/`ok` parameters on the
+  shared `write_result_json` helper).
+
 - **`clawbio run scrnaseq-pipeline` now forwards `--nextflow-config`.** The launcher
   (`clawbio/cli.py`) forwarded only `-c`/`--config`, silently dropping configs
   supplied via `--nextflow-config`. All three spellings are now a single repeatable

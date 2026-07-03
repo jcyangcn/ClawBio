@@ -8,6 +8,32 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Output layout now matches nfcore-rnaseq/scrnaseq.** `report.md` and
+  `result.json` are written at the output root (were under `reproducibility/`),
+  and execution logs are written to `<output>/logs/` (were under
+  `reproducibility/logs/`). A consumer now finds `<output>/result.json` and
+  `<output>/report.md` for any of the three pipelines. The `reproducibility/`
+  directory keeps the portable replay + provenance bundle (`commands.sh`,
+  `params.yaml`, `manifest.json`, `checksums.sha256`, `environment.yml`,
+  `remap_paths.py`, provenance JSON). The root `report.md`/`result.json` and the
+  `logs/` tree are excluded from `checksums.sha256`. On failure, the error
+  `result.json` marker is likewise written at the root.
+- **Report `Profile`, `Java`, and `Nextflow` are populated.** They previously
+  rendered as `-` because the runtime metadata was not threaded into the report
+  generator. Preflight now surfaces the detected Java and Nextflow versions, and
+  the composed Nextflow profile string is passed through, so all three appear in
+  `report.md` and in `result.json` (`run.profile`/`run.java_version`/
+  `run.nextflow_version`) as the sibling wrappers already do.
+- **`--demo` reports the effective samples and tools.** The `Samples` count now
+  falls back to the samples detected in the outputs when the local samplesheet is
+  empty (the upstream `-profile test` supplies samples remotely), and `Tools`
+  falls back to the tools observed in the parsed variant-calling/annotation
+  outputs when none were requested — so a demo that runs Strelka no longer reports
+  `Samples: 0` / `Tools: (none)`. `result.json` records both the requested
+  `run.tools` and the effective `run.tools_effective` (+ `run.tools_from_outputs`).
+- **`result.json` carries the shared `ok`/`status` contract.** A successful run is
+  `ok: true` (existing `status` retained); a failed run is `ok: false` with
+  `status: "error"` — a minimal discriminator shared with nfcore-rnaseq/scrnaseq.
 - **`clawbio run sarek-pipeline` now forwards `-c`/`--config` Nextflow config
   files.** The launcher (`clawbio/cli.py`) accepted `-c`/`--config` but forwarded
   only `--nextflow-config`, silently dropping configs supplied with the short or

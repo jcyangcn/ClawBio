@@ -17,6 +17,7 @@ class SkillError(Exception):
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "status": "error",
             "ok": False,
             "stage": self.stage,
             "error_code": self.error_code,

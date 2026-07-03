@@ -10,12 +10,9 @@ from errors import SkillError
 from executor import execute_nextflow
 
 
-def test_logs_written_under_reproducibility(tmp_path: Path):
-    """Run logs must live inside reproducibility/, not as a stray top-level dir.
-
-    SKILL.md guarantees the output directory has exactly two children
-    (``upstream/`` and ``reproducibility/``); the executor's stdout/stderr
-    capture therefore belongs under ``reproducibility/logs/``.
+def test_logs_written_under_root_logs_dir(tmp_path: Path):
+    """Run logs must live at ``<output_dir>/logs/`` — the same location as the
+    nfcore-rnaseq and nfcore-scrnaseq wrappers, so all three share one layout.
     """
     output_dir = tmp_path / "out"
     output_dir.mkdir()
@@ -27,16 +24,17 @@ def test_logs_written_under_reproducibility(tmp_path: Path):
         timeout_seconds=30,
     )
 
-    logs = output_dir / "reproducibility" / "logs"
+    logs = output_dir / "logs"
     assert (logs / "stdout.txt").exists()
     assert (logs / "stderr.txt").exists()
-    # No stray top-level logs/ directory.
-    assert not (output_dir / "logs").exists()
+    # Logs no longer live inside the reproducibility bundle.
+    assert not (output_dir / "reproducibility" / "logs").exists()
     assert result["exit_code"] == 0
     assert (logs / "stdout.txt").read_text().strip() == "hello"
     assert (logs / "stderr.txt").read_text().strip() == "oops"
-    # Reported paths point inside reproducibility/.
-    assert "reproducibility/logs/stdout.txt" in Path(str(result["stdout_path"])).as_posix()
+    # Reported paths point at the root-level logs/ directory.
+    assert "logs/stdout.txt" in Path(str(result["stdout_path"])).as_posix()
+    assert "reproducibility/logs" not in Path(str(result["stdout_path"])).as_posix()
 
 
 def test_macos_tmp_failure_hint_appended_on_failure(tmp_path, monkeypatch):
