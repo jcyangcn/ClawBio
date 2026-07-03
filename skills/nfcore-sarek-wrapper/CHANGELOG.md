@@ -8,6 +8,12 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Remote MultiQC config/logo URIs are preserved in `params.yaml`.** A remote
+  `--multiqc-config`/`--multiqc-logo`/`--multiqc-methods-description` URL was
+  resolved as a local path (collapsing the scheme, e.g. `https://host/x` →
+  `<cwd>/https:/host/x`); those fields now pass URIs through verbatim via
+  `_posix_or_uri`, parity with the genome reference fields (which already did).
+  The now-redundant URI-unaware `_posix` helper was removed.
 - **Output layout now matches nfcore-rnaseq/scrnaseq.** `report.md` and
   `result.json` are written at the output root (were under `reproducibility/`),
   and execution logs are written to `<output>/logs/` (were under

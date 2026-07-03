@@ -8,6 +8,15 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Remote reference URIs are no longer corrupted in `params.yaml`.** With
+  `--allow-remote-inputs`, a remote `--fasta`/`--gtf`/`--transcript-fasta`/index
+  URI (`https://`, `s3://`, `gs://`, `ftp://`, …) was resolved as a local path by
+  `params_builder`, collapsing the scheme and anchoring it to the working
+  directory (`https://host/x` → `<cwd>/https:/host/x`), which nf-core then rejected
+  during parameter validation. Reference fields now preserve URIs verbatim (via a
+  new `_posix_or_uri` helper, mirroring `igenomes_base` and the FASTQ handling) and
+  only resolve genuinely local paths. Remote references are still gated behind
+  `--allow-remote-inputs` at preflight and staged by Nextflow.
 - **`--demo` no longer reports `Samples: 0`.** The reported sample count trusted a
   local samplesheet count of `0` instead of falling back to the samples detected
   in the outputs. Under `--demo` the upstream `-profile test` supplies samples

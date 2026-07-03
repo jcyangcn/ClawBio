@@ -8,6 +8,14 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **`EXPECTED_OUTPUTS_NOT_FOUND` now explains an all-skipped run.** nf-core/rnaseq
+  drops samples below `min_trimmed_reads` (schema default 10000) before
+  quantification, so a run with only tiny inputs completes "successfully" yet
+  produces no merged count matrix — which the wrapper correctly flags. When the
+  captured log shows nf-core "completed with skipped sample(s)", the error fix now
+  points at `--min-trimmed-reads` (and the MultiQC/pipeline_info skipped-sample
+  report) instead of leaving the cause unexplained. Diagnosed from the actual log
+  signal, so it only appears when relevant.
 - **`result.json` carries the shared `ok`/`status` contract.** A successful run's
   envelope now includes `status: "ok"` and `ok: true`, and a failed run includes
   `status: "error"` alongside the existing `ok: false` — a minimal discriminator
