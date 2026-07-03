@@ -72,6 +72,28 @@ def _environment_failure_hints(stdout_path: Path, stderr_path: Path) -> str:
     return "".join(hints)
 
 
+def _cellbender_failure_hint(stdout_path: Path, stderr_path: Path) -> str:
+    """Hint when CellBender background removal is the failing process.
+
+    CELLBENDER_REMOVEBACKGROUND estimates ambient RNA from the droplet-count
+    distribution and errors on very small or test datasets (a common symptom is
+    ``IndexError: index -100 is out of bounds``). CellBender is optional, so a
+    re-run with ``--skip-cellbender`` lets the rest of the pipeline produce its
+    count matrices. Best-effort: empty string when CellBender is not the failing
+    process (or the logs are unreadable).
+    """
+    blob = (_read_log_tail(stdout_path) + "\n" + _read_log_tail(stderr_path)).lower()
+    if "cellbender_removebackground" in blob and "error executing process" in blob:
+        return (
+            " The failing process is CellBender background removal, which estimates "
+            "ambient RNA from the droplet distribution and does not work on very small "
+            "or test datasets (a common symptom is 'IndexError: index -100 is out of "
+            "bounds'). CellBender is optional — re-run with --skip-cellbender to let the "
+            "rest of the pipeline produce its count matrices."
+        )
+    return ""
+
+
 def execute_nextflow(
     command: list[str],
     *,
@@ -138,6 +160,7 @@ def execute_nextflow(
                 "Inspect logs/stdout.txt and logs/stderr.txt, then correct the failing input or environment."
                 + _macos_tmp_failure_hint(output_dir)
                 + _environment_failure_hints(stdout_path, stderr_path)
+                + _cellbender_failure_hint(stdout_path, stderr_path)
             ),
             details={
                 "exit_code": exit_code,

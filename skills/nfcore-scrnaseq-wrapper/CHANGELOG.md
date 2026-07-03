@@ -17,6 +17,12 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
   new `_posix_or_uri` helper, mirroring `igenomes_base` and the FASTQ handling) and
   only resolve genuinely local paths. Remote references are still gated behind
   `--allow-remote-inputs` at preflight and staged by Nextflow.
+- **CellBender failures now point at `--skip-cellbender`.** `CELLBENDER_REMOVEBACKGROUND`
+  estimates ambient RNA from the droplet-count distribution and errors on very small
+  or test datasets (`IndexError: index -100 is out of bounds`). When it is the
+  failing process, the `EXECUTION_FAILED` fix now explains that CellBender is optional
+  and can be skipped with `--skip-cellbender` so the rest of the pipeline finishes.
+  Diagnosed from the actual log signal, so it only appears when relevant.
 - **`--demo` no longer reports `Samples: 0`.** The reported sample count trusted a
   local samplesheet count of `0` instead of falling back to the samples detected
   in the outputs. Under `--demo` the upstream `-profile test` supplies samples

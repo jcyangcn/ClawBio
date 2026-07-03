@@ -218,3 +218,34 @@ def test_no_environment_hint_without_signature(tmp_path):
         )
     assert "resourceLimits" not in exc.value.fix
     assert "preferIPv6Addresses" not in exc.value.fix
+
+
+def test_cellbender_failure_hint(tmp_path):
+    """When CellBender background removal is the failing process (it errors on
+    very small/test datasets), the fix must point at --skip-cellbender."""
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    err = (
+        "Error executing process > "
+        "'NFCORE_SCRNASEQ:SCRNASEQ:H5AD_REMOVEBACKGROUND_BARCODES_CELLBENDER_ANNDATA:"
+        "CELLBENDER_REMOVEBACKGROUND (Sample_X)'\n"
+        "IndexError: index -100 is out of bounds for axis 0 with size 88"
+    )
+    with pytest.raises(SkillError) as exc:
+        execute_nextflow(
+            ["sh", "-c", f"echo '{err}' 1>&2; exit 1"],
+            cwd=output_dir, output_dir=output_dir, timeout_seconds=30,
+        )
+    assert "--skip-cellbender" in exc.value.fix
+
+
+def test_no_cellbender_hint_without_signal(tmp_path):
+    """A generic failure must not mention CellBender."""
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    with pytest.raises(SkillError) as exc:
+        execute_nextflow(
+            ["sh", "-c", "echo boom 1>&2; exit 1"],
+            cwd=output_dir, output_dir=output_dir, timeout_seconds=30,
+        )
+    assert "--skip-cellbender" not in exc.value.fix
