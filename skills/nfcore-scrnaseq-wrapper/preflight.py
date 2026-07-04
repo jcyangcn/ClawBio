@@ -1137,7 +1137,7 @@ def _check_protocol_compatibility(args) -> None:
                 stage="preflight",
                 error_code=ErrorCode.INVALID_PRESET_CONFIGURATION,
                 message="The selected preset requires an explicit protocol in nf-core/scrnaseq 4.1.0.",
-                fix="Provide --protocol with a value supported by the selected aligner, such as 10XV2, 10XV3, 10XV4, dropseq, or smartseq where documented.",
+                fix="Provide --protocol with a value supported by the selected aligner, such as 10XV2, 10XV3, 10XV4, dropseq, or smartseq where documented. nf-core/scrnaseq takes the protocol from this flag (a global pipeline parameter); a `protocol` column in the samplesheet is not read for it, so pass the value explicitly here even if your samplesheet has one.",
                 details={
                     "preset": preset,
                     "missing_field": "protocol",

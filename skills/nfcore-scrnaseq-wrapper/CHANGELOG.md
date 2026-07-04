@@ -8,6 +8,20 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **A `protocol` samplesheet column is no longer flagged as unrecognised.**
+  nf-core/scrnaseq 4.1.0's `schema_input.json` does not define a `protocol` column,
+  but the pipeline's own example samplesheet (`assets/samplesheet.csv`) ships one,
+  so a user copying it was warned that `protocol` is an unrecognised column. It is
+  now recognised (and preserved as before). The effective protocol is still taken
+  from the `--protocol` flag — a global pipeline parameter, not a per-sample column
+  — and the "explicit protocol required" preflight error now says so explicitly, so
+  a user with a `protocol` column knows to pass `--protocol` as well.
+- **Config-parse failures now point at `NXF_OFFLINE`.** On Nextflow 26.x the
+  nf-core `nextflow.config`'s `includeConfig … ? <url> : '/dev/null'` line fails to
+  parse when the remote `nfcore_custom.config` cannot be fetched. The executor's
+  `EXECUTION_FAILED` fix now detects `Unable to parse config file` /
+  `ConfigParseException` and suggests `NXF_OFFLINE=true` for a fully local run (or
+  confirming outbound HTTPS/DNS). Shared verbatim across the three wrappers.
 - **Remote reference URIs are no longer corrupted in `params.yaml`.** With
   `--allow-remote-inputs`, a remote `--fasta`/`--gtf`/`--transcript-fasta`/index
   URI (`https://`, `s3://`, `gs://`, `ftp://`, …) was resolved as a local path by

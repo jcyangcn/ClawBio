@@ -8,6 +8,13 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Config-parse failures now point at `NXF_OFFLINE`.** On Nextflow 26.x the
+  nf-core `nextflow.config`'s `includeConfig ... ? <url> : '/dev/null'` line fails
+  to parse when the remote `nfcore_custom.config` cannot be fetched. The executor's
+  `EXECUTION_FAILED` fix now detects `Unable to parse config file` /
+  `ConfigParseException` and suggests `NXF_OFFLINE=true` for a fully local run (or
+  confirming outbound HTTPS/DNS). Shared verbatim across the three wrappers.
+
 - **Remote MultiQC config/logo URIs are preserved in `params.yaml`.** A remote
   `--multiqc-config`/`--multiqc-logo`/`--multiqc-methods-description` URL was
   resolved as a local path (collapsing the scheme, e.g. `https://host/x` →

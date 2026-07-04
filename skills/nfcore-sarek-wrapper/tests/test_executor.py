@@ -102,3 +102,29 @@ def test_no_environment_hint_without_signature(tmp_path):
         )
     assert "resourceLimits" not in exc.value.fix
     assert "preferIPv6Addresses" not in exc.value.fix
+
+
+def test_config_parse_failure_hint(tmp_path):
+    """A run that fails because Nextflow could not fetch/parse the remote nf-core
+    config (the `includeConfig … ? <url> : '/dev/null'` line) must point at
+    NXF_OFFLINE for a fully-local run."""
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    sig = "Unable to parse config file: '/root/.nextflow/assets/nf-core/rnaseq/nextflow.config'"
+    with pytest.raises(SkillError) as exc:
+        execute_nextflow(
+            ["sh", "-c", f"echo \"{sig}\" 1>&2; exit 1"],
+            cwd=output_dir, output_dir=output_dir, timeout_seconds=30,
+        )
+    assert "NXF_OFFLINE" in exc.value.fix
+
+
+def test_no_config_parse_hint_without_signal(tmp_path):
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    with pytest.raises(SkillError) as exc:
+        execute_nextflow(
+            ["sh", "-c", "echo plain-failure 1>&2; exit 1"],
+            cwd=output_dir, output_dir=output_dir, timeout_seconds=30,
+        )
+    assert "NXF_OFFLINE" not in exc.value.fix

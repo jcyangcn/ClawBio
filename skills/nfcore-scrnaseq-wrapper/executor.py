@@ -33,6 +33,10 @@ _NETWORK_FAILURE_SIGNATURES = (
     "connection timed out",
     "temporary failure in name resolution",
 )
+_CONFIG_PARSE_FAILURE_SIGNATURES = (
+    "unable to parse config file",
+    "configparseexception",
+)
 
 
 def _read_log_tail(path: Path, limit: int = 65536) -> str:
@@ -68,6 +72,15 @@ def _environment_failure_hints(stdout_path: Path, stderr_path: Path) -> str:
             "github.com are reachable; on IPv6-only / NAT64 hosts the JVM prefers IPv4 "
             "by default, so export NXF_OPTS='-Djava.net.preferIPv6Addresses=true' and "
             "re-run."
+        )
+    if any(sig in blob for sig in _CONFIG_PARSE_FAILURE_SIGNATURES):
+        hints.append(
+            " Nextflow could not parse the pipeline config; on nf-core this usually "
+            "means it could not fetch the remote nf-core/configs 'nfcore_custom.config' "
+            "(the `includeConfig ... ? <url> : '/dev/null'` line). For a fully local run "
+            "(local --input, references and an already-pulled pipeline) set "
+            "NXF_OFFLINE=true so Nextflow skips the remote include; otherwise ensure "
+            "outbound HTTPS/DNS to raw.githubusercontent.com is reachable."
         )
     return "".join(hints)
 

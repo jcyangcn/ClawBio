@@ -8,6 +8,13 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Config-parse failures now point at `NXF_OFFLINE`.** On Nextflow 26.x the
+  nf-core `nextflow.config`'s `includeConfig ... ? <url> : '/dev/null'` line fails
+  to parse when the remote `nfcore_custom.config` cannot be fetched. The executor's
+  `EXECUTION_FAILED` fix now detects `Unable to parse config file` /
+  `ConfigParseException` and suggests `NXF_OFFLINE=true` for a fully local run (or
+  confirming outbound HTTPS/DNS). Shared verbatim across the three wrappers.
+
 - **`EXPECTED_OUTPUTS_NOT_FOUND` now explains an all-skipped run.** nf-core/rnaseq
   drops samples below `min_trimmed_reads` (schema default 10000) before
   quantification, so a run with only tiny inputs completes "successfully" yet
