@@ -9,6 +9,7 @@ from pathlib import Path
 
 from clawbio.common.portable_commands import write_portable_commands_sh
 from clawbio.common.report import generate_report_footer, generate_report_header, write_result_json
+from clawbio.common.textio import write_text_lf
 
 _SKILL_DIR = Path(__file__).resolve().parent
 if str(_SKILL_DIR) in sys.path:
@@ -215,7 +216,7 @@ def write_report(
         post_run_warnings=post_run_warnings,
     )
     report_path = output_dir / "report.md"
-    report_path.write_text("\n".join(lines), encoding="utf-8")
+    write_text_lf(report_path, "\n".join(lines))
     return report_path
 
 
@@ -341,8 +342,10 @@ def write_repro_commands(output_dir: Path, *, args) -> None:
     _patch_commands_sh_repo_fallback(commands_sh)
     _patch_commands_sh_python_interpreter(commands_sh)
     if not getattr(args, "demo", False):
-        with commands_sh.open("a", encoding="utf-8") as fh:
-            fh.write(_PORTABILITY_NOTICE)
+        # Append via the LF choke-point (not open("a"), which would re-introduce
+        # CRLF on Windows) so the whole script — including this notice — stays
+        # byte-stable across OSes, matching the scrnaseq/sarek wrappers.
+        write_text_lf(commands_sh, commands_sh.read_text(encoding="utf-8") + _PORTABILITY_NOTICE)
     _write_remap_script(repro_dir)
 
 
@@ -490,7 +493,7 @@ def build_result_data(
 
 def write_check_result(output_dir: Path, payload: dict[str, object]) -> Path:
     path = output_dir / "check_result.json"
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    write_text_lf(path, json.dumps(payload, indent=2))
     return path
 
 
@@ -500,7 +503,7 @@ def _patch_commands_sh_repo_fallback(commands_sh: Path) -> None:
     content = commands_sh.read_text(encoding="utf-8")
     if _CLAWBIO_REPO_FALLBACK not in content:
         return
-    commands_sh.write_text(content.replace(_CLAWBIO_REPO_FALLBACK, _CLAWBIO_REPO_FALLBACK_PATCHED), encoding="utf-8")
+    write_text_lf(commands_sh, content.replace(_CLAWBIO_REPO_FALLBACK, _CLAWBIO_REPO_FALLBACK_PATCHED))
 
 
 # The shared portable_commands template emits a bare `python "$SKILL_SCRIPT"`, but
@@ -519,9 +522,7 @@ def _patch_commands_sh_python_interpreter(commands_sh: Path) -> None:
     content = commands_sh.read_text(encoding="utf-8")
     if _PYTHON_INVOCATION not in content:
         return
-    commands_sh.write_text(
-        content.replace(_PYTHON_INVOCATION, _PYTHON_INVOCATION_PATCHED), encoding="utf-8"
-    )
+    write_text_lf(commands_sh, content.replace(_PYTHON_INVOCATION, _PYTHON_INVOCATION_PATCHED))
 
 
 def _write_remap_script(repro_dir: Path) -> None:

@@ -19,6 +19,22 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Reproducibility bundle is now byte-stable (LF-only) on every OS.** Every bundle
+  artifact the wrapper writes itself — `report.md`, `params.yaml`, `manifest.json`
+  and the provenance JSONs, `check_result.json`, the error-path `result.json`,
+  `commands.sh` (the repo-root/`python3` patches and the appended portability
+  notice), the demo/no-input samplesheet stubs, the macOS Docker config, the
+  `rnaseq_de_handoff.sh` template, and the standalone `remap_paths.py` rewrites and
+  repair-bundle stubs — now routes through the shared `write_text_lf` choke-point
+  (via a self-contained `_write_text_lf` in the bundle-shipped `remap_paths.py`,
+  which cannot import ClawBio at replay). Previously these used raw
+  `Path.write_text`, which emits CRLF on Windows and would corrupt `commands.sh`
+  under bash and change every `checksums.sha256` digest. This brings the wrapper
+  into line with the nfcore-scrnaseq and nfcore-sarek wrappers — whose bundle
+  writers already routed through the same choke-point — and with the single-writer
+  contract documented in `clawbio/common/textio.py`. Added
+  `tests/test_bundle_portability.py` as the cross-OS regression guard (parity with
+  the scrnaseq wrapper).
 - **Detected Java/Nextflow versions preserve zero-padded components in reports.**
   The version string shown in `report.md` and `result.json` was reconstructed from
   the integer comparison tuple, so `int("04") = 4` turned `26.04.3` into `26.4.3` —
