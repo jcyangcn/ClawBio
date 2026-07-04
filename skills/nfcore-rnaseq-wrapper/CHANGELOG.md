@@ -6,8 +6,27 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ## [Unreleased] — 0.1.0
 
+### Documentation
+
+- **`--allow-remote-inputs` semantics clarified.** SKILL.md now states explicitly
+  that the flag relaxes only the wrapper's own local-first preflight check: remote
+  FASTQ/reference URIs are written into the normalized samplesheet/`params.yaml`
+  verbatim and staged natively by Nextflow at run time. The wrapper does not
+  download them, so remote inputs require outbound network access and are
+  incompatible with `NXF_OFFLINE` (under which Nextflow's own nf-schema file-existence
+  validation still runs and fails on the remote paths). Shared wording across the
+  three wrappers.
+
 ### Fixed
 
+- **Detected Java/Nextflow versions preserve zero-padded components in reports.**
+  The version string shown in `report.md` and `result.json` was reconstructed from
+  the integer comparison tuple, so `int("04") = 4` turned `26.04.3` into `26.4.3` —
+  not a real Nextflow release, and inconsistent with `manifest.json`, which kept the
+  correct string. `_check_java`/`_check_nextflow` now record the version exactly as
+  reported by the tool (via `_detected_version_string`) for display, using the
+  integer tuple only for the minimum-version comparison. Parity with
+  nfcore-scrnaseq-wrapper (which already did this) and nfcore-sarek-wrapper.
 - **Config-parse failures now point at `NXF_OFFLINE`.** On Nextflow 26.x the
   nf-core `nextflow.config`'s `includeConfig ... ? <url> : '/dev/null'` line fails
   to parse when the remote `nfcore_custom.config` cannot be fetched. The executor's

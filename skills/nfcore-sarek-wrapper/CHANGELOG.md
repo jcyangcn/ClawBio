@@ -6,8 +6,44 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ## [Unreleased] — 0.1.0
 
+### Documentation
+
+- **`--allow-remote-inputs` semantics clarified.** SKILL.md now states explicitly
+  that the flag relaxes only the wrapper's own local-first preflight check: remote
+  FASTQ/reference URIs are written into the normalized samplesheet/`params.yaml`
+  verbatim and staged natively by Nextflow at run time. The wrapper does not
+  download them, so remote inputs require outbound network access and are
+  incompatible with `NXF_OFFLINE` (under which Nextflow's own nf-schema file-existence
+  validation still runs and fails on the remote paths). Shared wording across the
+  three wrappers.
+
 ### Fixed
 
+- **Custom `--fasta` without `--genome` now disables iGenomes automatically.**
+  nf-core/sarek 3.8.1 defaults `genome = 'GATK.GRCh38'` in `nextflow.config`, so a
+  custom-reference run that supplied `--fasta` but left `--genome` unset would still
+  load the full GATK.GRCh38 iGenomes configuration and abort while validating its
+  ~20 `s3://ngi-igenomes/...` reference paths as local files — a wall of "does not
+  exist" errors that never mentioned `--igenomes-ignore`. The wrapper now sets
+  `igenomes_ignore=true` in that case (emitting a WARNING recorded in the report),
+  matching the nf-core guidance for custom references and the equivalent automatic
+  behaviour already in nfcore-scrnaseq-wrapper. An explicit `--genome` alongside
+  `--fasta` (documented partial override) and `--demo`/`-profile test` runs are left
+  untouched.
+- **The BQSR preflight error now explains that baserecalibrator runs by default.**
+  When a start step requires `--dbsnp`/`--known_indels` and neither is available,
+  the `MISSING_REFERENCE` message now adds: "baserecalibrator runs by default in the
+  Sarek mapping workflow, independently of the requested variant-calling --tools."
+  A user who only requested `--tools haplotypecaller` previously had no way to know
+  why base recalibration — and therefore the known-sites requirement — was active.
+- **Detected Java/Nextflow versions preserve zero-padded components in reports.**
+  The version string shown in `report.md` and `result.json` was reconstructed from
+  the integer comparison tuple, so `int("04") = 4` turned `26.04.3` into `26.4.3` —
+  not a real Nextflow release, and inconsistent with `manifest.json`, which kept the
+  correct string. The check now records the version exactly as reported by the tool
+  (via `_detected_version_string`) for display, using the integer tuple only for the
+  minimum-version comparison. Parity with nfcore-scrnaseq-wrapper, which already did
+  this.
 - **Config-parse failures now point at `NXF_OFFLINE`.** On Nextflow 26.x the
   nf-core `nextflow.config`'s `includeConfig ... ? <url> : '/dev/null'` line fails
   to parse when the remote `nfcore_custom.config` cannot be fetched. The executor's

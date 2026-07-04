@@ -6,6 +6,17 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ## [Unreleased] — 0.1.0
 
+### Documentation
+
+- **`--allow-remote-inputs` semantics clarified.** SKILL.md now states explicitly
+  that the flag relaxes only the wrapper's own local-first preflight check: remote
+  FASTQ/reference URIs are written into the normalized samplesheet/`params.yaml`
+  verbatim and staged natively by Nextflow at run time. The wrapper does not
+  download them, so remote inputs require outbound network access and are
+  incompatible with `NXF_OFFLINE` (under which Nextflow's own nf-schema file-existence
+  validation still runs and fails on the remote paths). Shared wording across the
+  three wrappers.
+
 ### Fixed
 
 - **A `protocol` samplesheet column is no longer flagged as unrecognised.**

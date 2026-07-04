@@ -438,6 +438,62 @@ def test_apply_demo_overrides_clears_references(module):
 
 
 
+def test_custom_fasta_without_genome_auto_disables_igenomes(module):
+    """A custom --fasta with no --genome must auto-set igenomes_ignore so Sarek
+    does not fall back to its default GATK.GRCh38 iGenomes bundle and try to
+    validate ~20 remote s3://ngi-igenomes paths as local files."""
+    args = module.build_parser().parse_args([
+        "--output", "out",
+        "--input", "input.csv",
+        "--fasta", "/refs/custom.fa",
+    ])
+    args.profile = "docker"  # composed profile (no upstream test profile)
+    notice = module._auto_disable_igenomes_for_custom_fasta(args)
+    assert args.igenomes_ignore is True
+    assert notice and "igenomes" in notice.lower()
+    # The auto-disable must reach both preflight and the emitted params.yaml.
+    params = module._build_params_for_preflight(args, composed_profile="docker")
+    assert params.get("igenomes_ignore") is True
+
+
+def test_custom_fasta_with_explicit_genome_keeps_igenomes(module):
+    """When the user passes BOTH --fasta and --genome (documented override), the
+    wrapper must respect the explicit iGenomes choice and not auto-disable it."""
+    args = module.build_parser().parse_args([
+        "--output", "out",
+        "--input", "input.csv",
+        "--fasta", "/refs/custom.fa",
+        "--genome", "GATK.GRCh38",
+    ])
+    args.profile = "docker"
+    notice = module._auto_disable_igenomes_for_custom_fasta(args)
+    assert getattr(args, "igenomes_ignore", False) is False
+    assert notice is None
+
+
+def test_no_fasta_does_not_auto_disable_igenomes(module):
+    """A plain --genome run (no custom fasta) must not be touched."""
+    args = module.build_parser().parse_args([
+        "--output", "out",
+        "--input", "input.csv",
+        "--genome", "GATK.GRCh38",
+    ])
+    args.profile = "docker"
+    notice = module._auto_disable_igenomes_for_custom_fasta(args)
+    assert getattr(args, "igenomes_ignore", False) is False
+    assert notice is None
+
+
+def test_demo_run_does_not_auto_disable_igenomes(module):
+    """--demo uses the upstream test profile, which owns genome/igenomes_base;
+    auto-disabling would break it."""
+    args = module.build_parser().parse_args(["--output", "out", "--demo"])
+    args.profile = "test,docker"
+    notice = module._auto_disable_igenomes_for_custom_fasta(args)
+    assert notice is None
+    assert getattr(args, "igenomes_ignore", False) is False
+
+
 def test_timeout_hours_resolves_to_seconds(module):
     args = module.build_parser().parse_args(
         ["--output", "out", "--demo", "--no-banner", "--timeout-hours", "6"]

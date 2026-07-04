@@ -216,6 +216,20 @@ def _pad_version(t: tuple[int, ...], length: int = 3) -> tuple[int, ...]:
     return t + (0,) * max(0, length - len(t))
 
 
+def _detected_version_string(text: str) -> str:
+    """Return the version exactly as reported by the tool (e.g. '26.04.3').
+
+    The parsed tuple is for *comparison* only; reconstructing a string from it
+    drops zero-padding (26.04.3 → 26.4.3), which is not a real Nextflow release
+    and would break NXF_VER / conda pins on replay. Always store the raw token.
+    """
+    for pattern in (r"\b(\d+\.\d+\.\d+)\b", r"\b(\d+\.\d+)\b", r"\b(\d+)\b"):
+        m = re.search(pattern, text)
+        if m:
+            return m.group(1)
+    return ""
+
+
 def _parse_version_tuple(text: str) -> tuple[int, ...]:
     m = re.search(r"\b(\d+)\.(\d+)\.(\d+)\b", text)
     if m:
@@ -249,15 +263,16 @@ def _check_java() -> dict[str, str]:
             fix="Install Java 17 or newer and ensure `java -version` works.",
             details={"java_path": java_path},
         )
+    version_str = _detected_version_string(version_text)
     if version_tuple[0] < JAVA_MIN_VERSION:
         raise SkillError(
             stage="preflight",
             error_code=ErrorCode.JAVA_VERSION_TOO_OLD,
             message="Java version is too old for nf-core/rnaseq.",
             fix="Install Java 17 or newer.",
-            details={"detected_version": ".".join(map(str, version_tuple))},
+            details={"detected_version": version_str},
         )
-    return {"path": java_path, "version": ".".join(map(str, version_tuple))}
+    return {"path": java_path, "version": version_str}
 
 
 def _check_nextflow() -> dict[str, str]:
@@ -280,15 +295,16 @@ def _check_nextflow() -> dict[str, str]:
             fix="Install Nextflow 25.04.3 or newer and ensure `nextflow -version` works.",
             details={"nextflow_path": nextflow_path},
         )
+    version_str = _detected_version_string(version_text)
     if _pad_version(version_tuple) < _pad_version(NEXTFLOW_MIN_VERSION):
         raise SkillError(
             stage="preflight",
             error_code=ErrorCode.NEXTFLOW_VERSION_TOO_OLD,
             message="Nextflow version is too old for nf-core/rnaseq 3.26.0.",
             fix="Upgrade Nextflow to 25.04.3 or newer.",
-            details={"detected_version": ".".join(map(str, version_tuple))},
+            details={"detected_version": version_str},
         )
-    return {"path": nextflow_path, "version": ".".join(map(str, version_tuple))}
+    return {"path": nextflow_path, "version": version_str}
 
 
 def _check_nextflow_presence() -> dict[str, str | bool]:

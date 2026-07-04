@@ -193,6 +193,20 @@ def test_nextflow_version_too_old(monkeypatch):
     assert exc.value.error_code == ErrorCode.NEXTFLOW_VERSION_TOO_OLD
 
 
+def test_nextflow_version_preserves_zero_padded_month(monkeypatch):
+    """A detected version like '26.04.3' must be reported verbatim, never
+    reconstructed from the comparison tuple as '26.4.3' (not a real release)."""
+    monkeypatch.setattr(preflight.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(preflight, "_command_output", lambda args: "Nextflow version 26.04.3 build 5928")
+    assert preflight._check_nextflow()["version"] == "26.04.3"
+
+
+def test_java_version_preserves_exact_string(monkeypatch):
+    monkeypatch.setattr(preflight.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(preflight, "_command_output", lambda args: 'openjdk version "17.0.10" 2024-01-16')
+    assert preflight._check_java()["version"] == "17.0.10"
+
+
 def test_check_mode_does_not_execute_nextflow_version(tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr(preflight, "_check_java", lambda: {"path": "/usr/bin/java", "version": "17"})

@@ -221,6 +221,28 @@ def test_nextflow_version_unparseable_is_version_failure(monkeypatch):
     assert exc.value.error_code == ErrorCode.NEXTFLOW_VERSION_TOO_OLD
 
 
+def test_nextflow_version_preserves_zero_padded_month(monkeypatch):
+    """A detected version like '26.04.3' must be reported verbatim, never
+    reconstructed from the comparison tuple as '26.4.3' (which is not a real
+    Nextflow release and would break NXF_VER / conda pins on replay)."""
+    import preflight as p
+
+    monkeypatch.setattr(p.shutil, "which", lambda n: f"/usr/bin/{n}")
+    monkeypatch.setattr(
+        p, "_command_output", lambda args: "  N E X T F L O W\n  version 26.04.3 build 5928"
+    )
+    assert p._check_nextflow() == "26.04.3"
+
+
+def test_java_version_preserves_exact_string(monkeypatch):
+    import preflight as p
+
+    monkeypatch.setattr(p.shutil, "which", lambda n: f"/usr/bin/{n}")
+    monkeypatch.setattr(
+        p, "_command_output", lambda args: 'openjdk version "17.0.10" 2024-01-16'
+    )
+    assert p._check_java() == "17.0.10"
+
 
 def test_profile_empty():
     with pytest.raises(SkillError) as exc:
@@ -888,6 +910,18 @@ def test_bqsr_requires_dbsnp_or_known_indels_when_not_skipped():
     with pytest.raises(SkillError) as exc:
         _check_flag_compatibility(params=params, tools=[])
     assert exc.value.error_code == ErrorCode.MISSING_REFERENCE
+
+
+def test_bqsr_error_explains_baserecalibrator_runs_by_default():
+    """A user who only requested --tools haplotypecaller may not know
+    baserecalibrator runs by default in the mapping workflow. The error must
+    say so, so the fix (--skip-tools baserecalibrator or supplying known sites)
+    is understandable rather than surprising."""
+    params = make_params(step="mapping", skip_tools=[], genome="", igenomes_ignore=True, fasta="/ref.fa")
+    with pytest.raises(SkillError) as exc:
+        _check_flag_compatibility(params=params, tools=["haplotypecaller"])
+    assert exc.value.error_code == ErrorCode.MISSING_REFERENCE
+    assert "baserecalibrator runs by default" in exc.value.message.lower()
 
 
 def test_bqsr_allows_upstream_test_profile_refs():

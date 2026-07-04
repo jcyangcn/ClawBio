@@ -580,6 +580,13 @@ def _run_wrapper(args: argparse.Namespace, output_dir: Path) -> int:
     )
     args.profile = composed_profile  # propagate to preflight + provenance
 
+    # Custom --fasta without --genome → disable iGenomes so Sarek does not load its
+    # default GATK.GRCh38 bundle and validate ~20 remote paths as local files. Must
+    # run after demo-override cleanup and profile composition (see helper docstring).
+    igenomes_notice = _auto_disable_igenomes_for_custom_fasta(args)
+    if igenomes_notice:
+        print(f"WARNING: {igenomes_notice}", file=sys.stderr)
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # --- pipeline source resolution ---
@@ -623,6 +630,10 @@ def _run_wrapper(args: argparse.Namespace, output_dir: Path) -> int:
         resume_manifest=resume_manifest,
         allow_remote_inputs=bool(getattr(args, "allow_remote_inputs", False)),
     )
+    # Record the auto-igenomes-ignore notice in the report's warning list too, so the
+    # behaviour change is provenance-visible (not only on stderr at emit time).
+    if igenomes_notice:
+        preflight_result.warnings.insert(0, igenomes_notice)
     _print(f"[preflight] passed (warnings: {len(preflight_result.warnings)})")
     if args.verbose:
         for w in preflight_result.warnings:
@@ -874,6 +885,46 @@ def _apply_demo_overrides(args: argparse.Namespace) -> None:
             file=sys.stderr,
         )
         args.resume = False
+
+
+def _auto_disable_igenomes_for_custom_fasta(args: argparse.Namespace) -> str | None:
+    """Disable iGenomes automatically for a custom-FASTA run with no --genome.
+
+    nf-core/sarek 3.8.1 defaults ``genome = 'GATK.GRCh38'`` in ``nextflow.config``.
+    The wrapper deliberately omits upstream-default parameters from ``params.yaml``,
+    so a custom-reference run that supplies ``--fasta`` but leaves ``--genome`` unset
+    would still let Sarek load the full GATK.GRCh38 iGenomes configuration and try
+    to validate its ~20 ``s3://ngi-igenomes/...`` reference paths as local files —
+    failing with a wall of "does not exist" errors that never mention
+    ``--igenomes-ignore``. Setting ``igenomes_ignore=true`` matches the nf-core
+    guidance for custom references ("``--igenomes_ignore`` must be set ... The
+    ``fasta`` file is the only required input file") and mirrors the equivalent
+    automatic behaviour already in nfcore-scrnaseq-wrapper.
+
+    Returns an explanatory notice when it changed anything, else ``None``. Must run
+    AFTER ``_apply_demo_overrides`` (which clears references for demo) and AFTER the
+    profile is composed, so the upstream ``test`` profile — which owns its own
+    genome/igenomes_base — is never touched.
+    """
+    if getattr(args, "demo", False) or getattr(args, "_noinput", False):
+        return None
+    profile_parts = {p.strip() for p in str(getattr(args, "profile", "") or "").split(",") if p.strip()}
+    if any(p == "test" or p.startswith("test_") for p in profile_parts):
+        return None
+    if not getattr(args, "fasta", None):
+        return None
+    if getattr(args, "genome", None):
+        # Explicit --genome alongside --fasta is a documented override; respect it.
+        return None
+    if getattr(args, "igenomes_ignore", False):
+        return None
+    args.igenomes_ignore = True
+    return (
+        "--fasta was provided without --genome: iGenomes is disabled automatically "
+        "(igenomes_ignore=true) so Sarek does not fall back to its default "
+        "GATK.GRCh38 iGenomes reference bundle. Pass --genome to use iGenomes, or "
+        "--igenomes-ignore explicitly to silence this notice."
+    )
 
 
 def _sync_profile_flags(args: argparse.Namespace) -> None:

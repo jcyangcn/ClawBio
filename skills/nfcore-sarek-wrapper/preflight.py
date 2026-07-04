@@ -383,6 +383,20 @@ def _pad_version(t: tuple[int, ...], length: int = 3) -> tuple[int, ...]:
     return t + (0,) * max(0, length - len(t))
 
 
+def _detected_version_string(text: str) -> str:
+    """Return the version exactly as reported by the tool (e.g. '26.04.3').
+
+    The parsed tuple is for *comparison* only; reconstructing a string from it
+    drops zero-padding (26.04.3 → 26.4.3), which is not a real Nextflow release
+    and would break NXF_VER / conda pins on replay. Always store the raw token.
+    """
+    for pattern in (r"\b(\d+\.\d+\.\d+)\b", r"\b(\d+\.\d+)\b", r"\b(\d+)\b"):
+        m = re.search(pattern, text)
+        if m:
+            return m.group(1)
+    return ""
+
+
 def _check_java() -> str:
     """Java >=17 must be present on PATH. Returns the detected version string."""
     java_path = shutil.which("java")
@@ -404,15 +418,16 @@ def _check_java() -> str:
             fix="Install Java 17 or newer and ensure `java -version` works.",
             details={"java_path": java_path, "output": version_text},
         )
+    version_str = _detected_version_string(version_text)
     if version[0] < JAVA_MIN_VERSION:
         raise SkillError(
             stage="preflight",
             error_code=ErrorCode.JAVA_VERSION_TOO_OLD,
-            message=f"Java {'.'.join(map(str, version))} is older than the required {JAVA_MIN_VERSION}.",
+            message=f"Java {version_str} is older than the required {JAVA_MIN_VERSION}.",
             fix=f"Install Java {JAVA_MIN_VERSION} or newer.",
-            details={"detected_version": ".".join(map(str, version)), "min": JAVA_MIN_VERSION},
+            details={"detected_version": version_str, "min": JAVA_MIN_VERSION},
         )
-    return ".".join(map(str, version))
+    return version_str
 
 
 # --- §5.1: Nextflow -------------------------------------------------------
@@ -441,22 +456,23 @@ def _check_nextflow() -> str:
             fix=f"Install Nextflow >={minimum} and ensure `nextflow -version` works.",
             details={"nextflow_path": nextflow_path, "output": version_text},
         )
+    version_str = _detected_version_string(version_text)
     if _pad_version(version) < _pad_version(NEXTFLOW_MIN_VERSION):
         raise SkillError(
             stage="preflight",
             error_code=ErrorCode.NEXTFLOW_VERSION_TOO_OLD,
             message=(
                 "Nextflow "
-                f"{'.'.join(map(str, version))} is older than the required "
+                f"{version_str} is older than the required "
                 f"{minimum}."
             ),
             fix=f"Upgrade Nextflow to {minimum} or newer.",
             details={
-                "detected_version": ".".join(map(str, version)),
+                "detected_version": version_str,
                 "min_version": minimum,
             },
         )
-    return ".".join(map(str, version))
+    return version_str
 
 
 # --- §5.1: Profile & backends --------------------------------------------
@@ -1959,7 +1975,11 @@ def _check_flag_compatibility(*, params: dict[str, Any], tools: list[str]) -> li
             raise SkillError(
                 stage="preflight",
                 error_code=ErrorCode.MISSING_REFERENCE,
-                message="BQSR requires --dbsnp or --known_indels when baserecalibrator is not skipped.",
+                message=(
+                    "BQSR requires --dbsnp or --known_indels when baserecalibrator is not "
+                    "skipped. Note: baserecalibrator runs by default in the Sarek mapping "
+                    "workflow, independently of the requested variant-calling --tools."
+                ),
                 fix="Provide --dbsnp/--known_indels resources, select an iGenomes genome, or add baserecalibrator to --skip_tools.",
                 details={"step": step, "skip_tools": sorted(skip_tools)},
             )
