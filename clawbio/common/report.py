@@ -100,6 +100,8 @@ def write_result_json(
     data: dict[str, Any],
     input_checksum: str = "",
     datasets: dict[str, str] | None = None,
+    status: str | None = None,
+    ok: bool | None = None,
 ) -> Path:
     """Write the standardized result.json envelope alongside report.md.
 
@@ -110,6 +112,12 @@ def write_result_json(
         summary: High-level summary dict (skill-specific).
         data: Full result data dict (skill-specific).
         input_checksum: SHA-256 hex digest of the input file.
+        status: Optional run status (e.g. "ok"/"error"). When provided it is
+            written as a top-level key. Opt-in and backward-compatible: callers
+            that omit it get the historical envelope unchanged.
+        ok: Optional boolean success discriminator, written as a top-level key
+            when provided. Together with ``status`` this is the minimal shared
+            contract across the nf-core pipeline wrappers.
 
     Returns:
         Path to the written result.json file.
@@ -117,15 +125,22 @@ def write_result_json(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    envelope = {
-        "skill": skill,
-        "version": version,
-        "completed_at": datetime.now(timezone.utc).isoformat(),
-        "input_checksum": f"sha256:{input_checksum}" if input_checksum else "",
-        "datasets": datasets or {},
-        "summary": summary,
-        "data": data,
-    }
+    envelope: dict[str, Any] = {}
+    if status is not None:
+        envelope["status"] = status
+    if ok is not None:
+        envelope["ok"] = ok
+    envelope.update(
+        {
+            "skill": skill,
+            "version": version,
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "input_checksum": f"sha256:{input_checksum}" if input_checksum else "",
+            "datasets": datasets or {},
+            "summary": summary,
+            "data": data,
+        }
+    )
 
     result_path = output_dir / "result.json"
     result_path.write_text(json.dumps(envelope, indent=2, default=str))

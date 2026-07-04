@@ -687,7 +687,9 @@ SKILLS = {
             "--no-banner",
             "--profile",
             "--pipeline-version",
+            "--allow-pipeline-version-override",
             "--pipeline-local",
+            "--timeout-hours",
             "--resume",
             "--aligner",
             "--pseudo-aligner",
@@ -823,6 +825,7 @@ SKILLS = {
             "-v",
             "--verbose",
             "--no-banner",
+            "--allow-pipeline-version-override",
             "--allow-remote-inputs",
             "--resume",
             "--prokaryotic",
@@ -940,6 +943,7 @@ SKILLS = {
         """.split()),
         "allowed_extra_flags_without_values": set("""
             --check --resume --arm --gpu --spark-profile --mutect-profile
+            --allow-pipeline-version-override --allow-remote-inputs
             --run-downstream --no-banner --verbose --no-intervals --wes
             --joint-germline --joint-mutect2 --only-paired-variant-calling
             --ignore-soft-clipped-bases --filter-vcfs --normalize-vcfs
@@ -1351,6 +1355,24 @@ def _promote_structured_result_fields(result: dict, out_dir: Path | None) -> Non
             result["report_md"] = report_md
 
 
+_NFCORE_PIPELINE_SKILLS = {"scrnaseq-pipeline", "rnaseq-pipeline", "sarek-pipeline"}
+
+
+def _canonical_extra_flag(flag: str) -> str:
+    """Normalise a long CLI flag to its hyphenated spelling.
+
+    nf-core parameters are snake_case (``--skip_tools``) while the pipeline
+    wrappers expose them as hyphenated flags (``--skip-tools``). Mapping the two
+    to a single canonical form lets the INT-001 allowlist recognise an
+    nf-core-native command copied from the upstream docs without enumerating
+    every underscore variant. Only the long-flag name is touched; short flags and
+    values are returned unchanged.
+    """
+    if flag.startswith("--"):
+        return "--" + flag[2:].replace("_", "-")
+    return flag
+
+
 def run_skill(
     skill_name: str,
     input_path: str | None = None,
@@ -1473,21 +1495,34 @@ def run_skill(
         allowed = skill_info.get("allowed_extra_flags", set())
         flags_without_values = skill_info.get("allowed_extra_flags_without_values", set())
         blocked = {"--input", "--output", "--demo"}
+        # nf-core parameters are snake_case; the pipeline wrappers expose them as
+        # hyphenated flags. For those skills, treat the two spellings as
+        # equivalent so an nf-core-native command is not silently dropped, and
+        # forward the wrapper's canonical hyphen spelling (which its parser
+        # already accepts). Other skills keep exact-match behaviour unchanged.
+        canonicalize = skill_name in _NFCORE_PIPELINE_SKILLS
+
+        def _key(token: str) -> str:
+            name = token.split("=", 1)[0]
+            return _canonical_extra_flag(name) if canonicalize else name
+
         filtered = []
         i = 0
         while i < len(extra_args):
-            flag = extra_args[i].split("=")[0]
+            token = extra_args[i]
+            flag = _key(token)
             if flag in blocked:
-                i += 2 if "=" not in extra_args[i] and i + 1 < len(extra_args) else i + 1
+                i += 2 if "=" not in token and i + 1 < len(extra_args) else i + 1
                 continue
             if flag in allowed:
-                filtered.append(extra_args[i])
+                _name, sep, value = token.partition("=")
+                filtered.append(f"{flag}={value}" if sep else flag)
                 if (
-                    "=" not in extra_args[i]
+                    not sep
                     and flag not in flags_without_values
                     and i + 1 < len(extra_args)
-                    and extra_args[i + 1].split("=")[0] not in allowed
-                    and extra_args[i + 1].split("=")[0] not in blocked
+                    and _key(extra_args[i + 1]) not in allowed
+                    and _key(extra_args[i + 1]) not in blocked
                 ):
                     filtered.append(extra_args[i + 1])
                     i += 1
@@ -1804,7 +1839,21 @@ def main():
     run_parser.add_argument("--min-count", type=int, default=None, help="Minimum count threshold for rnaseq skill")
     run_parser.add_argument("--min-samples", type=int, default=None, help="Minimum samples threshold for rnaseq skill")
     run_parser.add_argument("--check", action="store_true", help="Preflight-only mode for pipeline skills (scrnaseq-pipeline, rnaseq-pipeline)")
-    run_parser.add_argument("-c", "--config", dest="extra_config", action="append", default=None, help="Additional Nextflow config file for scrnaseq-pipeline")
+    # Nextflow config passthrough for the nf-core pipeline skills. The three
+    # spellings (-c / --config / --nextflow-config) are aliases of one repeatable
+    # option — matching every wrapper's own parser — so a config supplied with any
+    # spelling reaches scrnaseq-pipeline, rnaseq-pipeline, and sarek-pipeline alike.
+    run_parser.add_argument(
+        "-c",
+        "--config",
+        "--nextflow-config",
+        dest="nextflow_config",
+        action="append",
+        metavar="CONFIG",
+        default=None,
+        help="Additional Nextflow config file(s) forwarded to nf-core pipeline skills as -c "
+        "(aliases: -c/--config/--nextflow-config; repeatable).",
+    )
     run_parser.add_argument("--pipeline-version", default=None, help="Pinned pipeline version/tag for pipeline skills")
     run_parser.add_argument("--allow-dirty-pipeline", action="store_true", help="Allow an intentionally modified local scrnaseq checkout")
     run_parser.add_argument("--require-local-pipeline", action="store_true", help="Require a verifiable local scrnaseq checkout")
@@ -1979,8 +2028,8 @@ def main():
     # rnaseq-pipeline — output and publishing controls
     run_parser.add_argument("--save-bbsplit-reads", action="store_true", help="Save BBSplit-separated FASTQ files for rnaseq-pipeline")
     run_parser.add_argument("--publish-dir-mode", default=None, choices=["symlink", "rellink", "link", "copy", "copyNoFollow", "move"], help="Nextflow publishDir mode for pipeline skills (pipeline default: copy)")
-    # rnaseq-pipeline — Nextflow config passthrough (repeatable)
-    run_parser.add_argument("--nextflow-config", action="append", metavar="CONFIG", default=None, help="Additional Nextflow config file(s) passed as -c (repeatable)")
+    # Nextflow config passthrough (-c/--config/--nextflow-config) is declared once,
+    # above, as a single repeatable option shared by every nf-core pipeline skill.
     run_parser.add_argument("--mode", default=None, help="Mode for diffviz skill (auto|bulk|scrna)")
     run_parser.add_argument("--adata", default=None, help="AnnData input for enhanced diffviz scRNA plots")
     run_parser.add_argument("--top-genes", type=int, default=None, help="Top genes/markers to display in diffviz")
@@ -2167,6 +2216,13 @@ def main():
         extra = list(extra)
         if getattr(args, "check", False):
             extra.append("--check")
+        # Nextflow config files (-c/--config/--nextflow-config) apply to every
+        # nf-core pipeline wrapper, which all accept those spellings as aliases of
+        # one repeatable option. Forward each entry as --nextflow-config so a config
+        # supplied with any spelling reaches the wrapper regardless of pipeline.
+        if args.skill in {"scrnaseq-pipeline", "rnaseq-pipeline", "sarek-pipeline"}:
+            for cfg in getattr(args, "nextflow_config", None) or []:
+                extra.extend(["--nextflow-config", cfg])
         if skill_backend_profile:
             extra.extend(["--profile", skill_backend_profile])
         if getattr(args, "pipeline_version", None):
@@ -2188,8 +2244,6 @@ def main():
                 extra.append("--allow-conda-cellranger")
             if getattr(args, "aligner", None):
                 extra.extend(["--aligner", args.aligner])
-            for config_path in getattr(args, "extra_config", []) or []:
-                extra.extend(["--config", config_path])
             for value_flag in (
                 ("email_on_fail", "--email-on-fail"),
                 ("multiqc_config", "--multiqc-config"),
@@ -2427,10 +2481,6 @@ def main():
                 extra.append("--no-deseq2-vst")
             elif getattr(args, "deseq2_vst", None) is True:
                 extra.append("--deseq2-vst")
-            # --nextflow-config uses action='append'; emit each entry so the wrapper
-            # receives the full list (matching `-c <cfg>` Nextflow expectations).
-            for cfg in getattr(args, "nextflow_config", None) or []:
-                extra.extend(["--nextflow-config", cfg])
         if args.skill == "sarek-pipeline":
             for value_flag in (
                 ("pipeline_local", "--pipeline-local"),
@@ -2456,8 +2506,6 @@ def main():
             ):
                 if getattr(args, attr, False):
                     extra.append(flag)
-            for cfg in getattr(args, "nextflow_config", None) or []:
-                extra.extend(["--nextflow-config", cfg])
         if getattr(args, "drug", None):
             extra.extend(["--drug", args.drug])
         if getattr(args, "dose", None):

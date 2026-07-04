@@ -74,6 +74,31 @@ class TestWriteResultJson:
         )
         assert path.exists()
 
+    def test_status_ok_are_opt_in(self, tmp_path):
+        """Backward-compat: without status/ok the envelope has neither key
+        (unchanged for the ~40 skills that use this helper)."""
+        path = write_result_json(
+            output_dir=tmp_path, skill="s", version="1", summary={}, data={}
+        )
+        envelope = json.loads(path.read_text())
+        assert "status" not in envelope
+        assert "ok" not in envelope
+
+    def test_status_ok_written_when_provided(self, tmp_path):
+        """The nf-core pipeline wrappers opt into the shared status/ok contract."""
+        path = write_result_json(
+            output_dir=tmp_path,
+            skill="s",
+            version="1",
+            summary={},
+            data={},
+            status="ok",
+            ok=True,
+        )
+        envelope = json.loads(path.read_text())
+        assert envelope["status"] == "ok"
+        assert envelope["ok"] is True
+
     def test_empty_checksum(self, tmp_path):
         path = write_result_json(
             output_dir=tmp_path,
