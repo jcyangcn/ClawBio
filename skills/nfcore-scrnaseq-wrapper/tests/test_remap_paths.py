@@ -295,3 +295,109 @@ def test_bundle_copy_regenerates_keys_even_if_in_repo_literal_drifts(
     exec(compile(copied, "remap_paths_bundle", "exec"), namespace)
     assert "WRONG_DRIFTED_KEY" not in copied
     assert namespace["_PARAMS_REFERENCE_KEYS"] == tuple(ALL_REFERENCE_PATH_FIELDS)
+
+
+# ── cmd_repair_bundle (crash-recovery parity with rnaseq/sarek) ────────────────
+
+
+def _make_repairable_bundle(tmp_path: Path) -> Path:
+    """Minimal scrnaseq bundle: reproducibility/ holds commands.sh + params.yaml +
+    samplesheet; the output dir also has upstream/results and logs. Returns the
+    reproducibility (bundle) directory. Callers add/remove the regenerable files."""
+    output_dir = tmp_path / "run"
+    bundle = output_dir / "reproducibility"
+    bundle.mkdir(parents=True)
+    (bundle / "commands.sh").write_text("#!/usr/bin/env bash\nnextflow run nf-core/scrnaseq\n", encoding="utf-8")
+    (bundle / "params.yaml").write_text("outdir: upstream/results\naligner: simpleaf\n", encoding="utf-8")
+    (bundle / "samplesheet.valid.csv").write_text(
+        "sample,fastq_1,fastq_2\nS1,/data/a.fastq.gz,/data/b.fastq.gz\n", encoding="utf-8"
+    )
+    (output_dir / "upstream" / "results").mkdir(parents=True)
+    (output_dir / "upstream" / "results" / "matrix.h5ad").write_bytes(b"h5ad-bytes")
+    (output_dir / "logs").mkdir()
+    (output_dir / "logs" / "nextflow_stdout.txt").write_text("nextflow log\n", encoding="utf-8")
+    return bundle
+
+
+def test_cmd_repair_bundle_noop_when_all_files_present(tmp_path):
+    from remap_paths import cmd_repair_bundle
+
+    bundle = _make_repairable_bundle(tmp_path)
+    for name in ("manifest.json", "checksums.sha256", "environment.yml"):
+        (bundle / name).write_text("placeholder\n", encoding="utf-8")
+    assert cmd_repair_bundle(bundle_dir=bundle) == 0
+
+
+def test_cmd_repair_bundle_regenerates_all_missing_files(tmp_path):
+    from remap_paths import cmd_repair_bundle
+
+    bundle = _make_repairable_bundle(tmp_path)
+    result = cmd_repair_bundle(bundle_dir=bundle)
+    assert result == 0
+    for name in ("manifest.json", "checksums.sha256", "environment.yml"):
+        assert (bundle / name).exists(), f"{name} must be regenerated"
+
+
+def test_cmd_repair_bundle_returns_nonzero_when_commands_sh_missing(tmp_path):
+    from remap_paths import cmd_repair_bundle
+
+    bundle = _make_repairable_bundle(tmp_path)
+    (bundle / "commands.sh").unlink()
+    # Cannot repair without the original command record.
+    assert cmd_repair_bundle(bundle_dir=bundle) == 1
+
+
+def test_cmd_repair_bundle_stubs_marked_post_hoc(tmp_path):
+    import json
+
+    from remap_paths import cmd_repair_bundle
+
+    bundle = _make_repairable_bundle(tmp_path)
+    cmd_repair_bundle(bundle_dir=bundle)
+    manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest.get("regenerated_post_hoc") is True
+    assert "regenerated_post_hoc: true" in (bundle / "environment.yml").read_text(encoding="utf-8")
+    # Environment stub must name the scrnaseq wrapper, not a sibling.
+    assert "clawbio-nfcore-scrnaseq-wrapper" in (bundle / "environment.yml").read_text(encoding="utf-8")
+
+
+def test_cmd_repair_bundle_is_idempotent(tmp_path):
+    from remap_paths import cmd_repair_bundle
+
+    bundle = _make_repairable_bundle(tmp_path)
+    assert cmd_repair_bundle(bundle_dir=bundle) == 0
+    assert cmd_repair_bundle(bundle_dir=bundle) == 0  # second run is a no-op
+
+
+def test_regenerated_checksums_verify_against_files(tmp_path):
+    """Safety guarantee: every entry in the regenerated checksums.sha256 must match
+    the actual file digest, with labels resolving relative to output_dir — i.e.
+    `sha256sum -c checksums.sha256` run from the output dir passes."""
+    from remap_paths import _sha256_file, cmd_repair_bundle
+
+    bundle = _make_repairable_bundle(tmp_path)
+    cmd_repair_bundle(bundle_dir=bundle)
+    output_dir = bundle.parent
+    text = (bundle / "checksums.sha256").read_text(encoding="utf-8")
+    assert text.strip(), "checksums.sha256 must not be empty"
+    seen_labels = []
+    for line in text.splitlines():
+        digest, label = line.split("  ", 1)
+        seen_labels.append(label)
+        target = output_dir / label
+        assert target.is_file(), f"checksum label does not resolve to a file: {label}"
+        assert _sha256_file(target) == digest, f"stale/wrong digest for {label}"
+    # The checksum file must never hash itself.
+    assert "reproducibility/checksums.sha256" not in seen_labels
+    # Must cover the regenerated params.yaml (the file remap mutates) and the output.
+    assert "reproducibility/params.yaml" in seen_labels
+    assert "upstream/results/matrix.h5ad" in seen_labels
+
+
+def test_regenerated_checksums_are_lf_only(tmp_path):
+    from remap_paths import cmd_repair_bundle
+
+    bundle = _make_repairable_bundle(tmp_path)
+    cmd_repair_bundle(bundle_dir=bundle)
+    for name in ("checksums.sha256", "manifest.json", "environment.yml"):
+        assert b"\r" not in (bundle / name).read_bytes(), f"{name} must be LF-only"

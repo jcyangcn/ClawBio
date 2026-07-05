@@ -16,6 +16,10 @@ remapping before replaying on a different machine:
   3. Verify everything is ready:
        python3 remap_paths.py --verify
 
+  4. Regenerate missing bundle files after a crash (manifest.json, checksums.sha256,
+     environment.yml):
+       python3 remap_paths.py --repair-bundle
+
   Preview any change without modifying files by adding --dry-run.
   Remote URIs (s3://, https://, ...) and $VAR references are always skipped.
 """
@@ -24,12 +28,34 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import json
 import re
 import shutil
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 _BUNDLE_DIR = Path(__file__).resolve().parent
+# Regenerable bundle files (crash recovery). commands.sh is the required input and
+# is never regenerated. Matches nfcore-rnaseq/nfcore-sarek.
+_REQUIRED_BUNDLE_FILES = ("manifest.json", "checksums.sha256", "environment.yml")
+
+
+def _write_text_lf(path: Path, text: str) -> None:
+    """Write ``text`` with LF line endings on every OS (self-contained).
+
+    This script is shipped inside the reproducibility bundle and runs standalone at
+    replay (no ClawBio package available), so it cannot import the shared
+    ``clawbio.common.textio`` helper. CRLF/CR are normalised to LF and the result is
+    written as bytes (bypassing text-mode newline translation) so a rewrite on
+    Windows never reintroduces CRLF into checksums.sha256, manifest.json, or
+    environment.yml. Mirrors the nfcore-rnaseq/nfcore-sarek helper.
+    """
+    normalised = text.replace("\r\n", "\n").replace("\r", "\n")
+    Path(path).write_bytes(normalised.encode("utf-8"))
+
+
 _FASTQ_COLUMNS = ("fastq_1", "fastq_2", "fastq_barcode")
 # Reference path KEYS as they appear in params.yaml (underscore form).
 # The block between the AUTO-GENERATED sentinels mirrors
@@ -348,6 +374,151 @@ def cmd_verify(bundle_dir: Path | None = None) -> int:
     return 0 if ok else 1
 
 
+def _sha256_file(path: Path) -> str:
+    """Compute the SHA-256 hex digest of a single file (stdlib-only, portable)."""
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _regenerate_checksums(bundle_dir: Path) -> None:
+    """Write checksums.sha256 over the current bundle contents (stdlib-only).
+
+    bundle_dir is the reproducibility/ directory (where this script lives); its
+    parent is the output_dir the wrapper used. Labels are relative to output_dir so
+    ``sha256sum -c`` succeeds when run from there, on any OS.
+
+    nf-core/scrnaseq keeps the provenance JSONs inside reproducibility/ (there is no
+    separate provenance/ tree, unlike nfcore-rnaseq), so the roots here are
+    upstream/results, reproducibility, and logs. checksums.sha256 never hashes
+    itself.
+    """
+    output_dir = bundle_dir.parent
+    checksum_path = bundle_dir / "checksums.sha256"
+    roots = [
+        output_dir / "upstream" / "results",
+        bundle_dir,  # reproducibility/ itself (params.yaml, samplesheet, JSONs, …)
+        output_dir / "logs",
+    ]
+    lines: list[str] = []
+    for root in roots:
+        if not root.exists():
+            continue
+        for f in sorted(root.rglob("*")):
+            if not f.is_file():
+                continue
+            if f.name == "checksums.sha256":
+                continue  # never hash the checksum file itself
+            try:
+                rel = f.relative_to(output_dir).as_posix()
+            except ValueError:
+                rel = f.name
+            lines.append(f"{_sha256_file(f)}  {rel}")
+    _write_text_lf(checksum_path, "\n".join(lines) + ("\n" if lines else ""))
+
+
+def _regenerate_manifest_stub(bundle_dir: Path, commands_sh: Path) -> None:
+    """Write a post-hoc manifest.json stub, clearly marked so audit consumers can
+    tell it from an original. The original manifest needs runtime metadata (args,
+    params checksum, Java/Nextflow versions detected at run time) that cannot be
+    reconstructed from the bundle alone."""
+    manifest = {
+        "regenerated_post_hoc": True,
+        "note": (
+            "Original manifest was lost because the wrapper crashed during "
+            "post-processing. This stub was written by remap_paths.py --repair-bundle. "
+            "For a complete audit bundle with original metadata, re-run the wrapper."
+        ),
+        "commands_sh": str(commands_sh),
+        "regenerated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _write_text_lf(bundle_dir / "manifest.json", json.dumps(manifest, indent=2))
+
+
+def _regenerate_environment_stub(bundle_dir: Path) -> None:
+    """Write a post-hoc environment.yml stub. The original captures exact
+    Java/Nextflow versions detected at run time, which cannot be reconstructed
+    without the wrapper context, so this records only a named placeholder."""
+    _write_text_lf(
+        bundle_dir / "environment.yml",
+        "# regenerated post-hoc by remap_paths.py --repair-bundle\n"
+        "# Original environment snapshot was lost because the wrapper crashed during\n"
+        "# post-processing. For the original snapshot, re-run the wrapper.\n"
+        "name: clawbio-nfcore-scrnaseq-wrapper\n"
+        "regenerated_post_hoc: true\n",
+    )
+
+
+def cmd_repair_bundle(bundle_dir: Path | None = None) -> int:
+    """Regenerate missing bundle files from existing bundle contents.
+
+    checksums.sha256 is recomputed from whatever files are present — fully accurate.
+    manifest.json and environment.yml are written as post-hoc stubs (marked
+    regenerated_post_hoc: true) because the original runtime metadata cannot be
+    reconstructed without re-running the wrapper. Returns 0 when all required files
+    exist after repair, 1 on failure. Idempotent: a complete bundle is a no-op.
+    Parity with nfcore-rnaseq/nfcore-sarek.
+    """
+    bd = bundle_dir or _BUNDLE_DIR
+    commands_sh = find_commands_sh(bundle_dir=bd)
+    if commands_sh is None:
+        print(
+            "ERROR: commands.sh not found in bundle directory.\n"
+            "  Cannot repair bundle without the original command record.",
+            file=sys.stderr,
+        )
+        return 1
+
+    missing = [f for f in _REQUIRED_BUNDLE_FILES if not (bd / f).exists()]
+    if not missing:
+        print("Bundle is complete - all required files are present. Nothing to repair.")
+        return 0
+
+    print(f"Repairing bundle - regenerating {len(missing)} missing file(s):")
+    try:
+        wrote_new_files = False
+        if "manifest.json" in missing:
+            _regenerate_manifest_stub(bd, commands_sh)
+            print("  [OK] manifest.json  (post-hoc stub - original metadata unavailable)")
+            wrote_new_files = True
+        if "environment.yml" in missing:
+            _regenerate_environment_stub(bd)
+            print("  [OK] environment.yml  (post-hoc stub - original snapshot unavailable)")
+            wrote_new_files = True
+        # Recompute checksums whenever any file was written (or checksums itself was
+        # missing), so the checksum file covers the full post-repair bundle state.
+        if wrote_new_files or "checksums.sha256" in missing:
+            _regenerate_checksums(bd)
+            print("  [OK] checksums.sha256  (recomputed from current bundle contents)")
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"ERROR: Repair failed: {exc}", file=sys.stderr)
+        return 1
+
+    still_missing = [f for f in _REQUIRED_BUNDLE_FILES if not (bd / f).exists()]
+    if still_missing:
+        print(
+            f"ERROR: Repair incomplete - still missing: {', '.join(still_missing)}",
+            file=sys.stderr,
+        )
+        return 1
+
+    stubs = [f for f in ("manifest.json", "environment.yml") if f in missing]
+    if stubs:
+        stub_list = " and ".join(stubs)
+        word = "stubs" if len(stubs) > 1 else "stub"
+        are_is = "are" if len(stubs) > 1 else "is a"
+        print(
+            f"\nRepair complete. Note: {stub_list} {are_is} post-hoc {word}\n"
+            "(marked regenerated_post_hoc: true). For a fully-original audit bundle,\n"
+            "re-run the wrapper instead."
+        )
+    else:
+        print("\nRepair complete.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Make this reproducibility bundle portable across machines.",
@@ -365,6 +536,9 @@ examples:
 
   Verify everything is ready to replay:
     python3 remap_paths.py --verify
+
+  Regenerate missing bundle files (manifest.json, checksums.sha256, environment.yml):
+    python3 remap_paths.py --repair-bundle
 """,
     )
     parser.add_argument(
@@ -389,8 +563,15 @@ examples:
     parser.add_argument(
         "--verify", action="store_true", help="Check all paths exist on this machine"
     )
+    parser.add_argument(
+        "--repair-bundle",
+        action="store_true",
+        help="Regenerate missing bundle files (manifest.json, checksums.sha256, environment.yml)",
+    )
     args = parser.parse_args()
 
+    if args.repair_bundle:
+        return cmd_repair_bundle()
     if args.verify:
         return cmd_verify()
     if args.refs_old is not None and args.refs_new is not None:

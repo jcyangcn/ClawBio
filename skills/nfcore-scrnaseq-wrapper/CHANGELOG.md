@@ -6,6 +6,25 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ## [Unreleased] — 0.1.0
 
+### Added
+
+- **Bundle `remap_paths.py` gains `--repair-bundle` (crash-recovery parity).** The
+  shipped standalone `remap_paths.py` can now regenerate the three regenerable
+  reproducibility-bundle files — `checksums.sha256` (recomputed from the current
+  bundle contents), and post-hoc `manifest.json` / `environment.yml` stubs (marked
+  `regenerated_post_hoc: true`) — if the wrapper crashed mid-post-processing and
+  left them missing. This matches the `nfcore-rnaseq-wrapper` / `nfcore-sarek-wrapper`
+  bundles, which already shipped `--repair-bundle`; scrnaseq was the only one
+  without it. `checksums.sha256` is regenerated stdlib-only over scrnaseq's actual
+  bundle layout (`upstream/results`, `reproducibility`, `logs`; scrnaseq keeps the
+  provenance JSONs inside `reproducibility/`, so — unlike nfcore-rnaseq — there is no
+  separate `provenance/` root), with labels relative to the output directory so
+  `sha256sum -c` passes. A self-contained `_write_text_lf` (mirroring the sibling
+  bundles) keeps the regenerated files LF-only on every OS. `--output-dir` and the
+  `--output`-based resume warning are deliberately **not** added: scrnaseq's
+  `commands.sh` self-anchors to the bundle location via `BASH_SOURCE`, so the output
+  path never needs patching.
+
 ### Documentation
 
 - **`--allow-remote-inputs` semantics clarified.** SKILL.md now states explicitly
