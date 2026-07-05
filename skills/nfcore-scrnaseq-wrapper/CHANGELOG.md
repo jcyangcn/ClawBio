@@ -38,6 +38,13 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **`params.yaml` now carries the explanatory header the sibling wrappers emit.**
+  `serialize_params_yaml` wrote a bare `yaml.dump`, so the bundled `params.yaml`
+  lacked the three-line comment header that nfcore-rnaseq / nfcore-sarek prepend
+  (noting that `input`/`outdir` are relative to the Nextflow launch directory and
+  pointing at `reproducibility/commands.sh` for replay). It now emits the same header,
+  adapted to nf-core/scrnaseq. YAML comments do not affect parsing, the reference-path
+  remapper, or the bundle checksum round-trip.
 - **A `protocol` samplesheet column is no longer flagged as unrecognised.**
   nf-core/scrnaseq 4.1.0's `schema_input.json` does not define a `protocol` column,
   but the pipeline's own example samplesheet (`assets/samplesheet.csv`) ships one,
