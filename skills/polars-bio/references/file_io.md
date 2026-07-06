@@ -12,7 +12,7 @@ the reader-level detail (function names, index requirements, notable parameters)
 
 | Format | Functions | Index | Notable params |
 |--------|-----------|-------|----------------|
-| BED | `scan_bed` / `read_bed` / `register_bed` | — | `use_zero_based`; **>=4 cols required**; 0-based half-open in file (auto-converted; fixed in #413) |
+| BED | `scan_bed` / `read_bed` / `register_bed` | — | `use_zero_based` (output representation; CLI defaults 0-based half-open, `--one-based` overrides); **>=4 cols required** |
 | VCF | `scan_vcf` / `read_vcf` / `register_vcf` / `describe_vcf` | TBI/CSI | `info_fields`, `samples`; predicate pushdown |
 | VCF Zarr | `scan_vcf_zarr` / `read_vcf_zarr` / `register_vcf_zarr` / `describe_vcf_zarr` | — | local Zarr directory store |
 | GFF / GTF | `scan_gff` / `scan_gtf` / `register_*` | TBI/CSI (GFF) | `attr_fields` to project attributes |

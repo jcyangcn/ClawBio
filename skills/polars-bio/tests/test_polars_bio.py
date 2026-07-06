@@ -1,4 +1,5 @@
 """Tests for polars_bio_runner.py"""
+import csv
 import importlib.util
 import json
 import os
@@ -7,6 +8,11 @@ import sys
 from pathlib import Path
 
 import pytest
+
+
+def _load_csv_rows(path):
+    with open(path, newline="") as fh:
+        return list(csv.DictReader(fh))
 
 SKILL_DIR = Path(__file__).parent.parent
 SCRIPT = SKILL_DIR / "polars_bio_runner.py"
@@ -248,6 +254,99 @@ class TestPileup:
         r = run(["pileup", "--input", str(bam), "--output", str(tmp_path)])
         assert r.returncode != 0
         assert "index" in (r.stdout + r.stderr).lower()
+
+
+class TestCoordinateSystem:
+    """BED reads default to 0-based half-open output; --one-based overrides.
+
+    The coordinate flag controls *output representation*, not input
+    interpretation: the reader already knows BED is 0-based on disk. Overlap
+    *pairings* are therefore identical in both modes — only displayed
+    coordinates differ. These golden-value tests pin that contract.
+    """
+
+    def setup_method(self):
+        pytest.importorskip("polars_bio")
+
+    EXPECTED_PAIRS = {("a1", "b1"), ("a2", "b1"), ("a3", "b2"),
+                      ("a4", "b3"), ("a5", "b4")}
+
+    def _overlap_rows(self, tmp_path, extra=None):
+        args = ["overlap", "--a", str(EX / "demo_a.bed"), "--b", str(EX / "demo_b.bed"),
+                "--output", str(tmp_path)] + (extra or [])
+        r = run(args)
+        assert r.returncode == 0, r.stderr
+        return _load_csv_rows(tmp_path / "result.csv")
+
+    def test_overlap_default_is_zero_based(self, tmp_path):
+        rows = self._overlap_rows(tmp_path)
+        assert {(r["name_1"], r["name_2"]) for r in rows} == self.EXPECTED_PAIRS
+        a1 = next(r for r in rows if r["name_1"] == "a1" and r["name_2"] == "b1")
+        # demo_a a1 = "chr1 1 6": 0-based half-open start stays 1
+        assert int(a1["start_1"]) == 1
+        assert int(a1["end_1"]) == 6
+
+    def test_overlap_one_based_override(self, tmp_path):
+        rows = self._overlap_rows(tmp_path, ["--one-based"])
+        # pairings are IDENTICAL regardless of representation
+        assert {(r["name_1"], r["name_2"]) for r in rows} == self.EXPECTED_PAIRS
+        a1 = next(r for r in rows if r["name_1"] == "a1" and r["name_2"] == "b1")
+        # 1-based closed shifts start +1
+        assert int(a1["start_1"]) == 2
+        assert int(a1["end_1"]) == 6
+
+    def test_params_records_zero_based_default(self, tmp_path):
+        self._overlap_rows(tmp_path)
+        data = json.loads((tmp_path / "result.json").read_text())
+        assert data["params"]["zero_based"] is True
+
+    def test_params_records_one_based_override(self, tmp_path):
+        self._overlap_rows(tmp_path, ["--one-based"])
+        data = json.loads((tmp_path / "result.json").read_text())
+        assert data["params"]["zero_based"] is False
+
+    def test_merge_roundtrip_is_zero_based(self, tmp_path):
+        # merged chr1 [1,6)+[5,9) -> [1,9) in 0-based; start would be 2 if 1-based
+        r = run(["merge", "--a", str(EX / "demo_a.bed"), "--output", str(tmp_path)])
+        assert r.returncode == 0, r.stderr
+        rows = _load_csv_rows(tmp_path / "result.csv")
+        starts = sorted(int(row["start"]) for row in rows if row["chrom"] == "chr1")
+        assert starts[0] == 1  # 0-based start preserved for BED round-trip
+
+    def test_io_bed_default_zero_based(self, tmp_path):
+        r = run(["io", "--input", str(EX / "demo_a.bed"), "--format", "bed",
+                 "--output", str(tmp_path)])
+        assert r.returncode == 0, r.stderr
+        rows = _load_csv_rows(tmp_path / "result.csv")
+        first = min(rows, key=lambda row: (row["chrom"], int(row["start"])))
+        # io path must honor the same 0-based default as interval ops
+        assert int(first["start"]) == 1
+
+
+class TestComplementBounds:
+    """complement without contig bounds spans to i64::MAX; surface a caveat
+    and let --genome bound the gaps."""
+
+    def setup_method(self):
+        pytest.importorskip("polars_bio")
+
+    def test_complement_without_genome_warns(self, tmp_path):
+        r = run(["complement", "--a", str(EX / "demo_a.bed"), "--output", str(tmp_path)])
+        assert r.returncode == 0, r.stderr
+        report = (tmp_path / "report.md").read_text().lower()
+        assert "contig" in report and "unbounded" in report
+        assert "unbounded" in (r.stdout + r.stderr).lower()
+
+    def test_complement_with_genome_is_bounded(self, tmp_path):
+        genome = tmp_path / "genome.txt"
+        genome.write_text("chr1\t35\nchr2\t60\n")
+        r = run(["complement", "--a", str(EX / "demo_a.bed"),
+                 "--genome", str(genome), "--output", str(tmp_path)])
+        assert r.returncode == 0, r.stderr
+        rows = _load_csv_rows(tmp_path / "result.csv")
+        ends = [int(row["end"]) for row in rows]
+        assert 9223372036854775807 not in ends
+        assert max(ends) <= 60
 
 
 class TestSkillMd:

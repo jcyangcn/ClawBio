@@ -18,10 +18,15 @@ pb.set_option("datafusion.execution.target_partitions", os.cpu_count())
 
 ## Coordinate systems
 
-- Default is **1-based closed** (matches VCF/GFF/SAM). BED files are **0-based half-open**
-  in the file; polars-bio converts on read (corrected in #413).
-- I/O functions accept `use_zero_based=True/False` to set coordinate metadata; the
-  ClawBio CLI exposes `--zero-based`.
+- `use_zero_based` controls the **output representation**, not how the input is parsed:
+  `True` → 0-based half-open output, `False` → 1-based closed output, `None` → the global
+  `datafusion.bio.coordinate_system_zero_based` fallback. The BED reader always knows the
+  file is 0-based half-open on disk, so interval-op *results are identical* in either mode —
+  only the displayed coordinates differ (1-based shifts each start +1).
+- The ClawBio CLI defaults BED to **0-based half-open** output (BED-native, so
+  `merge`/`complement`/`subtract`/`cluster` round-trip correctly) and exposes `--one-based`
+  to force 1-based closed. The `io`, `sql`, and interval-op paths all honor this default —
+  `sql` reconciles via `set_option` since `register_bed` takes no `use_zero_based` argument.
 - Mismatched systems between two inputs raise `CoordinateSystemMismatchError`; missing
   metadata (with `coordinate_system_check=True`) raises `MissingCoordinateSystemError`.
 

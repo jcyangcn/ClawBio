@@ -225,7 +225,10 @@ python skills/polars-bio/polars_bio_runner.py pileup --input aln.bam --min-mappi
 python skills/polars-bio/polars_bio_runner.py --demo --output /tmp/polars_bio_demo
 ```
 
-Global flags: `--zero-based` (treat coords as 0-based half-open), `--output` (required).
+Global flags: `--one-based` (output 1-based closed coords; default is **0-based
+half-open**, BED-native), `--genome <chrom-sizes>` (bound `complement` gaps),
+`--output` (required). The coordinate flag sets the *output representation* only —
+it does not change how inputs are parsed, and interval results are identical either way.
 
 ## Example Output
 
@@ -237,7 +240,7 @@ Global flags: `--zero-based` (treat coords as 0-based half-open), `--output` (re
 {
   "skill": "polars-bio",
   "subcommand": "overlap",
-  "params": { "k": 1, "zero_based": false },
+  "params": { "k": 1, "zero_based": true },
   "polars_bio_version": "<runtime-detected>",
   "output_rows": 5,
   "output_schema": {
@@ -267,22 +270,30 @@ Global flags: `--zero-based` (treat coords as 0-based half-open), `--output` (re
 
 1. **BED needs >=4 columns.** The polars-bio BED reader silently returns 0 rows for
    3-column BED. Demo files are BED6. Always include a name column.
-2. **Use an up-to-date polars-bio for correct BED coordinates.** A recent release fixed
-   0-based half-open `read_bed`/`scan_bed` handling (#413). The runner records the
-   actually-installed version in `result.json` (no hardcoded version anywhere).
-3. **Operations return LazyFrames.** The CLI requests eager output
+2. **The coordinate flag is output representation, not input parsing.** The reader
+   already knows BED is 0-based half-open on disk. `--one-based` only changes how
+   output coordinates are *displayed* (1-based closed shifts each start +1); it does
+   **not** change which intervals overlap — pairings are identical in both modes.
+   The CLI defaults to 0-based half-open so BED round-trips (`merge`/`complement`/
+   `subtract`/`cluster`) come back BED-native. `io` and `sql` honor the same default.
+   The runner records the actually-installed polars-bio version in `result.json`
+   (no hardcoded version anywhere).
+3. **`complement` needs contig bounds.** Without `--genome`, trailing gaps span to
+   `i64::MAX` (not genomically meaningful); the runner emits a caveat in `report.md`
+   and stderr. Pass `--genome <chrom-sizes>` (chrom&lt;TAB&gt;size per line) for bounded gaps.
+4. **Operations return LazyFrames.** The CLI requests eager output
    (`output_type="polars.DataFrame"`); if you call the library directly, remember
    `.collect()`.
-4. **Probe-build order matters.** For two-input ops the first DataFrame is probed
+5. **Probe-build order matters.** For two-input ops the first DataFrame is probed
    against the second — pass the larger set first for speed.
-5. **`expand` and `sort_bedframe` are not exposed** as functions in the current
+6. **`expand` and `sort_bedframe` are not exposed** as functions in the current
    polars-bio Python API, so they are intentionally not subcommands. Use Polars
    expressions for padding/sorting if needed.
-6. **BAM needs a `.bai` index** for `io`/`sql`/`pileup`; the runner errors clearly if
+7. **BAM needs a `.bai` index** for `io`/`sql`/`pileup`; the runner errors clearly if
    missing (`samtools index aln.bam`). CRAM needs a `reference_path`.
-7. **Nested columns can't be CSV.** GFF/GTF/VCF outputs with list/struct columns are
+8. **Nested columns can't be CSV.** GFF/GTF/VCF outputs with list/struct columns are
    written as `result.ndjson` instead of `result.csv` automatically.
-8. **INT32 position limit (~2.1 Gb)** per contig — fine for known genomes.
+9. **INT32 position limit (~2.1 Gb)** per contig — fine for known genomes.
 
 ## Safety
 

@@ -108,7 +108,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--k", type=int, default=1, help="nearest: number of nearest intervals (default 1).")
     p.add_argument("--min-mapping-quality", dest="min_mapping_quality", type=int, default=0,
                    help="pileup: minimum mapping quality (default 0).")
-    p.add_argument("--zero-based", action="store_true", help="Treat coordinates as 0-based half-open.")
+    p.add_argument("--one-based", action="store_true",
+                   help="Output 1-based closed coordinates. Default is 0-based half-open "
+                        "(matches BED on disk; controls output representation, not input parsing).")
+    p.add_argument("--genome",
+                   help="complement: contig-sizes file (chrom<TAB>size per line) used to bound gaps.")
     p.add_argument("--output", help="Output directory.")
     p.add_argument("--demo", action="store_true", help="Run overlap on bundled synthetic BED data.")
     p.add_argument("--verbose", action="store_true", help="Verbose output.")
@@ -120,7 +124,7 @@ def _now_iso() -> str:
 
 
 def build_result(subcommand, params, inputs, output_rows, output_schema, figure,
-                 polars_bio_version=None):
+                 polars_bio_version=None, caveats=None):
     return {
         "skill": "polars-bio",
         "subcommand": subcommand,
@@ -130,6 +134,7 @@ def build_result(subcommand, params, inputs, output_rows, output_schema, figure,
         "output_rows": output_rows,
         "output_schema": output_schema,
         "figure": figure,
+        "caveats": list(caveats or []),
         "report": "report.md",
         "timestamp": _now_iso(),
     }
@@ -147,12 +152,17 @@ def write_report(result: dict, out_dir: Path) -> None:
     fig = f"\n![figure]({result['figure']})\n" if result.get("figure") else ""
     params_json = json.dumps(result["params"], indent=2)
     inputs = ", ".join(result["inputs"]) or "(none)"
+    caveats = result.get("caveats") or []
+    caveat_block = (
+        "## Caveats\n\n" + "".join(f"- {c}\n" for c in caveats) + "\n" if caveats else ""
+    )
     report = (
         f"# polars-bio — {result['subcommand']}\n\n"
         f"**polars-bio version:** {result['polars_bio_version']}\n"
         f"**Inputs:** {inputs}\n"
         f"**Output rows:** {result['output_rows']}\n"
         f"**Generated:** {result['timestamp']}\n\n"
+        f"{caveat_block}"
         f"## Parameters\n\n"
         f"```json\n{params_json}\n```\n\n"
         f"## Output schema\n\n"
@@ -224,14 +234,39 @@ SINGLE_INPUT_OPS = {"merge", "cluster", "complement"}
 _DF = {"output_type": "polars.DataFrame"}
 
 
+def _zero_based(args) -> bool:
+    """Coordinate output representation: 0-based half-open by default (BED-native),
+    1-based closed when --one-based is passed. Controls output display only; both
+    inputs share the setting so interval logic is identical across modes."""
+    return not args.one_based
+
+
 def read_bed_lf(pb, path, zero_based):
     return pb.scan_bed(str(path), use_zero_based=bool(zero_based))
 
 
+def _load_genome_view(path):
+    """Build a contig-bounds view_df (chrom,start=0,end=size) from a chrom-sizes
+    file (chrom<TAB>size per line; '#' comments and blank lines ignored)."""
+    import polars as pl
+    chroms, ends = [], []
+    for line in Path(path).read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split("\t") if "\t" in line else line.split()
+        if len(parts) < 2:
+            raise ValueError(f"Bad chrom-sizes line (need chrom<TAB>size): {line!r}")
+        chroms.append(parts[0])
+        ends.append(int(parts[1]))
+    return pl.DataFrame({"chrom": chroms, "start": [0] * len(chroms), "end": ends})
+
+
 def run_interval_op(pb, op, args):
-    a = read_bed_lf(pb, args.a, args.zero_based)
+    zb = _zero_based(args)
+    a = read_bed_lf(pb, args.a, zb)
     if op in TWO_INPUT_OPS:
-        b = read_bed_lf(pb, args.b, args.zero_based)
+        b = read_bed_lf(pb, args.b, zb)
         if op == "overlap":
             return pb.overlap(a, b, **_DF)
         if op == "nearest":
@@ -247,7 +282,8 @@ def run_interval_op(pb, op, args):
     if op == "cluster":
         return pb.cluster(a, **_DF)
     if op == "complement":
-        return pb.complement(a, **_DF)
+        view = _load_genome_view(args.genome) if args.genome else None
+        return pb.complement(a, view_df=view, **_DF)
     raise ValueError(f"Unsupported interval op: {op}")
 
 
@@ -265,10 +301,22 @@ def _write_result_table(df, out_dir: Path) -> str:
         return "result.ndjson"
 
 
+_COMPLEMENT_UNBOUNDED = (
+    "complement was run without contig bounds: trailing gaps are unbounded "
+    "(span to i64::MAX) and are not genomically meaningful. Pass "
+    "--genome <chrom-sizes> (chrom<TAB>size per line) to bound the gaps."
+)
+
+
 def _run_interval_and_write(pb, op, args, out_dir, inputs, params):
     df = run_interval_op(pb, op, args)
+    caveats = []
+    if op == "complement" and not args.genome:
+        caveats.append(_COMPLEMENT_UNBOUNDED)
+        sys.stderr.write("WARNING: " + _COMPLEMENT_UNBOUNDED + "\n")
     figure = write_figure(op, df, out_dir)
-    result = build_result(op, params, inputs, df.height, _schema_of(df), figure)
+    result = build_result(op, params, inputs, df.height, _schema_of(df), figure,
+                          caveats=caveats)
     write_result_json(result, out_dir)
     write_report(result, out_dir)
     write_reproducibility(args, out_dir)
@@ -305,6 +353,9 @@ def run_io(pb, args):
         if not args.reference:
             raise ValueError("CRAM requires --reference (path to the reference FASTA).")
         lf = scan(args.input, reference_path=args.reference)
+    elif fmt == "bed":
+        # Honor the same coordinate default as the interval-op path.
+        lf = scan(args.input, use_zero_based=_zero_based(args))
     else:
         lf = scan(args.input)
     df = lf.head(50).collect()
@@ -330,6 +381,13 @@ def _register_fn(pb, path):
 
 
 def run_sql(pb, args):
+    # register_bed has no use_zero_based param, so reconcile the coordinate system
+    # via the global option before registration (keeps sql consistent with io/interval).
+    try:
+        pb.set_option("datafusion.bio.coordinate_system_zero_based",
+                      "true" if _zero_based(args) else "false")
+    except Exception:
+        pass
     _register_fn(pb, args.input)(args.input, name="t")
     res = pb.sql(args.query)
     return res.collect() if hasattr(res, "collect") else res
@@ -365,7 +423,9 @@ def _dispatch(args) -> int:
         if op in TWO_INPUT_OPS and not args.b:
             sys.stderr.write(f"ERROR: '{op}' needs both --a and --b.\n")
             return 1
-        params = {"k": args.k, "zero_based": args.zero_based}
+        params = {"k": args.k, "zero_based": _zero_based(args)}
+        if op == "complement":
+            params["genome"] = args.genome
         inputs = [args.a] + ([args.b] if args.b else [])
         return _run_interval_and_write(pb, op, args, out_dir, inputs, params)
 
