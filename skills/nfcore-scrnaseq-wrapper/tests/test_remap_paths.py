@@ -401,3 +401,117 @@ def test_regenerated_checksums_are_lf_only(tmp_path):
     cmd_repair_bundle(bundle_dir=bundle)
     for name in ("checksums.sha256", "manifest.json", "environment.yml"):
         assert b"\r" not in (bundle / name).read_bytes(), f"{name} must be LF-only"
+
+
+def _make_realistic_bundle(tmp_path: Path) -> Path:
+    """A bundle laid out like a real post-run scrnaseq output dir, including files the
+    original checksum manifest deliberately excludes (the reproducibility/*.json
+    provenance tree, environment.yml/manifest.json, extra upstream outputs, extra
+    logs). Returns the reproducibility (bundle) directory."""
+    output_dir = tmp_path / "run"
+    repro = output_dir / "reproducibility"
+    repro.mkdir(parents=True)
+    (repro / "commands.sh").write_text("#!/usr/bin/env bash\nnextflow run nf-core/scrnaseq\n", encoding="utf-8")
+    (repro / "params.yaml").write_text("outdir: upstream/results\naligner: simpleaf\n", encoding="utf-8")
+    (repro / "samplesheet.valid.csv").write_text(
+        "sample,fastq_1,fastq_2\nS1,/data/a.fastq.gz,/data/b.fastq.gz\n", encoding="utf-8"
+    )
+    # Decoys under reproducibility/ that the original manifest never hashes.
+    for name in ("runtime.json", "inputs.json", "invocation.json", "upstream.json",
+                 "preflight.json", "outputs.json", "samplesheet.json"):
+        (repro / name).write_text('{"decoy": true}\n', encoding="utf-8")
+
+    results = output_dir / "upstream" / "results"
+    mtx = results / "simpleaf" / "mtx_conversions"
+    mtx.mkdir(parents=True)
+    (mtx / "combined_filtered_matrix.h5ad").write_bytes(b"h5ad-combined")
+    (mtx / "S1").mkdir()
+    (mtx / "S1" / "S1_filtered_matrix.h5ad").write_bytes(b"h5ad-per-sample")
+    multiqc = results / "multiqc"
+    multiqc.mkdir(parents=True)
+    (multiqc / "multiqc_report.html").write_text("<html>mqc</html>\n", encoding="utf-8")
+    # Decoy upstream output that is not an h5ad candidate or the MultiQC report.
+    pipeline_info = results / "pipeline_info"
+    pipeline_info.mkdir()
+    (pipeline_info / "execution_report.html").write_text("<html>exec</html>\n", encoding="utf-8")
+
+    logs = output_dir / "logs"
+    logs.mkdir()
+    (logs / "stdout.txt").write_text("nextflow stdout\n", encoding="utf-8")
+    (logs / "stderr.txt").write_text("nextflow stderr\n", encoding="utf-8")
+    # Decoy log the original manifest never hashes.
+    (logs / "nextflow.log").write_text("timestamped log line\n", encoding="utf-8")
+    return repro
+
+
+def test_repaired_checksums_match_freshly_generated_manifest(tmp_path):
+    """Blocking-audit guard: the checksums.sha256 that --repair-bundle regenerates must
+    be byte-identical to the one the wrapper itself would write, i.e. cover exactly the
+    original allowlist and not the reproducibility/*.json tree, environment.yml/
+    manifest.json, other upstream outputs, or extra logs."""
+    from outputs_parser import find_h5ad_candidates, find_multiqc_report
+    from provenance import write_reproducibility_checksums
+    from remap_paths import _regenerate_checksums
+
+    bundle = _make_realistic_bundle(tmp_path)
+    output_dir = bundle.parent
+    results = output_dir / "upstream" / "results"
+
+    fresh_path = write_reproducibility_checksums(
+        output_dir,
+        normalized_samplesheet=bundle / "samplesheet.valid.csv",
+        params_path=bundle / "params.yaml",
+        preflight_result={},
+        parsed_outputs={
+            "h5ad_candidates": find_h5ad_candidates(results),
+            "multiqc_report": find_multiqc_report(results),
+        },
+        execution_result={
+            "stdout_path": str(output_dir / "logs" / "stdout.txt"),
+            "stderr_path": str(output_dir / "logs" / "stderr.txt"),
+        },
+    )
+    fresh_bytes = fresh_path.read_bytes()
+    fresh_labels = {line.split("  ", 1)[1] for line in fresh_path.read_text().splitlines()}
+
+    fresh_path.unlink()
+    _regenerate_checksums(bundle)
+    repaired_bytes = (bundle / "checksums.sha256").read_bytes()
+    repaired_labels = {line.split("  ", 1)[1] for line in (bundle / "checksums.sha256").read_text().splitlines()}
+
+    assert repaired_labels == fresh_labels
+    assert repaired_bytes == fresh_bytes, "repaired manifest must be byte-identical to a fresh one"
+
+    # The allowlist we expect, and the decoys that must never appear.
+    assert "reproducibility/params.yaml" in repaired_labels
+    assert "reproducibility/samplesheet.valid.csv" in repaired_labels
+    assert "logs/stdout.txt" in repaired_labels
+    assert "logs/stderr.txt" in repaired_labels
+    assert any(lbl.endswith(".h5ad") for lbl in repaired_labels)
+    assert "upstream/results/multiqc/multiqc_report.html" in repaired_labels
+    for decoy in (
+        "reproducibility/runtime.json",
+        "reproducibility/inputs.json",
+        "reproducibility/environment.yml",
+        "reproducibility/manifest.json",
+        "logs/nextflow.log",
+        "upstream/results/pipeline_info/execution_report.html",
+    ):
+        assert decoy not in repaired_labels, f"{decoy} must be excluded from the manifest"
+
+
+def test_repair_bundle_does_not_overwrite_existing_valid_checksums(tmp_path):
+    """Secondary-audit guard: when only a stub (manifest.json/environment.yml) is
+    missing, an existing valid checksums.sha256 is left untouched — no silent rewrite."""
+    from remap_paths import cmd_repair_bundle
+
+    bundle = _make_realistic_bundle(tmp_path)
+    (bundle / "checksums.sha256").write_text("sentinel-original-manifest\n", encoding="utf-8")
+    before = (bundle / "checksums.sha256").read_bytes()
+
+    assert cmd_repair_bundle(bundle_dir=bundle) == 0  # regenerates the two missing stubs
+    assert (bundle / "manifest.json").exists()
+    assert (bundle / "environment.yml").exists()
+    assert (bundle / "checksums.sha256").read_bytes() == before, (
+        "an existing checksums.sha256 must not be overwritten when only stubs are missing"
+    )

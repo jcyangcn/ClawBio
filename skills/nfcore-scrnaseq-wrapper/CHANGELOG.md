@@ -15,15 +15,22 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
   `regenerated_post_hoc: true`) — if the wrapper crashed mid-post-processing and
   left them missing. This matches the `nfcore-rnaseq-wrapper` / `nfcore-sarek-wrapper`
   bundles, which already shipped `--repair-bundle`; scrnaseq was the only one
-  without it. `checksums.sha256` is regenerated stdlib-only over scrnaseq's actual
-  bundle layout (`upstream/results`, `reproducibility`, `logs`; scrnaseq keeps the
-  provenance JSONs inside `reproducibility/`, so — unlike nfcore-rnaseq — there is no
-  separate `provenance/` root), with labels relative to the output directory so
-  `sha256sum -c` passes. A self-contained `_write_text_lf` (mirroring the sibling
-  bundles) keeps the regenerated files LF-only on every OS. `--output-dir` and the
-  `--output`-based resume warning are deliberately **not** added: scrnaseq's
-  `commands.sh` self-anchors to the bundle location via `BASH_SOURCE`, so the output
-  path never needs patching.
+  without it. `checksums.sha256` is regenerated stdlib-only over **exactly the
+  wrapper's original checksum allowlist** — the normalized samplesheet, `params.yaml`,
+  `logs/stdout.txt` / `logs/stderr.txt`, the h5ad candidates (canonical
+  `*/mtx_conversions/` matrices at both nesting depths, else a full-tree fallback),
+  and the MultiQC report — reconstructed from the bundle on disk so a repaired manifest
+  is byte-identical to one `provenance.write_reproducibility_checksums` would write. The
+  `reproducibility/` provenance JSON tree, `commands.sh`, the `environment.yml` /
+  `manifest.json` stubs, other `upstream/results` outputs, and non-`stdout/stderr` logs
+  are deliberately excluded, matching the original manifest (labels are relative to the
+  output directory so `sha256sum -c` passes). A self-contained `_write_text_lf`
+  (mirroring the sibling bundles) keeps the regenerated files LF-only on every OS.
+  Recompute is triggered **only when `checksums.sha256` itself is missing**, so an
+  existing valid manifest is never silently overwritten when merely a stub is
+  regenerated. `--output-dir` and the `--output`-based resume warning are deliberately
+  **not** added: scrnaseq's `commands.sh` self-anchors to the bundle location via
+  `BASH_SOURCE`, so the output path never needs patching.
 
 ### Documentation
 

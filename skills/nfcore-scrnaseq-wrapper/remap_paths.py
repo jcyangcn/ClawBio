@@ -383,39 +383,103 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def _find_h5ad_candidates(upstream_dir: Path) -> list[Path]:
+    """Stdlib-only mirror of outputs_parser.find_h5ad_candidates.
+
+    The canonical mtx_conversions matrices at both nesting depths, else a full-tree
+    fallback. Ordered by string exactly as the wrapper orders them, so the resulting
+    manifest matches a freshly generated one line-for-line.
+    """
+    if not upstream_dir.exists():
+        return []
+    canonical = sorted(
+        {
+            str(path)
+            for pattern in ("*/mtx_conversions/*.h5ad", "*/mtx_conversions/*/*.h5ad")
+            for path in upstream_dir.glob(pattern)
+        }
+    )
+    if canonical:
+        return [Path(p) for p in canonical]
+    return [Path(p) for p in sorted(str(path) for path in upstream_dir.rglob("*.h5ad"))]
+
+
+def _find_multiqc_report(upstream_dir: Path) -> Path | None:
+    """Stdlib-only mirror of outputs_parser.find_multiqc_report (first sorted match)."""
+    if not upstream_dir.exists():
+        return None
+    for pattern in ("multiqc/**/multiqc_report.html", "**/multiqc_report.html"):
+        matches = sorted(upstream_dir.glob(pattern))
+        if matches:
+            return matches[0]
+    return None
+
+
+def _bundle_checksum_targets(output_dir: Path) -> list[Path]:
+    """Reconstruct, from the bundle on disk, the exact allowlist that the wrapper's
+    provenance.write_reproducibility_checksums hashes (stdlib-only).
+
+    Membership and order mirror the wrapper: the normalized samplesheet, params.yaml,
+    the stdout/stderr logs, the h5ad candidates, then the MultiQC report — each entry
+    only when it exists inside output_dir, deduped preserving first-seen order. The
+    reproducibility/*.json provenance tree, commands.sh, environment.yml, manifest.json,
+    the copied policy files, and any other upstream/results or logs/ files are
+    deliberately excluded, matching the original manifest. Because params.yaml is the
+    only in-manifest file a later --refs-new remap mutates — exactly as in a fresh
+    bundle — the regenerated manifest stays reproducible and self-consistent.
+    """
+    repro = output_dir / "reproducibility"
+    upstream = output_dir / "upstream" / "results"
+    logs = output_dir / "logs"
+
+    # Only one samplesheet name exists per run (valid for a real run, demo for --demo);
+    # listing both and dropping the absent one keeps the surviving order identical to
+    # the wrapper's, which places the samplesheet first.
+    ordered: list[Path] = [
+        repro / "samplesheet.valid.csv",
+        repro / "samplesheet.demo.csv",
+        repro / "params.yaml",
+        logs / "stdout.txt",
+        logs / "stderr.txt",
+    ]
+    ordered.extend(_find_h5ad_candidates(upstream))
+    multiqc = _find_multiqc_report(upstream)
+    if multiqc is not None:
+        ordered.append(multiqc)
+
+    resolved_output_dir = output_dir.resolve()
+    seen: set[Path] = set()
+    targets: list[Path] = []
+    for path in ordered:
+        if path in seen:
+            continue
+        seen.add(path)
+        if not path.is_file():
+            continue
+        try:
+            path.resolve().relative_to(resolved_output_dir)
+        except ValueError:
+            continue  # defensive: never emit a bare-basename label that breaks -c
+        targets.append(path)
+    return targets
+
+
 def _regenerate_checksums(bundle_dir: Path) -> None:
-    """Write checksums.sha256 over the current bundle contents (stdlib-only).
+    """Write checksums.sha256 over the bundle's original checksum allowlist (stdlib-only).
 
-    bundle_dir is the reproducibility/ directory (where this script lives); its
-    parent is the output_dir the wrapper used. Labels are relative to output_dir so
-    ``sha256sum -c`` succeeds when run from there, on any OS.
-
-    nf-core/scrnaseq keeps the provenance JSONs inside reproducibility/ (there is no
-    separate provenance/ tree, unlike nfcore-rnaseq), so the roots here are
-    upstream/results, reproducibility, and logs. checksums.sha256 never hashes
-    itself.
+    bundle_dir is the reproducibility/ directory (where this script lives); its parent
+    is the output_dir the wrapper used. Labels are relative to output_dir so
+    ``sha256sum -c`` succeeds when run from there, on any OS. The file-set matches what
+    provenance.write_reproducibility_checksums originally wrote (see
+    _bundle_checksum_targets), so a repaired manifest is byte-identical to a fresh one.
+    checksums.sha256 never appears in the allowlist, so it never hashes itself.
     """
     output_dir = bundle_dir.parent
     checksum_path = bundle_dir / "checksums.sha256"
-    roots = [
-        output_dir / "upstream" / "results",
-        bundle_dir,  # reproducibility/ itself (params.yaml, samplesheet, JSONs, …)
-        output_dir / "logs",
+    lines = [
+        f"{_sha256_file(f)}  {f.relative_to(output_dir).as_posix()}"
+        for f in _bundle_checksum_targets(output_dir)
     ]
-    lines: list[str] = []
-    for root in roots:
-        if not root.exists():
-            continue
-        for f in sorted(root.rglob("*")):
-            if not f.is_file():
-                continue
-            if f.name == "checksums.sha256":
-                continue  # never hash the checksum file itself
-            try:
-                rel = f.relative_to(output_dir).as_posix()
-            except ValueError:
-                rel = f.name
-            lines.append(f"{_sha256_file(f)}  {rel}")
     _write_text_lf(checksum_path, "\n".join(lines) + ("\n" if lines else ""))
 
 
@@ -478,20 +542,20 @@ def cmd_repair_bundle(bundle_dir: Path | None = None) -> int:
 
     print(f"Repairing bundle - regenerating {len(missing)} missing file(s):")
     try:
-        wrote_new_files = False
         if "manifest.json" in missing:
             _regenerate_manifest_stub(bd, commands_sh)
             print("  [OK] manifest.json  (post-hoc stub - original metadata unavailable)")
-            wrote_new_files = True
         if "environment.yml" in missing:
             _regenerate_environment_stub(bd)
             print("  [OK] environment.yml  (post-hoc stub - original snapshot unavailable)")
-            wrote_new_files = True
-        # Recompute checksums whenever any file was written (or checksums itself was
-        # missing), so the checksum file covers the full post-repair bundle state.
-        if wrote_new_files or "checksums.sha256" in missing:
+        # checksums.sha256 lists only the wrapper's original allowlist (samplesheet,
+        # params.yaml, stdout, stderr, h5ad candidates, MultiQC report); it never
+        # covers the manifest.json / environment.yml stubs, so regenerating those
+        # cannot change it. Recompute only when checksums.sha256 itself is missing —
+        # this never silently overwrites an existing, valid manifest.
+        if "checksums.sha256" in missing:
             _regenerate_checksums(bd)
-            print("  [OK] checksums.sha256  (recomputed from current bundle contents)")
+            print("  [OK] checksums.sha256  (recomputed from the original checksum allowlist)")
     except Exception as exc:  # pragma: no cover - defensive
         print(f"ERROR: Repair failed: {exc}", file=sys.stderr)
         return 1
