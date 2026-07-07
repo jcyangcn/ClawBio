@@ -45,6 +45,14 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **`save_align_intermeds` no longer carries an invented `default: true` in the
+  contract.** nf-core/scrnaseq 4.1.0's `nextflow_schema.json` declares no default for
+  `save_align_intermeds` (an opt-in boolean, false when unset — same as
+  `save_reference`); the `OFFICIAL_PARAMS` contract wrongly recorded `default: True`.
+  The annotation was reference-only (never emitted to `params.yaml`, which the wrapper
+  writes only for user-supplied flags, and never used for validation), so no run was
+  affected — but it misrepresented the upstream schema. Corrected to `{"type":
+  "boolean"}` and the contract test now asserts the upstream reality (no `default` key).
 - **`params.yaml` now carries the explanatory header the sibling wrappers emit.**
   `serialize_params_yaml` wrote a bare `yaml.dump`, so the bundled `params.yaml`
   lacked the three-line comment header that nfcore-rnaseq / nfcore-sarek prepend
