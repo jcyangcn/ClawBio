@@ -25,10 +25,25 @@ from typing import Any
 DEFAULT_BASE_URL = os.getenv("UCSCXENA_API_BASE_URL", "http://biotree.top:38123/ucscxena/")
 DEFAULT_API_KEY = os.getenv("UCSCXENA_API_KEY")
 
+# Map hyphenated CLI task names to underscore keys used internally
+TASK_KEY_MAP = {
+    "cancers": "cancers",
+    "diff-expr": "diff_expr",
+    "corr": "corr",
+    "survival": "survival",
+}
+
 CLAWBIO_DISCLAIMER = (
     "ClawBio is a research and educational tool. It is not a medical device and "
     "does not provide clinical diagnoses. Consult a healthcare professional before "
     "making any medical decisions."
+)
+
+PROVENANCE_NOTE = (
+    "Results are computed by an author-hosted UCSCXenaToolsPy API service that "
+    "queries public TCGA/UCSC Xena-derived datasets. Numerical statistics (fold "
+    "change, p-values, survival associations) are calculated server-side and depend "
+    "on the hosted service implementation and dataset version."
 )
 
 
@@ -225,16 +240,19 @@ def run_demo(output_dir: Path) -> dict[str, Any]:
 # Report / output writers
 # ──────────────────────────────────────────────
 
-def build_report_md(demo_results: dict[str, Any], base_url: str) -> str:
-    """Build a Markdown report from demo results."""
+def build_report_md(demo_results: dict[str, Any], base_url: str, mode: str = "demo") -> str:
+    """Build a Markdown report from demo results (three-task bundle)."""
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    mode_label = "demo (synthetic data — no live API calls)" if mode == "demo" else mode
     lines = [
         "# Xena TCGA Gene Query Report",
         "",
         f"**Date**: {now_utc}",
         f"**API base URL**: {base_url}",
-        "**Mode**: demo (synthetic data — no live API calls)",
+        f"**Mode**: {mode_label}",
         "**Queries**: diff-expr (TP53 in LUAD), corr (TP53 vs EGFR in LUAD), survival (TP53 in LUAD)",
+        "",
+        f"*{PROVENANCE_NOTE}*",
         "",
         "---",
         "",
@@ -323,13 +341,124 @@ def build_report_md(demo_results: dict[str, Any], base_url: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def write_outputs(results: dict[str, Any], base_url: str, output_dir: Path) -> None:
+def build_live_report_md(task_key: str, data: dict[str, Any], base_url: str, mode: str = "live") -> str:
+    """Build a Markdown report from a single live API query result."""
+    now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    task_display = task_key.replace("_", "-")
+    lines = [
+        "# Xena TCGA Gene Query Report",
+        "",
+        f"**Date**: {now_utc}",
+        f"**API base URL**: {base_url}",
+        f"**Mode**: {mode}",
+        f"**Task**: {task_display}",
+        "",
+        f"*{PROVENANCE_NOTE}*",
+        "",
+        "---",
+        "",
+        "## Results",
+        "",
+    ]
+
+    if task_key == "cancers":
+        cancers = data.get("cancers", [])
+        with_normals = sum(1 for item in cancers if item.get("has_normal"))
+        lines.append(f"**Available cancer entries**: {data.get('count', len(cancers))}")
+        lines.append(f"**With >=3 normal samples**: {with_normals}")
+        lines.append("")
+        if cancers:
+            lines.append("| Cancer | Full Name | Tumor (n) | Normal (n) |")
+            lines.append("|--------|-----------|-----------|------------|")
+            for item in cancers[:20]:
+                lines.append(
+                    f"| {item.get('cancer', '?')} | {item.get('cancer_full_name', '?')} | "
+                    f"{item.get('tumor_n', '?')} | {item.get('normal_n', '?')} |"
+                )
+
+    elif task_key == "diff_expr":
+        gene = data.get("gene", "?")
+        if data.get("gene_input"):
+            gene = f"{data['gene_input']} -> {gene}"
+        tumor = data.get("tumor", {})
+        normal = data.get("normal", {})
+        lines.extend([
+            f"**Gene**: {gene}",
+            f"**Cancer**: {data.get('cancer')} ({data.get('cancer_full_name')})",
+            f"**Tumor samples**: n = {tumor.get('n')}",
+            f"**Normal samples**: n = {normal.get('n')}",
+            "",
+            "| Metric | Value |",
+            "|--------|-------|",
+            f"| Tumor mean (log2) | {_p(tumor.get('mean'))} |",
+            f"| Normal mean (log2) | {_p(normal.get('mean'))} |",
+            f"| log2 Fold Change | {_p(data.get('log2_fold_change'))} |",
+            f"| Mann-Whitney p | {_p(data.get('p_value'))} |",
+        ])
+
+    elif task_key == "corr":
+        g1 = data.get("gene1", "?")
+        g2 = data.get("gene2", "?")
+        if data.get("gene1_input"):
+            g1 = f"{data['gene1_input']} -> {g1}"
+        if data.get("gene2_input"):
+            g2 = f"{data['gene2_input']} -> {g2}"
+        lines.extend([
+            f"**Genes**: {g1}, {g2}",
+            f"**Cancer**: {data.get('cancer')} ({data.get('cancer_full_name')})",
+            f"**Primary tumor samples**: n = {data.get('n')}",
+            "",
+            "| Metric | Value |",
+            "|--------|-------|",
+            f"| Spearman r | {_p(data.get('spearman_r'))} |",
+            f"| p-value | {_p(data.get('p_value'))} |",
+        ])
+
+    elif task_key == "survival":
+        lines.extend([
+            f"**Gene**: {data.get('gene')}",
+            f"**Cancer**: {data.get('cancer')} ({data.get('cancer_full_name')})",
+            "",
+            "| Endpoint | n (total) | Events | Median-cutoff p | Optimal-cutoff p (exploratory) |",
+            "|----------|-----------|--------|-----------------|-------------------------------|",
+        ])
+        for ep_name in ["OS", "DSS", "DFI", "PFI"]:
+            ep = data.get("survival", {}).get(ep_name, {})
+            if "error" in ep:
+                lines.append(f"| {ep_name} | — | — | {ep['error']} | — |")
+            else:
+                median_p = _p(ep.get("median_cutoff", {}).get("p_value"))
+                optimal_p = _p(ep.get("optimal_cutoff", {}).get("p_value"))
+                lines.append(
+                    f"| {ep_name} | {ep.get('n_total', 'NA')} | {ep.get('n_events', 'NA')} | "
+                    f"{median_p} | {optimal_p} |"
+                )
+        lines.append("")
+        lines.append(
+            "Optimal-cutoff results are exploratory and not adjusted for multiple cutoff testing."
+        )
+
+    lines.extend([
+        "",
+        "---",
+        "",
+        f"*{CLAWBIO_DISCLAIMER}*",
+    ])
+    return "\n".join(lines) + "\n"
+
+
+def write_outputs(results: dict[str, Any], base_url: str, output_dir: Path, mode: str = "demo") -> None:
     """Write report.md, result.json, and reproducibility/ to output_dir."""
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # report.md
     report_path = output_dir / "report.md"
-    report_md = build_report_md(results, base_url)
+    if mode == "demo":
+        report_md = build_report_md(results, base_url, mode=mode)
+    else:
+        # Live mode: single-task result
+        task_key = next(iter(results))
+        report_md = build_live_report_md(task_key, results[task_key], base_url, mode=mode)
     report_path.write_text(report_md, encoding="utf-8")
 
     # result.json
@@ -340,22 +469,50 @@ def write_outputs(results: dict[str, Any], base_url: str, output_dir: Path) -> N
     repro_dir = output_dir / "reproducibility"
     repro_dir.mkdir(parents=True, exist_ok=True)
 
+    # commands.sh
     commands_sh = repro_dir / "commands.sh"
-    commands_sh.write_text(
-        "#!/bin/sh\n"
-        "# Reproducibility commands for xena-tcga-gene-query (demo mode)\n"
-        "# Replace BASE_URL with the actual API base URL for live queries.\n"
-        'BASE_URL="${UCSCXENA_API_BASE_URL:-http://biotree.top:38123/ucscxena/}"\n'
-        'curl "${BASE_URL}/api/v1/diff-expr?gene=TP53&cancer=LUAD"\n'
-        'curl "${BASE_URL}/api/v1/corr?gene1=TP53&gene2=EGFR&cancer=LUAD"\n'
-        'curl "${BASE_URL}/api/v1/survival?gene=TP53&cancer=LUAD"\n',
-        encoding="utf-8",
-    )
+    if mode == "demo":
+        cmd_text = (
+            "#!/bin/sh\n"
+            "# Reproducibility commands for xena-tcga-gene-query (demo mode)\n"
+            "# Replace BASE_URL with the actual API base URL for live queries.\n"
+            'BASE_URL="${UCSCXENA_API_BASE_URL:-http://biotree.top:38123/ucscxena/}"\n'
+            'curl "${BASE_URL}/api/v1/diff-expr?gene=TP53&cancer=LUAD"\n'
+            'curl "${BASE_URL}/api/v1/corr?gene1=TP53&gene2=EGFR&cancer=LUAD"\n'
+            'curl "${BASE_URL}/api/v1/survival?gene=TP53&cancer=LUAD"\n'
+        )
+    else:
+        task_key = next(iter(results))
+        task_display = task_key.replace("_", "-")
+        if task_key == "cancers":
+            curl_line = f'curl "${{BASE_URL}}/api/v1/cancers"\n'
+        elif task_key == "diff_expr":
+            curl_line = (
+                f'curl "${{BASE_URL}}/api/v1/{task_display}?'
+                f'gene={results[task_key].get("gene","?")}&cancer={results[task_key].get("cancer","?")}"\n'
+            )
+        elif task_key == "corr":
+            curl_line = (
+                f'curl "${{BASE_URL}}/api/v1/{task_display}?'
+                f'gene1={results[task_key].get("gene1","?")}&gene2={results[task_key].get("gene2","?")}'
+                f'&cancer={results[task_key].get("cancer","?")}"\n'
+            )
+        else:
+            curl_line = (
+                f'curl "${{BASE_URL}}/api/v1/{task_display}?'
+                f'gene={results[task_key].get("gene","?")}&cancer={results[task_key].get("cancer","?")}"\n'
+            )
+        cmd_text = (
+            "#!/bin/sh\n"
+            f"# Reproducibility commands for xena-tcga-gene-query ({mode} mode)\n"
+            'BASE_URL="${UCSCXENA_API_BASE_URL:-' + base_url + '}"\n'
+        ) + curl_line
+    commands_sh.write_text(cmd_text, encoding="utf-8")
 
     run_json = repro_dir / "run.json"
     run_meta = {
         "skill": "xena-tcga-gene-query",
-        "mode": "demo",
+        "mode": mode,
         "base_url": base_url,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "python_version": sys.version,
@@ -404,7 +561,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.demo:
         output_dir = Path(args.output) if args.output else Path("/tmp/xena_demo")
         results = run_demo(output_dir)
-        write_outputs(results, args.base_url, output_dir)
+        write_outputs(results, args.base_url, output_dir, mode="demo")
 
         # Also print a summary to stdout
         print(f"Demo complete. Output written to {output_dir}")
@@ -448,8 +605,9 @@ def main(argv: list[str] | None = None) -> int:
     # Write outputs if --output specified
     if args.output:
         output_dir = Path(args.output)
-        results = {args.task: data}
-        write_outputs(results, args.base_url, output_dir)
+        task_key = TASK_KEY_MAP[args.task]
+        results = {task_key: data}
+        write_outputs(results, args.base_url, output_dir, mode="live")
 
     return 0
 
