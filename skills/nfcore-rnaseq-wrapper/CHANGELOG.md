@@ -19,6 +19,21 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **`--allow-remote-inputs` is now replayed by `commands.sh`.** A run launched with
+  `--allow-remote-inputs` (remote FASTQ/reference URIs) produced a bundle whose
+  `commands.sh` omitted the flag, so re-running it failed preflight with
+  `REMOTE_INPUT_NOT_ALLOWED` even though the bundle's samplesheet/`params.yaml` already
+  carried the remote URIs. Because rnaseq's `commands.sh` re-invokes the wrapper (and
+  thus re-runs preflight, unlike sarek/scrnaseq which replay Nextflow directly), the
+  flag is now recorded in `_BOOLEAN_FLAGS` and emitted whenever the user opted in, so
+  the replay faithfully reproduces the original run.
+- **User `-c` configs are now copied into the bundle and replayed portably.** A
+  `--nextflow-config`/`-c` file living outside the output directory was baked into
+  `commands.sh` as a host-specific absolute path, so the reproduction script failed
+  out-of-the-box on another machine (or after the config moved). Each config is now
+  copied into `reproducibility/nextflow_configs/config_NN_<name>` and referenced via
+  `${SCRIPT_DIR}`, matching the nfcore-scrnaseq-wrapper bundle. Remote config URIs are
+  passed through verbatim.
 - **Reproducibility bundle is now byte-stable (LF-only) on every OS.** Every bundle
   artifact the wrapper writes itself — `report.md`, `params.yaml`, `manifest.json`
   and the provenance JSONs, `check_result.json`, the error-path `result.json`,

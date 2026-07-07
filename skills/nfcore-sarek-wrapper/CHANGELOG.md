@@ -25,6 +25,16 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **User `-c` configs are now copied into the bundle and replayed portably.** A
+  `--nextflow-config`/`-c` file living outside the output directory was rewritten to a
+  `<EDIT_ME>` placeholder in `commands.sh` (the portable-argv rewriter cannot anchor an
+  out-of-tree absolute path), so the reproduction script failed out-of-the-box unless
+  the user hand-edited it. Each external config is now copied into
+  `reproducibility/nextflow_configs/config_NN_<name>` before `commands.sh` is built, so
+  the argv rewriter resolves it to `$SCRIPT_DIR/nextflow_configs/<name>` — no
+  `<EDIT_ME>`, no host-specific absolute path. Configs already inside the bundle (e.g.
+  `macos_docker.config`), non-absolute values, and remote URIs are left untouched.
+  Matches the nfcore-scrnaseq-wrapper bundle.
 - **Output root tolerates OS/VCS scratch files (macOS parity).** `_check_output_dir`
   previously rejected any root entry other than `reproducibility/`, so a stray
   `.DS_Store` / `.gitkeep` / `.gitignore` / `Thumbs.db` at `--output` raised

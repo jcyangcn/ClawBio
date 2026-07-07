@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shlex
 import shutil
 import sys
@@ -151,6 +152,12 @@ _BOOLEAN_FLAGS = (
     "skip_downstream",
     "skip_bbsplit",
     "allow_pipeline_version_override",
+    # Recorded so a run that opted into remote inputs replays faithfully: rnaseq's
+    # commands.sh re-invokes the wrapper (which re-runs preflight), so without this
+    # the replay would fail REMOTE_INPUT_NOT_ALLOWED even though the bundle's
+    # samplesheet/params.yaml already carry the remote URIs. Only emitted when the
+    # user actually passed --allow-remote-inputs, like every other flag here.
+    "allow_remote_inputs",
 )
 
 _PORTABILITY_NOTICE = """\
@@ -400,8 +407,42 @@ def build_repro_command_args(output_dir: Path, *, args) -> dict[str, str | None]
             command_args[f"--{field.replace('_', '-')}"] = _serialize_repro_path(field, str(value))
     user_configs = getattr(args, "nextflow_config", None) or []
     if user_configs:
-        command_args["--nextflow-config"] = [Path(c).expanduser().resolve().as_posix() for c in user_configs]
+        command_args["--nextflow-config"] = _stage_user_nextflow_configs(output_dir, user_configs)
     return command_args
+
+
+def _safe_config_basename(name: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", name).strip("._")
+    return safe or "nextflow.config"
+
+
+def _stage_user_nextflow_configs(output_dir: Path, config_paths: list[str]) -> list[str]:
+    """Copy each user ``-c``/``--nextflow-config`` file into
+    ``reproducibility/nextflow_configs/`` and return ``${SCRIPT_DIR}``-relative
+    references, so ``commands.sh`` replays the exact configs portably instead of baking
+    a host-specific absolute path — which broke replay when the config lived outside the
+    output dir (the argv rewriter had to fall back to an absolute path or ``<EDIT_ME>``).
+    ``${SCRIPT_DIR}`` resolves to the bundle's ``reproducibility/`` dir at replay, so the
+    copied configs travel with the bundle. Remote URIs and paths whose source file is
+    missing fall back to the resolved value unchanged. Mirrors
+    nfcore-scrnaseq-wrapper._copy_user_nextflow_configs (adapted to rnaseq's
+    wrapper-re-invoking commands.sh, which anchors on ``${SCRIPT_DIR}``)."""
+    config_dir = output_dir / "reproducibility" / "nextflow_configs"
+    staged: list[str] = []
+    for index, raw in enumerate(config_paths, start=1):
+        raw = str(raw)
+        if "://" in raw:
+            staged.append(raw)  # remote config URI — not a local file to copy
+            continue
+        source = Path(raw).expanduser().resolve()
+        if not source.is_file():
+            staged.append(source.as_posix())  # defensive: nothing to copy in
+            continue
+        config_dir.mkdir(parents=True, exist_ok=True)
+        destination = config_dir / f"config_{index:02d}_{_safe_config_basename(source.name)}"
+        shutil.copyfile(source, destination)
+        staged.append(f"${{SCRIPT_DIR}}/nextflow_configs/{destination.name}")
+    return staged
 
 
 def _serialize_repro_path(field: str, value: str) -> str:
