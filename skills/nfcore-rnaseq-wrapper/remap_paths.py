@@ -103,6 +103,15 @@ _OUTPUT_FLAG_RE = re.compile(
     re.MULTILINE,
 )
 
+# Matches the idempotent-replay guard line written by reporting.py:
+#   if [[ -f "<output_dir>/reproducibility/manifest.json" ]]; then
+# The captured value is the output directory, kept in sync with the --output flag
+# so a relocated bundle checks the NEW output dir (not the original) for a prior run.
+_RESUME_GUARD_RE = re.compile(
+    r"""^(if \[\[ -f ")(?P<value>[^"\n]*)(/reproducibility/manifest\.json" \]\]; then)$""",
+    re.MULTILINE,
+)
+
 # Matches any of the reference flags in commands.sh, same quoting rules.
 _REFERENCE_FLAG_RE = re.compile(
     r"""^([ \t]+--(?:"""
@@ -243,6 +252,11 @@ def update_commands_output(commands_sh: Path, new_output_dir: str) -> bool:
     updated = _OUTPUT_FLAG_RE.sub(
         lambda m: f"{m.group(1)}{_format_output_value(new_output_dir, old_value=m.group('value'))}{m.group(3)}",
         original,
+    )
+    # Keep the idempotent-replay guard's manifest path in sync with the --output flag.
+    updated = _RESUME_GUARD_RE.sub(
+        lambda m: f"{m.group(1)}{new_output_dir}{m.group(3)}",
+        updated,
     )
     if updated == original:
         return False

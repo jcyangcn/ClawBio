@@ -34,7 +34,11 @@ from schemas import (
     profile_includes,
 )
 
-_CLAWBIO_SCRIPT = (SKILL_DIR.parent.parent / "clawbio.py").as_posix()
+# Repository-relative (not an absolute path resolved on the generating machine): an
+# absolute path baked into the report would not exist on any other machine. Matches
+# the `clawbio.py run ...` convention documented across the repo. Invoked with
+# `python3` for portability to python3-only systems (PEP 394).
+_CLAWBIO_SCRIPT = "clawbio.py"
 
 
 def write_report(
@@ -120,8 +124,8 @@ def _build_handoff_lines(preferred_h5ad: str) -> list[str]:
         return [
             "## Next Steps",
             "",
-            f"- `python {_CLAWBIO_SCRIPT} run scrna --input {preferred_h5ad} --output <dir>`",
-            f"- `python {_CLAWBIO_SCRIPT} run scrna-embedding --input {preferred_h5ad} --output <dir>`",
+            f"- `python3 {_CLAWBIO_SCRIPT} run scrna --input {preferred_h5ad} --output <dir>`",
+            f"- `python3 {_CLAWBIO_SCRIPT} run scrna-embedding --input {preferred_h5ad} --output <dir>`",
             "",
         ]
     return [

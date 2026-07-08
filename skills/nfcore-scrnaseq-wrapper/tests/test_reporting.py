@@ -139,6 +139,28 @@ def test_write_report_handoff_with_preferred_h5ad(tmp_path):
     assert "scrna" in content
 
 
+def test_write_report_handoff_is_portable(tmp_path):
+    """The Next Steps handoff must be portable: no machine-specific absolute path to
+    clawbio.py (that path only exists on the machine that generated the report), and
+    `python3` rather than a bare `python` (python3-only systems, PEP 394). Uses the
+    repository-relative `clawbio.py` convention."""
+    import re
+
+    preferred = "/output/outs/cellbender.h5ad"
+    write_report(
+        tmp_path,
+        args=_make_args(tmp_path),
+        pipeline_source=_pipeline_source(),
+        preflight_result=_preflight_result(),
+        parsed_outputs=_parsed_outputs(preferred_h5ad=preferred),
+        command_str="nextflow run nf-core/scrnaseq",
+    )
+    content = (tmp_path / "report.md").read_text(encoding="utf-8")
+    assert "python3 clawbio.py run scrna " in content
+    assert "python3 clawbio.py run scrna-embedding " in content
+    assert not re.search(r"/[^\s`]*/clawbio\.py", content), "absolute clawbio.py path is not portable"
+
+
 def test_write_report_handoff_without_preferred_h5ad(tmp_path):
     write_report(
         tmp_path,

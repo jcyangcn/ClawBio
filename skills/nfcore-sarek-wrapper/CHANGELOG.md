@@ -25,6 +25,12 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Downstream handoff examples now use `python3`.** The generated
+  `sarek_downstream_handoff.sh` listed cross-skill example commands (clinical-variant-reporter,
+  clinical-trial-finder, omics-target-evidence-mapper, wes-clinical-report-en/es) as bare
+  `python skills/<skill>/<script>.py`. On python3-only systems (modern macOS and many Linux
+  distributions, PEP 394) that fails with `python: command not found`. They now use `python3`,
+  matching the wrapper's other reproduction/handoff scripts. Covered by a new test.
 - **User `-c` configs are now copied into the bundle and replayed portably.** A
   `--nextflow-config`/`-c` file living outside the output directory was rewritten to a
   `<EDIT_ME>` placeholder in `commands.sh` (the portable-argv rewriter cannot anchor an

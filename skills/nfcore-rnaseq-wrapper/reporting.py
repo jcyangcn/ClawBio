@@ -347,7 +347,7 @@ def write_repro_commands(output_dir: Path, *, args) -> None:
     )
     commands_sh = repro_dir / "commands.sh"
     _patch_commands_sh_repo_fallback(commands_sh)
-    _patch_commands_sh_python_interpreter(commands_sh)
+    _patch_commands_sh_idempotent_resume(commands_sh, output_dir)
     if not getattr(args, "demo", False):
         # Append via the LF choke-point (not open("a"), which would re-introduce
         # CRLF on Windows) so the whole script — including this notice — stays
@@ -547,23 +547,45 @@ def _patch_commands_sh_repo_fallback(commands_sh: Path) -> None:
     write_text_lf(commands_sh, content.replace(_CLAWBIO_REPO_FALLBACK, _CLAWBIO_REPO_FALLBACK_PATCHED))
 
 
-# The shared portable_commands template emits a bare `python "$SKILL_SCRIPT"`, but
-# modern macOS and many Linux distros ship only `python3` (PEP 394) — a bare `python`
-# replay fails with "python: command not found". Rewrite it to a portable form that
-# defaults to python3 and honours a PYTHON override, so the bundle replays on any
-# compatible OS and from any folder. (Root cause is in clawbio/common/portable_commands.py;
-# patched here to keep the fix within this skill's surface.)
-_PYTHON_INVOCATION = 'python "$SKILL_SCRIPT"'
-_PYTHON_INVOCATION_PATCHED = '"${PYTHON:-python3}" "$SKILL_SCRIPT"'
+# The portable interpreter (`${PYTHON:-python3}`) is emitted by the shared
+# clawbio/common/portable_commands template, so no per-skill rewrite is needed here.
+_REPLAY_INVOCATION_LINE = '"${PYTHON:-python3}" "$SKILL_SCRIPT" \\'
 
 
-def _patch_commands_sh_python_interpreter(commands_sh: Path) -> None:
+def _patch_commands_sh_idempotent_resume(commands_sh: Path, output_dir: Path) -> None:
+    """Make an in-place replay idempotent.
+
+    Unlike the Sarek/scRNA-seq bundles (which replay Nextflow directly, and Nextflow
+    tolerates a populated output directory), the RNA-seq bundle re-invokes the wrapper,
+    whose preflight rejects a non-empty --output with OUTPUT_DIR_NOT_EMPTY. So a plain
+    re-run of commands.sh in the same directory fails. This injects a guard that adds
+    `--resume` when the target output directory already holds a completed run of this
+    bundle (reproducibility/manifest.json present); a fresh or `remap_paths.py
+    --output-dir`-relocated output directory has no manifest and runs normally.
+
+    Skipped when the command already carries `--resume` (the run always resumes) or is a
+    `--demo` replay (the test profile is not combined with --resume).
+    """
     if not commands_sh.exists():
         return
     content = commands_sh.read_text(encoding="utf-8")
-    if _PYTHON_INVOCATION not in content:
+    if _REPLAY_INVOCATION_LINE not in content:
         return
-    write_text_lf(commands_sh, content.replace(_PYTHON_INVOCATION, _PYTHON_INVOCATION_PATCHED))
+    if "\n    --resume" in content or "\n    --demo" in content:
+        return
+    manifest = f"{output_dir.as_posix()}/reproducibility/manifest.json"
+    guard = (
+        "# Idempotent replay: resume in place if this output directory already holds a\n"
+        "# completed run of this bundle (reproducibility/manifest.json). A fresh or\n"
+        "# remapped output directory (see the remap_paths.py --output-dir note below)\n"
+        "# has no manifest and runs normally.\n"
+        'CLAWBIO_RESUME=""\n'
+        f'if [[ -f "{manifest}" ]]; then\n'
+        '  CLAWBIO_RESUME="--resume"\n'
+        "fi\n"
+        '"${PYTHON:-python3}" "$SKILL_SCRIPT" $CLAWBIO_RESUME \\'
+    )
+    write_text_lf(commands_sh, content.replace(_REPLAY_INVOCATION_LINE, guard, 1))
 
 
 def _write_remap_script(repro_dir: Path) -> None:

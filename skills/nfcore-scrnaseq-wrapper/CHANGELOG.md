@@ -45,6 +45,12 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Report "Next Steps" handoff is now portable.** The downstream handoff bullets in
+  `report.md` baked an **absolute** path to `clawbio.py` (resolved on the machine that
+  generated the report, e.g. `/mnt/.../ClawBio/clawbio.py`), so the suggested command did
+  not exist on any other machine, and invoked it with a bare `python`. They now use the
+  repository-relative `clawbio.py` (matching the convention documented across the repo)
+  and `python3` (portable to python3-only systems, PEP 394). Covered by a new test.
 - **`save_align_intermeds` no longer carries an invented `default: true` in the
   contract.** nf-core/scrnaseq 4.1.0's `nextflow_schema.json` declares no default for
   `save_align_intermeds` (an opt-in boolean, false when unset — same as

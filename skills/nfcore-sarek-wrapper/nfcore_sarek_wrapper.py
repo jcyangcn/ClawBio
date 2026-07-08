@@ -1436,35 +1436,35 @@ def _emit_downstream_handoff(
         "clinical-variant-reporter": {
             "description": "ACMG/AMP clinical variant interpretation from VEP-annotated VCFs.",
             "example": (
-                "python skills/clinical-variant-reporter/clinical_variant_reporter.py "
+                "python3 skills/clinical-variant-reporter/clinical_variant_reporter.py "
                 f"--input {shlex.quote(str(annotation_dir))} --output <dir>"
             ),
         },
         "clinical-trial-finder": {
             "description": "Match patient variants to ClinicalTrials.gov / EUCTR trials.",
             "example": (
-                "python skills/clinical-trial-finder/clinical_trial_finder.py "
+                "python3 skills/clinical-trial-finder/clinical_trial_finder.py "
                 f"--input {shlex.quote(str(annotation_dir))} --output <dir>"
             ),
         },
         "omics-target-evidence-mapper": {
             "description": "Aggregate target-level evidence across multi-omic sources.",
             "example": (
-                "python skills/omics-target-evidence-mapper/omics_target_evidence_mapper.py "
+                "python3 skills/omics-target-evidence-mapper/omics_target_evidence_mapper.py "
                 f"--input {shlex.quote(str(annotation_dir))} --output <dir>"
             ),
         },
         "wes-clinical-report-en": {
             "description": "Render a WES clinical PDF report in English.",
             "example": (
-                "python skills/wes-clinical-report-en/wes_clinical_report_en.py "
+                "python3 skills/wes-clinical-report-en/wes_clinical_report_en.py "
                 f"--report-dir {shlex.quote(str(output_dir))} --output-dir <pdf_dir>"
             ),
         },
         "wes-clinical-report-es": {
             "description": "Render a WES clinical PDF report in Spanish.",
             "example": (
-                "python skills/wes-clinical-report-es/wes_clinical_report_es.py "
+                "python3 skills/wes-clinical-report-es/wes_clinical_report_es.py "
                 f"--report-dir {shlex.quote(str(output_dir))} --output-dir <pdf_dir>"
             ),
         },

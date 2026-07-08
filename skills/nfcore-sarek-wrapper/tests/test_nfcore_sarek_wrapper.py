@@ -888,6 +888,24 @@ def test_main_run_downstream_writes_handoff(module, monkeypatch, tmp_path):
     assert "wes-clinical-report-es" in payload["routes"]
 
 
+def test_downstream_handoff_examples_use_python3(module, monkeypatch, tmp_path):
+    """The generated sarek_downstream_handoff.sh lists cross-skill example commands
+    the user runs directly (`bash sarek_downstream_handoff.sh`). They must invoke
+    `python3`, not a bare `python`, for portability to python3-only systems (PEP 394)."""
+    _patch_heavy(monkeypatch, module)
+    rc = module.main([
+        "--output", str(tmp_path / "out"),
+        "--demo",
+        "--no-banner",
+        "--run-downstream",
+        "--downstream-skill", "clinical-variant-reporter",
+    ])
+    assert rc == 0
+    sh = (tmp_path / "out" / "reproducibility" / "sarek_downstream_handoff.sh").read_text()
+    assert "python3 skills/" in sh
+    assert "python skills/" not in sh, "bare `python` is not portable; use python3"
+
+
 def test_main_run_downstream_without_skill_returns_2(module, monkeypatch, tmp_path):
     _patch_heavy(monkeypatch, module)
     rc = module.main([

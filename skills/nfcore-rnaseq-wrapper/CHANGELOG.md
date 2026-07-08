@@ -19,6 +19,23 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **`commands.sh` replay uses a portable interpreter at the source.** The shared
+  `clawbio/common/portable_commands` template that builds `commands.sh` emitted a bare
+  `python "$SKILL_SCRIPT"`; this wrapper previously rewrote it to `${PYTHON:-python3}`
+  with a post-generation patch. The interpreter is now `"${PYTHON:-python3}"` directly in
+  the template, so every skill that builds a bundle inherits the fix, and this wrapper's
+  now-redundant post-generation patch has been removed. Behaviour is unchanged; the
+  existing `commands.sh` interpreter test still passes.
+- **`commands.sh` in-place replay is now idempotent.** Because this wrapper's
+  `commands.sh` re-invokes the wrapper (which re-runs preflight, unlike the Sarek/scRNA-seq
+  bundles that replay Nextflow directly), a plain re-run in the original `--output`
+  directory failed with `OUTPUT_DIR_NOT_EMPTY`. `commands.sh` now guards the replay:
+  when the target output directory already holds a completed run of this bundle
+  (`reproducibility/manifest.json` present) it adds `--resume`; a fresh or
+  `remap_paths.py --output-dir`-relocated output directory has no manifest and runs
+  normally. The guard is omitted for `--demo` and for runs that already baked `--resume`.
+  `remap_paths.py --output-dir` rewrites the guard's manifest path in lockstep with the
+  `--output` flag. Covered by new tests.
 - **Reproducibility helper instructions now invoke `python3`, matching the sibling
   wrappers.** `remap_paths.py` ships a `#!/usr/bin/env python3` shebang, but its own
   usage/help text and error hints — and the "Portability notice" header emitted into

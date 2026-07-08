@@ -326,6 +326,38 @@ def test_repro_commands_sh_uses_portable_python_interpreter(tmp_path):
     assert "\npython \"$SKILL_SCRIPT\"" not in content, "bare `python` is not portable"
 
 
+def test_repro_commands_sh_has_idempotent_resume_guard(tmp_path):
+    """Re-running commands.sh in place must be idempotent. The RNA-seq bundle
+    re-invokes the wrapper (which re-runs preflight and rejects a non-empty output
+    dir, unlike the Sarek/scRNA-seq bundles that replay Nextflow directly). The
+    replay therefore guards with --resume when the target output dir already holds a
+    completed run of this bundle (reproducibility/manifest.json present); a fresh or
+    remapped output dir has no manifest and runs normally."""
+    write_repro_commands(tmp_path, args=_args(tmp_path))
+    content = (tmp_path / "reproducibility" / "commands.sh").read_text(encoding="utf-8")
+    manifest = f"{tmp_path.as_posix()}/reproducibility/manifest.json"
+    assert f'if [[ -f "{manifest}" ]]; then' in content
+    assert 'CLAWBIO_RESUME="--resume"' in content
+    assert '"${PYTHON:-python3}" "$SKILL_SCRIPT" $CLAWBIO_RESUME' in content
+
+
+def test_repro_commands_sh_resume_guard_skipped_for_demo(tmp_path):
+    """--demo replays the test profile and is not combined with --resume, so the
+    idempotent-resume guard is not emitted for demo bundles."""
+    write_repro_commands(tmp_path, args=_args(tmp_path, demo=True))
+    content = (tmp_path / "reproducibility" / "commands.sh").read_text(encoding="utf-8")
+    assert "CLAWBIO_RESUME" not in content
+
+
+def test_repro_commands_sh_resume_guard_skipped_when_run_used_resume(tmp_path):
+    """If the original run already used --resume the command always resumes, so the
+    conditional guard is redundant and omitted."""
+    write_repro_commands(tmp_path, args=_args(tmp_path, resume=True))
+    content = (tmp_path / "reproducibility" / "commands.sh").read_text(encoding="utf-8")
+    assert "CLAWBIO_RESUME" not in content
+    assert "\n    --resume" in content
+
+
 def test_build_repro_command_args_omits_default_trimmer(tmp_path):
     """commands.sh must not record the default --trimmer (trimgalore) — it would
     diverge from params.yaml, which omits defaults ('omit = trust upstream default'),
