@@ -7,7 +7,7 @@ description: >-
   European reference estimates.
 license: MIT
 metadata:
-  version: "1.3.0"
+  version: "1.3.1"
   author: ClawBio
   domain: population-genetics
   tags:
@@ -227,7 +227,7 @@ These thresholds are for display colouring only. AES has no published external v
 
 - **Local-first**: All computation runs on-device; no genotype data is uploaded
 - **Disclaimer**: Every report includes the ClawBio medical disclaimer
-- **Cited sources**: Most association entries include verified PMIDs. One entry (ALDH2 rs671 ESCC) has `pmid: null` and cites GWAS Catalog accession GCST001563 pending re-verification of the correct PMID. See `data/PROVENANCE.md` for full correction history.
+- **Cited sources**: Every association entry carries a non-null PMID (enforced by a CI test). One entry (ALDH2 rs671 ESCC) uses PMID 22960999 (Wu et al. 2012 Nat Genet) with GWAS Catalog accession GCST001563; the entry note flags that the accession-to-PMID mapping was not independently confirmed via the Catalog. See `data/PROVENANCE.md` for full correction history.
 - **LCT entries removed in v1.3.0**: All `rs4988235` Lactose Intolerance entries were removed because (a) PMID 14507249 cited as Enattah 2002 resolves to an unrelated bladder-cancer paper, and (b) the EUR `or=0.45` and non-EUR `or=3.2–6.8` encoded opposite outcome framings for the same allele, manufacturing spurious AES of 7–15x.
 - **Soft posterior gating in v1.3.0**: When ancestry confidence is "low" and top posterior < 0.35, disease risk scoring is skipped entirely with an explanatory message. Between 0.35–0.6 a caveat note is shown alongside results. User-supplied `--ancestry` overrides the gate.
 - **No hallucinated ORs**: All effect sizes trace to the bundled `ancestry_risk_associations.json`
@@ -262,7 +262,7 @@ The agent (LLM) dispatches and explains results. The skill (Python) executes the
 - Karczewski et al. (2020) Nature 581:434. PMID 32461654. gnomAD v3.1 allele frequencies for AISNP panel
 - Kosoy et al. (2009) Hum Genet 126:719–731. PMID 19680671. AISNP panel design validation (≥30 markers for continental assignment)
 - Dubois et al. (2010) Nat Genet 42:295–302. PMID 20190752. Celiac disease GWAS (PTPN22 R620W)
-- Wu et al. (2012) Nat Genet 44:1090–1093. GWAS Catalog GCST001563. ESCC GWAS in Chinese (ALDH2 rs671) — PMID unverified; two consecutive wrong PMIDs (20686008, 22561518) corrected to null in v1.3.0
+- Wu et al. (2012) Nat Genet 44:1090–1093. PMID 22960999. GWAS Catalog GCST001563. ESCC GWAS in Chinese (ALDH2 rs671); two earlier wrong PMIDs (20686008, 22561518) were corrected, and the accession-to-PMID mapping is flagged for confirmation in the entry note
 - Grant et al. (2006) Nat Genet 38:320–323. PMID 16415884. TCF7L2 T2D discovery
 - Zeggini et al. (2007) Nat Genet 39:638–644. PMID 17463246. T2D replication
 - Feder et al. (1996) Nat Genet 13:399–408. PMID 9068472. HFE hereditary haemochromatosis

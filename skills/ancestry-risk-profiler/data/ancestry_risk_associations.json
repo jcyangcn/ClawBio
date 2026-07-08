@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "version": "1.3.0",
+    "version": "1.3.1",
     "description": "Curated ancestry-stratified variant-disease associations. Each entry has both an ancestry-specific OR and a EUR reference OR for AES computation.",
     "sources": [
       "GWAS Catalog",
@@ -38,68 +38,6 @@
       "rs699 HTN SAS \u2014 removed: no SAS hypertension paper found; was wrongly cited under Cho 2011 EAS T2D (PMID 22158537)",
       "rs429358 AD SAS \u2014 removed: no SAS-specific APOE Alzheimer's paper confirmed; was wrongly cited under Cho 2011 EAS T2D (PMID 22158537)"
     ]
-  },
-  "baseline_prevalences": {
-    "AFR": {
-      "Type 2 Diabetes": 0.197,
-      "Coronary Artery Disease": 0.119,
-      "Hypertension": 0.573,
-      "Stroke": 0.046,
-      "Breast Cancer": 0.098,
-      "Chronic Kidney Disease": 0.161,
-      "Lactose Intolerance": 0.72,
-      "Atrial Fibrillation": 0.12,
-      "Celiac Disease": 0.005,
-      "Prostate Cancer": 0.175
-    },
-    "AMR": {
-      "Type 2 Diabetes": 0.225,
-      "Coronary Artery Disease": 0.106,
-      "Hypertension": 0.434,
-      "Stroke": 0.033,
-      "Breast Cancer": 0.096,
-      "Chronic Kidney Disease": 0.11,
-      "Lactose Intolerance": 0.53,
-      "Atrial Fibrillation": 0.215,
-      "Celiac Disease": 0.01,
-      "Prostate Cancer": 0.115
-    },
-    "EAS": {
-      "Type 2 Diabetes": 0.143,
-      "Coronary Artery Disease": 0.079,
-      "Hypertension": 0.435,
-      "Stroke": 0.028,
-      "Breast Cancer": 0.069,
-      "Chronic Kidney Disease": 0.085,
-      "Lactose Intolerance": 0.95,
-      "Atrial Fibrillation": 0.094,
-      "Celiac Disease": 0.002,
-      "Prostate Cancer": 0.059
-    },
-    "EUR": {
-      "Type 2 Diabetes": 0.109,
-      "Coronary Artery Disease": 0.095,
-      "Hypertension": 0.462,
-      "Stroke": 0.024,
-      "Breast Cancer": 0.13,
-      "Chronic Kidney Disease": 0.092,
-      "Lactose Intolerance": 0.22,
-      "Atrial Fibrillation": 0.249,
-      "Celiac Disease": 0.014,
-      "Prostate Cancer": 0.121
-    },
-    "SAS": {
-      "Type 2 Diabetes": 0.265,
-      "Coronary Artery Disease": 0.159,
-      "Hypertension": 0.396,
-      "Stroke": 0.031,
-      "Breast Cancer": 0.066,
-      "Chronic Kidney Disease": 0.102,
-      "Lactose Intolerance": 0.69,
-      "Atrial Fibrillation": 0.189,
-      "Celiac Disease": 0.009,
-      "Prostate Cancer": 0.073
-    }
   },
   "associations": [
     {

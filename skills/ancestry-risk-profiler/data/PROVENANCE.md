@@ -48,6 +48,25 @@ Elevation Score.
 **Coverage**: 5 super-populations × ~11 diseases = ~51 disease-ancestry combinations.
 Full panel: ~51 additive association entries + 1 compound recessive group (APOL1 CKD/AFR).
 
+### Changes in v1.3.1 (PR-audit follow-up: dead-data removal + doc reconciliation)
+
+**Removed inert `baseline_prevalences` block from `ancestry_risk_associations.json`**
+
+The top-level `baseline_prevalences` object (5 super-populations, incl. diseases not scored by the
+panel such as Prostate Cancer) was no longer read by any code path after the absolute-risk
+calculation was dropped in v1.3.0. It was removed entirely so the file cannot be re-wired into a
+double-counting absolute-risk calculation, and a CI test (`test_no_baseline_prevalences_block`)
+now asserts its absence. No scored output changes.
+
+**rs671 (ALDH2 ESCC) PMID docs reconciled with the data**
+
+The JSON entry carries `pmid: "22960999"` (Wu et al. 2012 Nat Genet), but SKILL.md and this file
+still described it as `pmid: null` "pending re-verification". The docs are corrected to match the
+data; the entry note continues to flag that the GWAS Catalog accession-to-PMID mapping (GCST001563)
+was not independently confirmed.
+
+Version strings aligned to 1.3.1 across SKILL.md, `ancestry_risk_associations.json`, and `catalog.json`.
+
 ### Changes in v1.3.0 (PR-audit provenance resolution)
 
 **PMID 17478679 misidentified as "McPherson 2007" — corrected to Helgadottir 2007 and scope narrowed**
@@ -192,7 +211,7 @@ A verified PMID must be confirmed against PubMed / GWAS Catalog before reinstati
 - Variants are assumed independent within each disease (LD not modelled)
 - APOL1 CKD uses a recessive compound model (see `compound_recessive_groups`) — per-allele log-additive OR is biologically wrong for this locus
 - This panel is curated for educational demonstration; it is not a validated clinical risk calculator
-- ALDH2 rs671: PMID is null pending re-verification; biology and OR are from the published ESCC GWAS literature
+- ALDH2 rs671: PMID 22960999 (Wu et al. 2012 Nat Genet ESCC GWAS); the GWAS Catalog accession-to-PMID mapping (GCST001563) is flagged for confirmation in the entry note
 
 ---
 

@@ -770,6 +770,18 @@ class TestProvenanceIntegrity:
         )
 
     # ------------------------------------------------------------------
+    # 3b. No inert baseline_prevalences block (double-counting hazard)
+    # ------------------------------------------------------------------
+
+    def test_no_baseline_prevalences_block(self):
+        assert "baseline_prevalences" not in self.data, (
+            "The inert `baseline_prevalences` block must not be present in "
+            "ancestry_risk_associations.json. Absolute-risk scoring was removed in "
+            "v1.3.0 to avoid double-counting; leaving the prevalence table in the file "
+            "leaves the double-counting bug one wiring change away from returning."
+        )
+
+    # ------------------------------------------------------------------
     # 4. All ORs are positive and plausible (catches transcription errors
     #    that would silently produce nonsense AES values)
     # ------------------------------------------------------------------
