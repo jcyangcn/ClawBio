@@ -19,6 +19,21 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Reproducibility helper instructions now invoke `python3`, matching the sibling
+  wrappers.** `remap_paths.py` ships a `#!/usr/bin/env python3` shebang, but its own
+  usage/help text and error hints — and the "Portability notice" header emitted into
+  `commands.sh` by `reporting.py` — told users to run it as a bare `python
+  remap_paths.py`. On modern macOS and many Linux distributions only `python3` exists
+  in `PATH` (PEP 394), so the suggested command failed with `python: command not
+  found`. All such instructions now say `python3`, consistent with the
+  nfcore-sarek-wrapper and nfcore-scrnaseq-wrapper reproduction guides. A static guard
+  test (`tests/test_portability_remap_interpreter.py`, mirroring the sibling wrappers)
+  prevents regressions.
+- **Generated `rnaseq_de_handoff.sh` now uses a portable interpreter.** The downstream
+  handoff script — executed on a possibly-fresh machine via `bash rnaseq_de_handoff.sh`
+  — invoked a bare `python "${CLAWBIO_REPO}/clawbio.py"`, which fails on python3-only
+  systems. It now uses `"${PYTHON:-python3}"`, mirroring the `commands.sh` replay patch
+  (defaults to `python3`, honours a `PYTHON` override). Covered by a new test.
 - **`--allow-remote-inputs` is now replayed by `commands.sh`.** A run launched with
   `--allow-remote-inputs` (remote FASTQ/reference URIs) produced a bundle whose
   `commands.sh` omitted the flag, so re-running it failed preflight with

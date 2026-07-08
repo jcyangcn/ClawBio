@@ -168,16 +168,16 @@ _PORTABILITY_NOTICE = """\
 # Before replaying on a different machine:
 #
 #   1. Remap FASTQ/BAM paths in samplesheet.valid.csv:
-#        python reproducibility/remap_paths.py --old /original/prefix --new /new/prefix
+#        python3 reproducibility/remap_paths.py --old /original/prefix --new /new/prefix
 #
 #   2. Remap reference/index paths in commands.sh (if references moved):
-#        python reproducibility/remap_paths.py --refs-old /original/refs --refs-new /new/refs
+#        python3 reproducibility/remap_paths.py --refs-old /original/refs --refs-new /new/refs
 #
 #   3. Update the --output path above if the output directory changed:
-#        python reproducibility/remap_paths.py --output-dir /new/output/dir
+#        python3 reproducibility/remap_paths.py --output-dir /new/output/dir
 #
 #   4. Verify everything:
-#        python reproducibility/remap_paths.py --verify
+#        python3 reproducibility/remap_paths.py --verify
 #
 # If ClawBio is installed at a non-standard path on this machine:
 #   CLAWBIO_REPO=/path/to/ClawBio bash reproducibility/commands.sh

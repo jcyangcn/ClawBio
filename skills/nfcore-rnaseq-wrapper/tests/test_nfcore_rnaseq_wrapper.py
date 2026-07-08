@@ -630,6 +630,24 @@ def test_run_downstream_handoff_template_only_without_required_flags(tmp_path):
     assert (tmp_path / "reproducibility" / "rnaseq_de_handoff.sh").exists()
 
 
+def test_downstream_handoff_uses_portable_python_interpreter(tmp_path):
+    """The generated `rnaseq_de_handoff.sh` is executed on possibly-fresh machines
+    (`bash rnaseq_de_handoff.sh`) where only `python3` exists (PEP 394). It must invoke
+    the interpreter portably as `${PYTHON:-python3}`, never a bare `python`, mirroring
+    the `commands.sh` replay patch — a bare `python` fails with `python: command not found`."""
+    module = _load_skill_module()
+    args = Namespace(run_downstream=True, skip_downstream=False, metadata=None, formula=None, contrast=None, downstream_output=None)
+    with patch("subprocess.run"):
+        module._run_downstream_handoff(
+            args,
+            parsed_outputs={"preferred_counts_tsv": "counts.tsv", "handoff_available": True},
+            output_dir=tmp_path,
+        )
+    script = (tmp_path / "reproducibility" / "rnaseq_de_handoff.sh").read_text(encoding="utf-8")
+    assert "\npython " not in script, "bare `python` is not portable; use ${PYTHON:-python3}"
+    assert '"${PYTHON:-python3}"' in script
+
+
 def test_run_downstream_handoff_returns_none_without_run_downstream(tmp_path):
     """Without --run-downstream, NO handoff template is written and None is returned,
     even when counts are available (this is the demo/default path). The report's Next

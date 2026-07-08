@@ -1442,7 +1442,7 @@ def _run_downstream_handoff(
         '  echo "  CLAWBIO_REPO=/path/to/ClawBio bash ${BASH_SOURCE[0]}" >&2\n'
         "  exit 1\n"
         "fi\n\n"
-        'python "${CLAWBIO_REPO}/clawbio.py" run rnaseq \\\n'
+        '"${PYTHON:-python3}" "${CLAWBIO_REPO}/clawbio.py" run rnaseq \\\n'
         f"  --counts {shlex.quote(counts)} \\\n"
         "  --metadata <your_metadata.csv> \\\n"
         '  --formula "~ batch + condition" \\\n'
