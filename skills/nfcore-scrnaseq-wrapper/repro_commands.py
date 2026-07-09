@@ -89,6 +89,20 @@ fi
 
 """
 
+# Idempotent replay: reuse the previous run's cache when replaying against an
+# already-completed output dir, but start fresh on a first run. Nextflow keeps its
+# session history in the launch dir's .nextflow/, so its presence means a prior run
+# happened here. -resume is a no-op (with only a warning) on a fresh dir, but the
+# guard keeps first-run output clean and mirrors the nfcore-rnaseq bundle. A plain
+# assigned string (not an array) keeps macOS's bash 3.2 happy under `set -u`.
+_RESUME_GUARD = """\
+RESUME=""
+if [[ -d ".nextflow" ]]; then
+  RESUME="-resume"
+fi
+
+"""
+
 # Nextflow config with the macOS + Apple-Silicon Docker workarounds. Always
 # shipped inside docker bundles; applied at replay only under the uname guard
 # above. See nfcore_scrnaseq_wrapper for the full rationale of each fix.
@@ -179,7 +193,6 @@ def build_nextflow_commands_sh(
     *,
     pipeline_source: dict[str, Any],
     profile: str,
-    resume: bool,
     demo: bool,
     macos_docker_config: bool,
     nextflow_version: str | None,
@@ -198,8 +211,6 @@ def build_nextflow_commands_sh(
     profile:
         Backend profile (e.g. ``docker``). For demo runs the ``test`` profile
         is prepended (``test,docker``) to match the live invocation.
-    resume:
-        Append ``-resume`` when True.
     demo:
         Prepend the ``test`` profile when True.
     macos_docker_config:
@@ -225,13 +236,12 @@ def build_nextflow_commands_sh(
         f"  -work-dir {shlex.quote(work_dir)}",
     ]
     # Append optional flags as continuation lines on the last fixed line.
-    # $EXTRA_CONFIG is unquoted so it word-splits to "-c <path>" or to nothing
-    # (the path is space-free); it is always assigned, so safe under `set -u`.
+    # $EXTRA_CONFIG / $RESUME are unquoted so they word-split to a flag or to
+    # nothing; both are always assigned, so they are safe under `set -u`.
     tail: list[str] = []
     for config_path in extra_configs or []:
         tail.append(f"  -c {shlex.quote(config_path)}")
-    if resume:
-        tail.append("  -resume")
+    tail.append("  $RESUME")
     if macos_docker_config:
         tail.append("  $EXTRA_CONFIG")
     if tail:
@@ -242,6 +252,7 @@ def build_nextflow_commands_sh(
     parts = [
         _HEADER.format(generated_at=generated_at),
         "\n# ── Replay command ────────────────────────────────────────────────────────────\n",
+        _RESUME_GUARD,
     ]
     if nextflow_version:
         # Pin the Nextflow engine version (the pipeline is pinned via -r). Nextflow

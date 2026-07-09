@@ -16,8 +16,30 @@ from pathlib import Path
 from reporting import (
     ReportingArtifacts,
     _best_variant_count,
+    _split_macos_docker_config,
     write_reports,
 )
+
+
+def test_resource_limits_config_stripped_from_replay(tmp_path):
+    # The host-specific resourceLimits cap is applied to the live run only; it must
+    # NOT be baked into the portable replay bundle (it would pin one machine's RAM).
+    argv = [
+        "nextflow", "run", "nf-core/sarek", "-r", "3.8.1",
+        "-c", str(tmp_path / ".nextflow_resource_limits.config"),
+        "-params-file", "reproducibility/params.yaml",
+    ]
+    out, found_macos = _split_macos_docker_config(argv)
+    assert "resource_limits.config" not in " ".join(out)
+    assert found_macos is False
+
+
+def test_macos_docker_config_still_split_out(tmp_path):
+    argv = ["nextflow", "run", "-c", "reproducibility/macos_docker.config", "-resume"]
+    out, found_macos = _split_macos_docker_config(argv)
+    assert found_macos is True
+    assert "macos_docker.config" not in " ".join(out)
+    assert "-resume" in out
 
 
 # ---------------------------------------------------------------------------
@@ -212,6 +234,34 @@ def test_write_reports_leaves_in_bundle_config_untouched(tmp_path: Path) -> None
         pipeline_source_kind="remote",
     )
     assert not (output_dir / "reproducibility" / "nextflow_configs").exists()
+
+
+def test_commands_sh_replay_is_idempotent_with_resume_guard(tmp_path: Path) -> None:
+    """Replaying commands.sh against an already-completed output must reuse the cache.
+
+    The generated script must add -resume only when a prior Nextflow session
+    (.nextflow/ in the launch dir) exists, so a first run starts fresh but a replay
+    resumes — mirroring the nfcore-rnaseq bundle.
+    """
+    output_dir = _make_output_dir(tmp_path)
+    # Original run captured with -resume: the guard must own resume, not a bare flag.
+    command = _minimal_command(output_dir) + ["-resume"]
+    write_reports(
+        output_dir=output_dir,
+        skill_dir=_skill_dir(),
+        params=_minimal_params(),
+        samplesheet_report=_minimal_samplesheet(),
+        pipeline_source=_minimal_pipeline_source(),
+        outputs_report=_FakeOutputsReport(),
+        nextflow_command=command,
+        pipeline_source_kind="remote",
+    )
+    commands = (output_dir / "reproducibility" / "commands.sh").read_text()
+    assert 'RESUME="-resume"' in commands
+    assert '.nextflow' in commands
+    assert "$RESUME" in commands
+    # No bare, unconditional -resume token survived from the captured argv.
+    assert commands.count("-resume") == 1
 
 
 def test_report_md_includes_pairings_when_somatic(tmp_path: Path) -> None:

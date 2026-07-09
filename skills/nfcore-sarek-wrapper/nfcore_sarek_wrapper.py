@@ -14,6 +14,7 @@ import argparse
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -659,8 +660,14 @@ def _run_wrapper(args: argparse.Namespace, output_dir: Path) -> int:
     )
     params_path = write_params_yaml(params, output_dir=output_dir)
 
-    macos_cfg = _write_macos_docker_config(output_dir, args=args)
-    extra_configs = _resolve_extra_configs(args, macos_cfg=macos_cfg)
+    # On macOS+docker: the macOS workarounds config (also carries resourceLimits).
+    # On non-macOS+docker (real runs): a host-scaled resourceLimits cap so the local
+    # executor does not abort when a process's production requirement exceeds this
+    # host. Exactly one of the two applies per host; both are self-gating.
+    auto_cfg = _write_macos_docker_config(output_dir, args=args)
+    if auto_cfg is None:
+        auto_cfg = _write_resource_limits_config(output_dir, args=args)
+    extra_configs = _resolve_extra_configs(args, macos_cfg=auto_cfg)
     work_dir = _resolve_nextflow_work_dir(args, output_dir)
 
     nextflow_command, command_str = build_nextflow_command(
@@ -1265,6 +1272,89 @@ def _host_memory_gb() -> int:
         return max(1, int(os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") / (1024 ** 3)))
     except (ValueError, OSError, AttributeError):
         return 16
+
+
+def _docker_vm_memory_gb() -> int | None:
+    """Docker runtime's total memory in whole GB, or None when unknown.
+
+    On native Linux this reports the host's cgroup memory (≈ physical RAM); it is
+    the true ceiling before the OOM-killer intervenes. Best-effort: any failure
+    (docker absent, daemon down, unparseable output) returns None.
+    """
+    if not shutil.which("docker"):
+        return None
+    try:
+        proc = subprocess.run(
+            ["docker", "info", "--format", "{{.MemTotal}}"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    raw = proc.stdout.strip()
+    if not raw.isdigit():
+        return None
+    gb = int(int(raw) / (1024 ** 3))
+    return gb or None
+
+
+_RESOURCE_LIMITS_MEMORY_HEADROOM_GB = 4
+_RESOURCE_LIMITS_MEMORY_FLOOR_GB = 8
+
+
+def _resource_limits_memory_gb() -> int:
+    """Per-process memory ceiling (GB) for the non-macOS resourceLimits config.
+
+    nf-core's guidance is that ``resourceLimits`` should match the machine's maximum
+    (https://nf-co.re/docs/running/configuration/nextflow-for-your-system). Native
+    Linux Docker exposes the full host RAM, so — unlike the macOS Docker Desktop VM —
+    there is no 15 GB ceiling here. We take the smaller of the detected physical RAM
+    and (when known) the Docker runtime's MemTotal, then reserve a few GB of headroom
+    for the OS, the Nextflow JVM and the Docker daemon.
+    """
+    signals = [gb for gb in (_host_memory_gb(), _docker_vm_memory_gb()) if gb]
+    budget = (min(signals) - _RESOURCE_LIMITS_MEMORY_HEADROOM_GB) if signals else 12
+    return max(_RESOURCE_LIMITS_MEMORY_FLOOR_GB, budget)
+
+
+def _write_resource_limits_config(output_dir: Path, *, args: argparse.Namespace) -> Path | None:
+    """Host-scaled ``resourceLimits`` config for non-macOS docker runs.
+
+    Applied to the *live* run only so a real (non-demo) run whose production process
+    requirements exceed this host does not abort with "Process requirement exceeds
+    available memory". Carries only the portable resourceLimits block — none of the
+    macOS-only workarounds. Returns None when not applicable (macOS is handled by
+    ``_write_macos_docker_config``; ``--demo`` relies on -profile test's own limits).
+    """
+    if sys.platform == "darwin":
+        return None
+    profile_parts = {p.strip() for p in (args.profile or "").split(",") if p.strip()}
+    if "docker" not in profile_parts or bool(getattr(args, "demo", False)):
+        return None
+    config_path = output_dir / ".nextflow_resource_limits.config"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    cpus = max(1, os.cpu_count() or 1)
+    memory_gb = _resource_limits_memory_gb()
+    timeout_hours = getattr(args, "timeout_hours", _DEFAULT_TIMEOUT_HOURS)
+    time_hours = int(_DEFAULT_TIMEOUT_HOURS) if timeout_hours == 0 else max(1, int(timeout_hours))
+    write_text_lf(
+        config_path,
+        "// Cap process resource requests to this host so Nextflow's local executor\n"
+        "// does not abort real runs whose production requirements exceed this machine.\n"
+        "// Follows nf-core resourceLimits guidance (values match the machine maximum):\n"
+        "// https://nf-co.re/docs/running/configuration/nextflow-for-your-system\n"
+        "process {\n"
+        "    resourceLimits = [\n"
+        f"        cpus: {cpus},\n"
+        f"        memory: '{memory_gb}.GB',\n"
+        f"        time: '{time_hours}.h'\n"
+        "    ]\n"
+        "}\n",
+    )
+    return config_path
 
 
 def _write_macos_docker_config(output_dir: Path, *, args: argparse.Namespace) -> Path | None:

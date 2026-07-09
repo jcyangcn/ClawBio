@@ -8,6 +8,14 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Documentation
 
+- **`split_fastq` gotcha added.** SKILL.md now documents that normal runs use the
+  nf-core/sarek default `split_fastq = 50000000`, while `--demo` (`-profile test`)
+  disables splitting (`0`). The wrapper faithfully passes the pipeline default rather
+  than silently injecting `0`, so a normal run and a `--demo` run of the *same* tiny
+  dataset can produce different variant sets (FASTQ split/merge perturbs calls on
+  degenerate, test-scale inputs — a known nf-core artifact, not a wrapper bug). Pass
+  `--split-fastq 0` to match `-profile test` when reproducing demo/test output; leave the
+  default for production cohorts.
 - **`--allow-remote-inputs` semantics clarified.** SKILL.md now states explicitly
   that the flag relaxes only the wrapper's own local-first preflight check: remote
   FASTQ/reference URIs are written into the normalized samplesheet/`params.yaml`
@@ -25,6 +33,23 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Host memory auto-cap now also applies on Linux (not only macOS).** The host-scaled
+  `process.resourceLimits` cap that prevents Nextflow's local executor from aborting a
+  real run with `Process requirement exceeds available memory` was written only on
+  macOS+docker (`_write_macos_docker_config` returned `None` off-Darwin), so a normal
+  Linux docker run got no cap and failed whenever an nf-core default process request
+  exceeded the host. A non-macOS docker run now writes a portable resourceLimits config
+  (`.nextflow_resource_limits.config`) scaled to the machine — the smaller of physical
+  RAM and the Docker `MemTotal`, minus headroom, no 15 GB macOS-VM ceiling — per
+  nf-core's resourceLimits guidance. It is applied to the **live** run only and stripped
+  from the portable `commands.sh` replay bundle so a single machine's RAM is never pinned
+  into it. `--demo` and the macOS path are unchanged.
+- **`commands.sh` replay is now idempotent (`-resume`).** The nextflow-direct replay
+  script re-ran the whole pipeline from scratch against an already-completed output dir.
+  It now emits a guard that adds `-resume` when a prior Nextflow session (`.nextflow/`)
+  exists in the launch dir, so a first run starts fresh but a replay reuses the cache —
+  matching the `nfcore-rnaseq-wrapper` bundle. Any `-resume` captured from the original
+  run is stripped so the guard is the single source of truth.
 - **IPv6/NAT64 hint now actually shows (scan `.nextflow.log`).** The `EXECUTION_FAILED`
   environment-hint scanner read only `logs/stdout.txt` and `logs/stderr.txt`. When
   Nextflow fails while parsing the config (before the pipeline starts), the underlying

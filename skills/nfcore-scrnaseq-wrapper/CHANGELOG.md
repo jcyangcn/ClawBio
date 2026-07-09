@@ -45,6 +45,22 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Host memory auto-cap now also applies on Linux (not only macOS).** The host-scaled
+  `process.resourceLimits` cap that prevents Nextflow's local executor from aborting a
+  real run with `Process requirement exceeds available memory` was written only on
+  macOS+docker, so a normal Linux docker run got no cap and failed whenever a process's
+  production request (e.g. STARsolo's index build) exceeded the host. A non-macOS docker
+  run now writes a portable resourceLimits config (`.nextflow_resource_limits.config`)
+  scaled to the machine — the smaller of physical RAM and the Docker `MemTotal`, minus
+  headroom, no 15 GB macOS-VM ceiling — per nf-core's resourceLimits guidance. It is
+  applied to the **live** run only; the portable `commands.sh` bundle (rebuilt from
+  `params.yaml`) stays host-independent. `--demo` and the macOS path are unchanged.
+- **`commands.sh` replay is now idempotent (`-resume`).** The nextflow-direct replay
+  script re-ran the whole pipeline from scratch against an already-completed output dir.
+  It now emits a guard that adds `-resume` when a prior Nextflow session (`.nextflow/`)
+  exists in the launch dir, so a first run starts fresh but a replay reuses the cache —
+  matching the `nfcore-rnaseq-wrapper` bundle. `build_nextflow_commands_sh` no longer
+  takes a `resume` flag; the guard is the single source of truth.
 - **IPv6/NAT64 hint now actually shows (scan `.nextflow.log`).** The `EXECUTION_FAILED`
   environment-hint scanner read only `logs/stdout.txt` and `logs/stderr.txt`. When
   Nextflow fails while parsing the config (before the pipeline starts), the underlying

@@ -19,6 +19,18 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Host memory auto-cap now also applies on Linux (not only macOS).** The
+  `process.resourceLimits` config that stops Nextflow's local executor from aborting a
+  real run with `Process requirement exceeds available memory` (when an nf-core default
+  process request is larger than the host) was gated behind `platform.system() ==
+  "Darwin"`, so a normal Linux docker run got no cap and failed on any host smaller than
+  the pipeline's production requirements. A docker run on a non-macOS host now writes a
+  portable `resourceLimits` config scaled to the machine — the smaller of physical RAM
+  and the Docker runtime `MemTotal`, minus a few GB of headroom, with no 15 GB macOS-VM
+  ceiling — per nf-core's resourceLimits guidance (values match the machine maximum).
+  `--demo` is untouched (it relies on `-profile test`'s own limits) and the macOS path
+  is byte-for-byte unchanged. The config carries only the resourceLimits block, none of
+  the macOS-only workarounds (`--platform`, `stageInMode = 'copy'`).
 - **IPv6/NAT64 hint now actually shows (scan `.nextflow.log`).** The
   `EXECUTION_FAILED` environment-hint scanner only read `logs/stdout.txt` and
   `logs/stderr.txt`. When Nextflow fails while parsing the config (before the pipeline

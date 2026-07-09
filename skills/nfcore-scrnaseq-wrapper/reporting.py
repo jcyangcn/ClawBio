@@ -197,7 +197,6 @@ def write_repro_commands(
     script = build_nextflow_commands_sh(
         pipeline_source=pipeline_source,
         profile=args.profile,
-        resume=bool(args.resume),
         demo=bool(getattr(args, "demo", False)),
         macos_docker_config=macos_docker_config,
         nextflow_version=nextflow_version,

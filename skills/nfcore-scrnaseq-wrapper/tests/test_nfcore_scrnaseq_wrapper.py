@@ -525,6 +525,39 @@ def test_build_extra_nextflow_configs_writes_config_on_macos_docker(tmp_path):
     assert "stageInMode" in result[0].read_text(encoding="utf-8")
 
 
+def test_build_extra_configs_emits_resource_limits_on_linux_real_run(tmp_path):
+    """A non-macOS docker real run must get a host-scaled resourceLimits cap so the
+    local executor does not abort when STARsolo's default request exceeds this host."""
+    module = _load_skill_module()
+    import argparse as _argparse
+
+    args = _argparse.Namespace(profile="docker", demo=False)
+    with patch("platform.system", return_value="Linux"):
+        result = module._build_extra_nextflow_configs(args, tmp_path)
+    names = [p.name for p in result]
+    assert ".nextflow_resource_limits.config" in names
+    text = (tmp_path / ".nextflow_resource_limits.config").read_text(encoding="utf-8")
+    assert "resourceLimits" in text
+    assert "stageInMode" not in text and "--platform" not in text
+
+
+def test_build_extra_configs_skips_resource_limits_on_linux_demo(tmp_path):
+    module = _load_skill_module()
+    import argparse as _argparse
+
+    args = _argparse.Namespace(profile="docker", demo=True)
+    with patch("platform.system", return_value="Linux"):
+        result = module._build_extra_nextflow_configs(args, tmp_path)
+    assert ".nextflow_resource_limits.config" not in [p.name for p in result]
+
+
+def test_resource_limits_memory_scales_with_host(monkeypatch):
+    module = _load_skill_module()
+    monkeypatch.setattr(module, "_host_memory_gb", lambda: 64)
+    monkeypatch.setattr(module, "_docker_vm_memory_gb", lambda: None)
+    assert module._resource_limits_memory_gb() > 15
+
+
 # ---------------------------------------------------------------------------
 # Task 18: downstream scrna_orchestrator handoff
 # ---------------------------------------------------------------------------
