@@ -19,6 +19,30 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **IPv6/NAT64 hint now actually shows (scan `.nextflow.log`).** The
+  `EXECUTION_FAILED` environment-hint scanner only read `logs/stdout.txt` and
+  `logs/stderr.txt`. When Nextflow fails while parsing the config (before the pipeline
+  starts), the top-level stderr often shows only "Unable to parse config file" while the
+  real cause ("Network is unreachable") is recorded only in `.nextflow.log` — so the
+  already-implemented IPv6/NAT64 hint (`NXF_OPTS='-Djava.net.preferIPv6Addresses=true'`)
+  never appeared on the hosts that need it. `.nextflow.log` (in the Nextflow launch cwd)
+  is now scanned too. Applied identically to all three wrappers (the hint function is
+  shared verbatim). Covered by a new test.
+- **`commands.sh` is regenerated atomically (no self-corruption on in-place replay).**
+  An in-place `--resume` replay re-invokes the wrapper, which regenerates the very
+  `commands.sh` that bash is still executing. The previous truncate-and-rewrite corrupted
+  bash's mid-run read (a trailing shell error such as `…: No such file or directory`).
+  `commands.sh` is now composed in memory and written once via an atomic
+  `os.replace` (new `write_text_lf_atomic`), so an open reader keeps the original inode
+  intact. Verified with an open-file-descriptor test.
+- **`commands.sh` locates the ClawBio checkout automatically.** The script walked up
+  from its own directory looking for `skills/`, but the bundle always lives OUTSIDE the
+  repo (the wrapper forbids `--output` inside it), so it never found the checkout and
+  required a manual `CLAWBIO_REPO` — contradicting the header. It now bakes the
+  generating checkout as the `CLAWBIO_REPO` default (`REPO_ROOT="${CLAWBIO_REPO:-…}"`),
+  so a same-machine replay needs no manual setup while remaining overridable, and the
+  misleading "from anywhere inside the repository clone" header wording is corrected.
+  Sarek/scRNA-seq don't need this (they replay Nextflow directly). Covered by new tests.
 - **Config re-bundling on replay is idempotent (no `config_01_config_01_…` growth).**
   A `--nextflow-config` file is staged into `reproducibility/nextflow_configs/` as
   `config_NN_<name>`. On an in-place `--resume` replay, `commands.sh` re-invokes the

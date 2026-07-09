@@ -31,7 +31,7 @@ def _purge_local_modules(*names: str) -> None:
 
 _purge_foreign_bare_modules("reporting", "schemas")
 
-from reporting import _REPRO_PATH_FLAGS, build_repro_command_args, write_report, write_repro_commands, write_result
+from reporting import _REPO_ROOT, _REPRO_PATH_FLAGS, build_repro_command_args, write_report, write_repro_commands, write_result
 from schemas import DEFAULT_TIMEOUT_HOURS
 
 _purge_local_modules("reporting", "schemas")
@@ -356,6 +356,37 @@ def test_repro_commands_sh_resume_guard_skipped_when_run_used_resume(tmp_path):
     content = (tmp_path / "reproducibility" / "commands.sh").read_text(encoding="utf-8")
     assert "CLAWBIO_RESUME" not in content
     assert "\n    --resume" in content
+
+
+def test_write_repro_commands_replaces_commands_sh_atomically(tmp_path):
+    """An in-place --resume replay regenerates commands.sh while bash is still executing
+    it. The write must be atomic (os.replace to a fresh inode), so a reader that already
+    has the file open keeps seeing the ORIGINAL bytes rather than a truncated/rewritten
+    file. Regenerating with different content must not disturb the open reader."""
+    write_repro_commands(tmp_path, args=_args(tmp_path, aligner="star_salmon"))
+    commands_sh = tmp_path / "reproducibility" / "commands.sh"
+    original = commands_sh.read_text(encoding="utf-8")
+    with commands_sh.open("r", encoding="utf-8") as held:
+        head = held.read(20)
+        # Regenerate in place with different content (simulates the wrapper re-invoked
+        # by the very commands.sh under execution).
+        write_repro_commands(tmp_path, args=_args(tmp_path, aligner="star_rsem"))
+        rest = held.read()
+    assert head + rest == original, "open reader saw a truncated/rewritten file — not atomic"
+    assert "star_rsem" not in (head + rest)
+    # The on-disk file is the regenerated version.
+    assert "star_rsem" in commands_sh.read_text(encoding="utf-8")
+
+
+def test_repro_commands_sh_bakes_clawbio_repo_default(tmp_path):
+    """The bundle always lives OUTSIDE the ClawBio checkout, so walking up from the
+    script never finds skills/. commands.sh must bake the generating checkout as the
+    CLAWBIO_REPO default so a same-machine replay needs no manual CLAWBIO_REPO, while
+    remaining overridable. The misleading "inside the repository clone" hint is gone."""
+    write_repro_commands(tmp_path, args=_args(tmp_path))
+    content = (tmp_path / "reproducibility" / "commands.sh").read_text(encoding="utf-8")
+    assert f'REPO_ROOT="${{CLAWBIO_REPO:-{_REPO_ROOT.as_posix()}}}"' in content
+    assert "inside the repository clone" not in content
 
 
 def test_build_repro_command_args_omits_default_trimmer(tmp_path):

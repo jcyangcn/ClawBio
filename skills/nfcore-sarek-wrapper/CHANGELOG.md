@@ -25,6 +25,13 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **IPv6/NAT64 hint now actually shows (scan `.nextflow.log`).** The `EXECUTION_FAILED`
+  environment-hint scanner read only `logs/stdout.txt` and `logs/stderr.txt`. When
+  Nextflow fails while parsing the config (before the pipeline starts), the underlying
+  "Network is unreachable" cause is often recorded only in `.nextflow.log`, so the
+  IPv6/NAT64 hint (`NXF_OPTS='-Djava.net.preferIPv6Addresses=true'`) never appeared.
+  `.nextflow.log` (in the Nextflow launch cwd) is now scanned too. Shared verbatim with
+  the sibling wrappers; covered by a new test.
 - **Downstream handoff examples now use `python3`.** The generated
   `sarek_downstream_handoff.sh` listed cross-skill example commands (clinical-variant-reporter,
   clinical-trial-finder, omics-target-evidence-mapper, wes-clinical-report-en/es) as bare
