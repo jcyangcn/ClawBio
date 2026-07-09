@@ -19,6 +19,16 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Config re-bundling on replay is idempotent (no `config_01_config_01_…` growth).**
+  A `--nextflow-config` file is staged into `reproducibility/nextflow_configs/` as
+  `config_NN_<name>`. On an in-place `--resume` replay, `commands.sh` re-invokes the
+  wrapper with `--nextflow-config` already pointing at that staged copy
+  (`${SCRIPT_DIR}/nextflow_configs/config_01_<name>`), and the wrapper copied it again
+  under a fresh prefix (`config_01_config_01_<name>`), accumulating a prefix on every
+  replay. Staging now detects that the source already lives in this bundle's
+  `nextflow_configs/` directory and references it in place instead of re-copying.
+  Sarek/scRNA-seq are unaffected (they replay Nextflow directly and do not re-stage
+  configs). Covered by a new test.
 - **`commands.sh` replay uses a portable interpreter at the source.** The shared
   `clawbio/common/portable_commands` template that builds `commands.sh` emitted a bare
   `python "$SKILL_SCRIPT"`; this wrapper previously rewrote it to `${PYTHON:-python3}`

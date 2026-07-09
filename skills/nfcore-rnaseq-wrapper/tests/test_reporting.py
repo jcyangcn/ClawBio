@@ -512,6 +512,29 @@ def test_build_repro_command_args_stages_config_outside_output_dir(tmp_path):
     assert copied.read_text() == "process { resourceLimits = [ memory: '12.GB' ] }\n"
 
 
+def test_build_repro_command_args_config_restage_is_idempotent(tmp_path):
+    """On an in-place --resume replay, commands.sh re-invokes the wrapper with
+    --nextflow-config pointing at the ALREADY-staged
+    ${SCRIPT_DIR}/nextflow_configs/config_01_*.config (a file inside THIS bundle).
+    Re-staging must reference it in place, not copy it again under a new config_NN_
+    prefix — otherwise successive replays accumulate config_01_config_01_..."""
+    external = tmp_path / "elsewhere" / "limits.config"
+    external.parent.mkdir()
+    external.write_text("process { resourceLimits = [ memory: '12.GB' ] }\n", encoding="utf-8")
+    output_dir = tmp_path / "run"
+    output_dir.mkdir()
+    first = build_repro_command_args(output_dir, args=_args(output_dir, nextflow_config=[str(external)]))
+    assert first["--nextflow-config"] == ["${SCRIPT_DIR}/nextflow_configs/config_01_limits.config"]
+    staged = output_dir / "reproducibility" / "nextflow_configs" / "config_01_limits.config"
+    assert staged.is_file()
+    # Replay: the wrapper is re-invoked with the already-staged (absolute) path.
+    second = build_repro_command_args(output_dir, args=_args(output_dir, nextflow_config=[str(staged)]))
+    assert second["--nextflow-config"] == ["${SCRIPT_DIR}/nextflow_configs/config_01_limits.config"]
+    config_dir = output_dir / "reproducibility" / "nextflow_configs"
+    names = sorted(p.name for p in config_dir.iterdir())
+    assert names == ["config_01_limits.config"], f"double-prefixed copy created: {names}"
+
+
 def test_build_repro_command_args_remote_config_uri_passed_through(tmp_path):
     """A remote config URI is not a local file, so it is replayed verbatim (not copied)."""
     result = build_repro_command_args(

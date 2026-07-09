@@ -439,6 +439,14 @@ def _stage_user_nextflow_configs(output_dir: Path, config_paths: list[str]) -> l
             staged.append(source.as_posix())  # defensive: nothing to copy in
             continue
         config_dir.mkdir(parents=True, exist_ok=True)
+        # Idempotent re-bundling: an in-place --resume replay re-invokes the wrapper with
+        # --nextflow-config already pointing at THIS bundle's staged copy
+        # (${SCRIPT_DIR}/nextflow_configs/config_NN_*.config resolves inside config_dir).
+        # Reference it in place instead of copying it again under a new config_NN_ prefix,
+        # which would accumulate config_01_config_01_... on successive replays.
+        if source.parent == config_dir.resolve():
+            staged.append(f"${{SCRIPT_DIR}}/nextflow_configs/{source.name}")
+            continue
         destination = config_dir / f"config_{index:02d}_{_safe_config_basename(source.name)}"
         shutil.copyfile(source, destination)
         staged.append(f"${{SCRIPT_DIR}}/nextflow_configs/{destination.name}")
