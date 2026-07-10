@@ -54,6 +54,20 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **`checksums.sha256` no longer leaks the nested Nextflow work tree into the manifest.**
+  The checksum generator excluded `work/`, `.nextflow/`, `reproducibility/` and `logs/`
+  by matching only the *first* path component (`rel.parts[0]`). But the default work dir
+  is `<output>/upstream/work`, so every ephemeral scratch file sat at `upstream/work/**`
+  (first component `upstream`) and was hashed into the manifest — the bulk of its lines
+  were transient task files that change every run, defeating the manifest's purpose and
+  breaking `sha256sum -c` reproducibility. Both generators — `provenance._iter_checksum_paths`
+  and the stdlib-only `remap_paths._regenerate_checksums` (kept in lockstep) — now exclude
+  a file when **any** ancestor directory is an excluded tree, so the nested work dir is
+  caught wherever it lives (including a custom `--work-dir` placed under the output root).
+  The manifest now contains only the real `upstream/results/**` outputs. The existing test
+  used an unrealistic flat `output/work/` layout (which the old first-component check
+  happened to catch), masking the bug; new tests in `test_provenance.py` and
+  `test_remap_paths.py` assert exclusion of the real `upstream/work/**` layout.
 - **`--genome testdata.nf-core.sarek` is now rejected early without a matching
   `--igenomes-base`.** nf-core/sarek's tiny test genome resolves only under the
   test-datasets mirror (`conf/test.config` sets `igenomes_base` to
