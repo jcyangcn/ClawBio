@@ -25,6 +25,18 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **Output-dir "not empty" check now ignores the whole `reproducibility/` bundle.** The
+  check used a per-file allowlist (`_ALLOWED_REPRO_FILES` = samplesheet/params/manifest
+  only), so an output directory containing a *complete* reproducibility bundle — with the
+  wrapper's own `commands.sh`, `checksums.sha256`, `environment.yml`, `remap_paths.py` and
+  provenance JSON — was rejected with `OUTPUT_DIR_NOT_EMPTY` on a non-resume run. The
+  `reproducibility/` directory is entirely wrapper-generated (never user data), so it is
+  now ignored wholesale (added to `_IGNORED_ROOT_NAMES`), matching nfcore-sarek and
+  nfcore-scrnaseq. This removes a fragile allowlist that had to grow with every new bundle
+  file, and makes the three wrappers accept the same pre-existing output-dir contents.
+  Genuine result artifacts at the output root (`report.md`, `result.json`, `upstream/`,
+  `logs/`) still block a non-resume re-run, and the incomplete-prior-run guidance is
+  unchanged.
 - **Host memory auto-cap now also applies on Linux (not only macOS).** The
   `process.resourceLimits` config that stops Nextflow's local executor from aborting a
   real run with `Process requirement exceeds available memory` (when an nf-core default
