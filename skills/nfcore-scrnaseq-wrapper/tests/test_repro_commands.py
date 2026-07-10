@@ -52,6 +52,22 @@ def test_demo_uses_test_profile_prefix():
     assert "-profile test,docker" in script
 
 
+def test_resource_limits_guard_emitted_when_shipped():
+    # A non-macOS docker real run ships reproducibility/resource_limits.config; the
+    # replay must apply it on non-macOS hosts so a from-scratch reproduction on the
+    # generating (memory-constrained) machine does not re-abort STAR_GENOMEGENERATE.
+    script = _build(resource_limits_config=True)
+    assert 'if [[ "$(uname -s)" != "Darwin" ]]; then' in script
+    assert 'RESOURCE_CONFIG="-c reproducibility/resource_limits.config"' in script
+    assert "$RESOURCE_CONFIG" in script
+
+
+def test_resource_limits_guard_absent_by_default():
+    script = _build()
+    assert "resource_limits.config" not in script
+    assert "RESOURCE_CONFIG" not in script
+
+
 def test_idempotent_resume_guard_always_emitted():
     # Replay must be idempotent: reuse the previous run's cache when replaying against
     # a completed output dir, but start fresh on a first run. The guard adds -resume

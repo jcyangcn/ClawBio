@@ -8,6 +8,10 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Documentation
 
+- **`remap_paths.py --output-dir` documented.** The portability section now lists
+  `--output-dir <new-path>` (rewrites the baked `--output` in `commands.sh` when a run is
+  relocated) alongside `--old/--new` and `--refs-old/--refs-new`, and notes that the
+  scrnaseq bundle self-relocates and only accepts `--output-dir` for parity.
 - **`split_fastq` gotcha added.** SKILL.md now documents that normal runs use the
   nf-core/sarek default `split_fastq = 50000000`, while `--demo` (`-profile test`)
   disables splitting (`0`). The wrapper faithfully passes the pipeline default rather
@@ -33,6 +37,23 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **`--genome testdata.nf-core.sarek` is now rejected early without a matching
+  `--igenomes-base`.** nf-core/sarek's tiny test genome resolves only under the
+  test-datasets mirror (`conf/test.config` sets `igenomes_base` to
+  `https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/`), never the
+  default `s3://ngi-igenomes` catalogue — yet it was accepted like a normal iGenomes
+  key, so a real run without that override failed late during nf-schema reference
+  validation with no warning. `_check_genome_known` now special-cases it: accepted under
+  `-profile test`/`--demo` or with a custom `--igenomes-base`, otherwise rejected at
+  preflight (`INVALID_GENOME`) with a fix naming `--demo` and the exact test-datasets base.
+- **The host resourceLimits cap now ships in the reproducibility bundle and replays.**
+  Previously the cap was applied to the live run but stripped from `commands.sh`, so a
+  from-scratch reproduction on the generating (memory-constrained) host re-aborted with
+  `Process requirement exceeds available memory`. The cap is now written to
+  `reproducibility/resource_limits.config` and `commands.sh` re-applies it via a
+  `uname != Darwin` guard (complementary to the macOS-config guard), so a bundle
+  reproduces the run on the machine that made it. The cap only ever clamps requests, so
+  a larger replay host simply under-uses it.
 - **Host memory auto-cap now also applies on Linux (not only macOS).** The host-scaled
   `process.resourceLimits` cap that prevents Nextflow's local executor from aborting a
   real run with `Process requirement exceeds available memory` was written only on

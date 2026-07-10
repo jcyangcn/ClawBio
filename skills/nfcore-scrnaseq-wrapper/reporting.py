@@ -194,6 +194,10 @@ def write_repro_commands(
     copied_extra_configs = _copy_user_nextflow_configs(
         repro_dir, getattr(args, "extra_config", []) or []
     )
+    # The host-scaled resourceLimits cap is written into the bundle by the live run
+    # (only for non-macOS docker real runs). Ship+apply it on replay when present so a
+    # from-scratch reproduction on the generating host does not re-abort on memory.
+    resource_limits_config = (repro_dir / "resource_limits.config").is_file()
     script = build_nextflow_commands_sh(
         pipeline_source=pipeline_source,
         profile=args.profile,
@@ -203,6 +207,7 @@ def write_repro_commands(
         generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         extra_configs=copied_extra_configs,
         work_dir=_replay_work_dir(args),
+        resource_limits_config=resource_limits_config,
     )
     if not getattr(args, "demo", False):
         script += _PORTABILITY_NOTICE

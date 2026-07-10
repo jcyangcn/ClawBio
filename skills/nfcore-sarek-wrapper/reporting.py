@@ -895,7 +895,7 @@ def _build_commands_sh(
     # host, not the host that generated the bundle: a macOS-generated bundle
     # replayed on Linux must NOT load it. Pull it out of the inline command and
     # apply it through a uname-gated variable instead (matches scrnaseq).
-    replay_argv, has_macos_config = _split_macos_docker_config(portable_argv)
+    replay_argv, has_macos_config, has_resource_config = _split_macos_docker_config(portable_argv)
     # Idempotent replay owns -resume via a guard below, so drop any bare -resume the
     # original run captured (avoids a duplicate and lets the guard decide).
     replay_argv = [a for a in replay_argv if a != "-resume"]
@@ -907,6 +907,16 @@ def _build_commands_sh(
         lines.append('EXTRA_CONFIG=""')
         lines.append('if [[ "$(uname -s)" == "Darwin" ]]; then')
         lines.append('  EXTRA_CONFIG="-c reproducibility/macos_docker.config"')
+        lines.append("fi")
+        lines.append("")
+    if has_resource_config:
+        lines.append("# Re-apply the host-scaled resourceLimits cap the wrapper used for the")
+        lines.append("# original run, but ONLY on non-macOS (on macOS the Docker VM is the")
+        lines.append("# ceiling). Reproduces the cap so a from-scratch replay on the generating")
+        lines.append('# host does not abort with "Process requirement exceeds available memory".')
+        lines.append('RESOURCE_CONFIG=""')
+        lines.append('if [[ "$(uname -s)" != "Darwin" ]]; then')
+        lines.append('  RESOURCE_CONFIG="-c reproducibility/resource_limits.config"')
         lines.append("fi")
         lines.append("")
     # Idempotent replay: reuse the previous run's cache when replaying against an
@@ -925,6 +935,8 @@ def _build_commands_sh(
     # Unquoted on purpose: word-splits to the flag or to nothing. Both are always
     # assigned above, so this is safe under `set -u`.
     replay_inner += " \\\n  $RESUME"
+    if has_resource_config:
+        replay_inner += " \\\n  $RESOURCE_CONFIG"
     if has_macos_config:
         replay_inner += " \\\n  $EXTRA_CONFIG"
     lines.append('(cd "$SCRIPT_DIR/.." && \\')
@@ -1077,22 +1089,26 @@ def _portable_argv(
     return out, warnings
 
 
-def _split_macos_docker_config(argv: list[str]) -> tuple[list[str], bool]:
-    """Strip host-/OS-specific ``-c`` config pairs from a replay argv.
+def _split_macos_docker_config(argv: list[str]) -> tuple[list[str], bool, bool]:
+    """Pull host-/OS-specific ``-c`` config pairs out of a replay argv.
 
-    Two configs are pulled out:
+    Both configs are re-applied by ``commands.sh`` through complementary ``uname``
+    guards rather than baked into the inline command, so a single bundle runs on
+    either OS:
 
-    * ``macos_docker.config`` — OS-specific; commands.sh re-applies it through a
-      ``uname``-gated variable rather than baking it into the inline command. This
-      is what the returned ``found`` flag reports.
-    * ``.nextflow_resource_limits.config`` — a host-scaled resourceLimits cap
-      generated for the *live* run only. It encodes one machine's RAM, so it must
-      NOT travel with the portable bundle; it is dropped outright (no re-add).
+    * ``macos_docker.config`` — applied only when replaying on macOS (VirtioFS /
+      Apple-Silicon / STAR-FIFO workarounds). Reported by ``macos_found``.
+    * ``resource_limits.config`` — the host-scaled resourceLimits cap; applied only
+      when replaying on a non-macOS host. Shipping it (rather than dropping it) lets a
+      from-scratch reproduction on the generating machine succeed instead of
+      re-aborting with "Process requirement exceeds available memory". Reported by
+      ``resource_found``.
 
-    Returns ``(filtered_argv, macos_found)``.
+    Returns ``(filtered_argv, macos_found, resource_found)``.
     """
     out: list[str] = []
     macos_found = False
+    resource_found = False
     i = 0
     while i < len(argv):
         token = argv[i]
@@ -1102,12 +1118,13 @@ def _split_macos_docker_config(argv: list[str]) -> tuple[list[str], bool]:
                 macos_found = True
                 i += 2
                 continue
-            if nxt.endswith(".nextflow_resource_limits.config"):
+            if nxt.endswith("resource_limits.config"):
+                resource_found = True
                 i += 2
                 continue
         out.append(token)
         i += 1
-    return out, macos_found
+    return out, macos_found, resource_found
 
 
 def _shell_quote(s: str) -> str:

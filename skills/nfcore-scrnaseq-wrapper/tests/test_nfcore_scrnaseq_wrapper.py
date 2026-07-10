@@ -535,8 +535,11 @@ def test_build_extra_configs_emits_resource_limits_on_linux_real_run(tmp_path):
     with patch("platform.system", return_value="Linux"):
         result = module._build_extra_nextflow_configs(args, tmp_path)
     names = [p.name for p in result]
-    assert ".nextflow_resource_limits.config" in names
-    text = (tmp_path / ".nextflow_resource_limits.config").read_text(encoding="utf-8")
+    assert "resource_limits.config" in names
+    # Shipped inside the bundle so commands.sh can re-apply it on replay.
+    shipped = tmp_path / "reproducibility" / "resource_limits.config"
+    assert shipped.is_file()
+    text = shipped.read_text(encoding="utf-8")
     assert "resourceLimits" in text
     assert "stageInMode" not in text and "--platform" not in text
 
@@ -548,7 +551,7 @@ def test_build_extra_configs_skips_resource_limits_on_linux_demo(tmp_path):
     args = _argparse.Namespace(profile="docker", demo=True)
     with patch("platform.system", return_value="Linux"):
         result = module._build_extra_nextflow_configs(args, tmp_path)
-    assert ".nextflow_resource_limits.config" not in [p.name for p in result]
+    assert "resource_limits.config" not in [p.name for p in result]
 
 
 def test_resource_limits_memory_scales_with_host(monkeypatch):

@@ -222,6 +222,28 @@ def test_write_repro_commands_demo_uses_test_profile(tmp_path):
     assert "--input" not in content
 
 
+def test_write_repro_commands_applies_shipped_resource_limits(tmp_path):
+    # When the live run shipped reproducibility/resource_limits.config, commands.sh
+    # must re-apply it on non-macOS replay (findings #1/#3).
+    repro = tmp_path / "reproducibility"
+    repro.mkdir(parents=True, exist_ok=True)
+    (repro / "resource_limits.config").write_text(
+        "process { resourceLimits = [ memory: '58.GB' ] }\n", encoding="utf-8"
+    )
+    args = _make_args(tmp_path, profile="docker")
+    write_repro_commands(tmp_path, args=args, pipeline_source=_pipeline_source())
+    content = (repro / "commands.sh").read_text(encoding="utf-8")
+    assert 'RESOURCE_CONFIG="-c reproducibility/resource_limits.config"' in content
+    assert "$RESOURCE_CONFIG" in content
+
+
+def test_write_repro_commands_no_resource_guard_without_config(tmp_path):
+    args = _make_args(tmp_path, profile="docker")
+    write_repro_commands(tmp_path, args=args, pipeline_source=_pipeline_source())
+    content = (tmp_path / "reproducibility" / "commands.sh").read_text(encoding="utf-8")
+    assert "resource_limits.config" not in content
+
+
 def test_write_repro_commands_copies_user_nextflow_configs(tmp_path):
     cfg = tmp_path / "cluster.config"
     cfg.write_text("process.executor = 'slurm'\n", encoding="utf-8")

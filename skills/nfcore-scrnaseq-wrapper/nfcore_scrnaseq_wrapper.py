@@ -1096,8 +1096,13 @@ def _write_resource_limits_config(output_dir: Path, *, args: argparse.Namespace)
 
     Carries only the portable resourceLimits block — none of the macOS-only
     workarounds (``--platform``, ``stageInMode = 'copy'``, STAR FIFO overrides).
+
+    Written inside ``reproducibility/`` (not the output root) so it ships with the
+    portable bundle: ``commands.sh`` re-applies it on non-macOS replay hosts, letting a
+    from-scratch reproduction on the generating machine succeed instead of re-aborting
+    with "Process requirement exceeds available memory".
     """
-    config_path = output_dir / ".nextflow_resource_limits.config"
+    config_path = output_dir / "reproducibility" / "resource_limits.config"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     cpus = max(1, os.cpu_count() or 1)
     memory_gb = _resource_limits_memory_gb()

@@ -32,6 +32,15 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
   **not** added: scrnaseq's `commands.sh` self-anchors to the bundle location via
   `BASH_SOURCE`, so the output path never needs patching.
 
+### Added
+
+- **`remap_paths.py --output-dir` accepted for CLI parity.** The rnaseq/sarek bundles
+  expose `--output-dir` to rewrite a baked `--output`; the scrnaseq bundle self-relocates
+  (its `commands.sh` self-anchors and `params.yaml` is output-relative), so it never
+  needed one. `--output-dir` is now accepted as a documented no-op that explains the
+  self-relocation, so a user reaching for it out of habit gets guidance instead of an
+  argument error. SKILL.md documents the difference across all three wrappers.
+
 ### Documentation
 
 - **`--allow-remote-inputs` semantics clarified.** SKILL.md now states explicitly
@@ -45,6 +54,13 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **The host resourceLimits cap now ships in the reproducibility bundle and replays.**
+  Previously the cap was applied to the live run but written outside the bundle, so a
+  from-scratch reproduction on the generating host re-aborted at `STAR_GENOMEGENERATE`
+  with `Process requirement exceeds available memory`. It is now written to
+  `reproducibility/resource_limits.config` and `commands.sh` re-applies it via a
+  `uname != Darwin` guard, so a bundle reproduces the run on the machine that made it.
+  The cap only ever clamps requests, so a larger replay host simply under-uses it.
 - **Host memory auto-cap now also applies on Linux (not only macOS).** The host-scaled
   `process.resourceLimits` cap that prevents Nextflow's local executor from aborting a
   real run with `Process requirement exceeds available memory` was written only on

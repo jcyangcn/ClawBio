@@ -1323,18 +1323,21 @@ def _resource_limits_memory_gb() -> int:
 def _write_resource_limits_config(output_dir: Path, *, args: argparse.Namespace) -> Path | None:
     """Host-scaled ``resourceLimits`` config for non-macOS docker runs.
 
-    Applied to the *live* run only so a real (non-demo) run whose production process
+    Applied to the live run so a real (non-demo) run whose production process
     requirements exceed this host does not abort with "Process requirement exceeds
-    available memory". Carries only the portable resourceLimits block — none of the
-    macOS-only workarounds. Returns None when not applicable (macOS is handled by
-    ``_write_macos_docker_config``; ``--demo`` relies on -profile test's own limits).
+    available memory". Written inside ``reproducibility/`` so it ships with the
+    portable bundle: ``commands.sh`` re-applies it on non-macOS replay hosts, letting a
+    from-scratch reproduction on the generating machine succeed. Carries only the
+    portable resourceLimits block — none of the macOS-only workarounds. Returns None
+    when not applicable (macOS is handled by ``_write_macos_docker_config``; ``--demo``
+    relies on -profile test's own limits).
     """
     if sys.platform == "darwin":
         return None
     profile_parts = {p.strip() for p in (args.profile or "").split(",") if p.strip()}
     if "docker" not in profile_parts or bool(getattr(args, "demo", False)):
         return None
-    config_path = output_dir / ".nextflow_resource_limits.config"
+    config_path = output_dir / "reproducibility" / "resource_limits.config"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     cpus = max(1, os.cpu_count() or 1)
     memory_gb = _resource_limits_memory_gb()

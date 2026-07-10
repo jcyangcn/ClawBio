@@ -8,6 +8,12 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Documentation
 
+- **`remap_paths.py --output-dir` documented as a Gotcha.** SKILL.md now explains that
+  relocating the bundle's output directory uses `python3 reproducibility/remap_paths.py
+  --output-dir <new-path>` (the rnaseq bundle bakes `--output` into `commands.sh`),
+  alongside `--old/--new` and `--refs-old/--refs-new`, and notes the scrnaseq bundle
+  self-relocates and accepts `--output-dir` only for parity. Resolves the cross-wrapper
+  CLI inconsistency being undocumented.
 - **`--allow-remote-inputs` semantics clarified.** SKILL.md now states explicitly
   that the flag relaxes only the wrapper's own local-first preflight check: remote
   FASTQ/reference URIs are written into the normalized samplesheet/`params.yaml`

@@ -103,6 +103,21 @@ fi
 
 """
 
+# Applies the host-scaled resourceLimits cap the wrapper generated for the original
+# run, ONLY when replaying on a non-macOS host (on macOS the Docker VM is the ceiling
+# and macos_docker.config applies instead). Shipping it makes a from-scratch
+# reproduction on the generating machine — the whole point of the bundle — succeed
+# instead of re-aborting with "Process requirement exceeds available memory".
+# resourceLimits only ever caps requests (never grants more), so a larger replay host
+# simply under-uses it. A plain assigned string keeps bash 3.2 happy under `set -u`.
+_RESOURCE_GUARD = """\
+RESOURCE_CONFIG=""
+if [[ "$(uname -s)" != "Darwin" ]]; then
+  RESOURCE_CONFIG="-c reproducibility/resource_limits.config"
+fi
+
+"""
+
 # Nextflow config with the macOS + Apple-Silicon Docker workarounds. Always
 # shipped inside docker bundles; applied at replay only under the uname guard
 # above. See nfcore_scrnaseq_wrapper for the full rationale of each fix.
@@ -199,6 +214,7 @@ def build_nextflow_commands_sh(
     generated_at: str,
     extra_configs: list[str] | None = None,
     work_dir: str = "upstream/work",
+    resource_limits_config: bool = False,
 ) -> str:
     """Return the full contents of a portable, nextflow-direct ``commands.sh``.
 
@@ -242,6 +258,8 @@ def build_nextflow_commands_sh(
     for config_path in extra_configs or []:
         tail.append(f"  -c {shlex.quote(config_path)}")
     tail.append("  $RESUME")
+    if resource_limits_config:
+        tail.append("  $RESOURCE_CONFIG")
     if macos_docker_config:
         tail.append("  $EXTRA_CONFIG")
     if tail:
@@ -254,6 +272,8 @@ def build_nextflow_commands_sh(
         "\n# ── Replay command ────────────────────────────────────────────────────────────\n",
         _RESUME_GUARD,
     ]
+    if resource_limits_config:
+        parts.append(_RESOURCE_GUARD)
     if nextflow_version:
         # Pin the Nextflow engine version (the pipeline is pinned via -r). Nextflow
         # auto-fetches this exact version, so the engine cannot drift on replay.
