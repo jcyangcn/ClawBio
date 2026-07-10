@@ -743,7 +743,10 @@ def _prepare_demo_samplesheet(
     staging_dir: Path | None,
 ) -> tuple[Path, Path, dict[str, object]]:
     # Apply demo overrides first so all subsequent callers see star.
-    if args.preset != "star":
+    # Only warn when the user *explicitly* asked for a non-star preset; the
+    # bare default (preset_explicit is False) was never a real request, so
+    # claiming "requested: 'standard'" would be misleading.
+    if getattr(args, "preset_explicit", False) and args.preset != "star":
         print(
             f"WARNING: --demo forces preset=star (requested: {args.preset!r}). "
             "The nf-core test profile ships STAR-compatible data.",

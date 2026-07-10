@@ -8,6 +8,23 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Documentation
 
+- **`split_fastq` gotcha: demo-vs-normal difference is a profile effect, not a thread/CPU
+  effect.** The existing gotcha now records that a demo-vs-normal variant difference cannot
+  come from the host-scaled `resourceLimits` CPU count: nf-core/sarek 3.8.1 pins
+  `bwa mem -K 100000000` on every mapping process (`conf/modules/aligner.config`), which
+  fixes the per-batch base count and makes alignment bit-identical regardless of thread
+  count. The divergence is driven by the `-profile test` overrides already documented
+  (`split_fastq = 0`, and the test profile's own `--tools strelka` / reference choices),
+  so a run at 28 CPUs reproduces the same calls as the demo's 4. Documentation only.
+- **Transient first-replay failures documented (upstream/network, auto-recovered).** A new
+  gotcha explains that a demo replay can fail on the *first* attempt because nf-core/sarek's
+  own `conf/test.config` uses a trailing-slash `igenomes_base`/`modules_testdata_base_path`
+  (`…/test-datasets/modules/data/`) that can join into `//` URLs some CDNs momentarily 404,
+  and remote staging occasionally races — upstream behaviour, not a wrapper/bundle defect.
+  The generated `commands.sh` already recovers it: it adds `-resume` whenever a prior
+  `.nextflow/` session exists, so re-invoking `bash commands.sh` resumes from cached tasks
+  and completes without recomputing. Documentation only (the auto-`-resume` mechanism was
+  added in an earlier change).
 - **`remap_paths.py --output-dir` documented.** The portability section now lists
   `--output-dir <new-path>` (rewrites the baked `--output` in `commands.sh` when a run is
   relocated) alongside `--old/--new` and `--refs-old/--refs-new`, and notes that the

@@ -54,6 +54,14 @@ and the wrapper version is tracked in `SKILL.md` YAML frontmatter.
 
 ### Fixed
 
+- **`--demo` no longer prints a misleading "requested" preset warning.** Running `--demo`
+  without `--preset` fired `WARNING: --demo forces preset=star (requested: 'standard')`,
+  implying the user had asked for `standard` when it was merely the parser default. The
+  demo-override warning now consults the existing `preset_explicit` flag (set only by
+  `_PresetAction` when `--preset` is actually supplied on the CLI), so it fires **only**
+  when the user explicitly requested a non-`star` preset that `--demo` overrides. Purely
+  cosmetic — the run result was always identical — but the message no longer fabricates a
+  request the user never made.
 - **Output-dir "not empty" check now ignores the whole `reproducibility/` bundle.** The
   check used a per-file allowlist (`_ALLOWED_REPRO_FILES` = samplesheet/params/macos
   config only), so an output directory containing a *complete* reproducibility bundle —

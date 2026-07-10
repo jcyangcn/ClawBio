@@ -156,6 +156,39 @@ def test_aligner_alias_rejects_conflict_with_explicit_default_preset():
     assert exc.value.details["preset_from_aligner"] == "star"
 
 
+def test_demo_does_not_warn_about_preset_when_none_was_requested(
+    tmp_path, capsys
+):
+    # --demo without --preset should not claim the user "requested" the
+    # default preset; the warning is only meaningful for an explicit choice.
+    module = _load_skill_module()
+    parser = module.build_parser()
+    args = parser.parse_args(["--output", str(tmp_path), "--demo"])
+
+    module._prepare_demo_samplesheet(args, tmp_path, staging_dir=None)
+
+    stderr = capsys.readouterr().err
+    assert "forces preset=star" not in stderr
+    assert args.preset == "star"
+
+
+def test_demo_warns_when_explicit_non_star_preset_is_overridden(
+    tmp_path, capsys
+):
+    # An explicit --preset that --demo overrides still warns.
+    module = _load_skill_module()
+    parser = module.build_parser()
+    args = parser.parse_args(
+        ["--output", str(tmp_path), "--demo", "--preset", "standard"]
+    )
+
+    module._prepare_demo_samplesheet(args, tmp_path, staging_dir=None)
+
+    stderr = capsys.readouterr().err
+    assert "forces preset=star (requested: 'standard')" in stderr
+    assert args.preset == "star"
+
+
 def test_main_writes_structured_error_for_aligner_preset_conflict(tmp_path, monkeypatch):
     module = _load_skill_module()
     monkeypatch.setattr(
