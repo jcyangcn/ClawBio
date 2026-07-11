@@ -19,7 +19,13 @@ choke-point all bundle writers route through.
 
 from __future__ import annotations
 
+import os
+import tempfile
 from pathlib import Path
+
+
+def _to_lf_bytes(text: str) -> bytes:
+    return text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
 
 
 def write_text_lf(path: Path | str, text: str) -> Path:
@@ -30,6 +36,35 @@ def write_text_lf(path: Path | str, text: str) -> Path:
     Returns the written path.
     """
     p = Path(path)
-    normalised = text.replace("\r\n", "\n").replace("\r", "\n")
-    p.write_bytes(normalised.encode("utf-8"))
+    p.write_bytes(_to_lf_bytes(text))
+    return p
+
+
+def write_text_lf_atomic(path: Path | str, text: str) -> Path:
+    """Like :func:`write_text_lf`, but replaces ``path`` atomically.
+
+    The content is written to a temporary file in the same directory and then
+    ``os.replace``\\ d into place, so a reader that already has ``path`` open keeps
+    reading the original (now-unlinked) inode intact instead of seeing a truncated
+    file. This matters for ``commands.sh``: an in-place ``--resume`` replay re-invokes
+    the wrapper, which regenerates the very script bash is executing — a plain
+    truncate-and-rewrite corrupts bash's read mid-run. The existing file's permission
+    bits are preserved. Returns the written path.
+    """
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    mode = p.stat().st_mode if p.exists() else None
+    fd, tmp_name = tempfile.mkstemp(dir=str(p.parent), prefix=f".{p.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(_to_lf_bytes(text))
+        if mode is not None:
+            os.chmod(tmp_name, mode)
+        os.replace(tmp_name, p)
+    except BaseException:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
     return p

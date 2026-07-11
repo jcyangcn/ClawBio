@@ -83,9 +83,13 @@ fi
 
 """
 
+# Portable interpreter: modern macOS and many Linux distributions ship only
+# `python3`, not a bare `python` (PEP 394), so a bare `python "$SKILL_SCRIPT"`
+# replay fails with `python: command not found`. `${PYTHON:-python3}` defaults to
+# python3 while honouring an explicit `PYTHON` override.
 _COMMAND_TEMPLATE = """\
 # ── Replay command ────────────────────────────────────────────────────────────
-python "$SKILL_SCRIPT" \\
+"${{PYTHON:-python3}}" "$SKILL_SCRIPT" \\
 {args_block}
 """
 

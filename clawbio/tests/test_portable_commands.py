@@ -42,6 +42,20 @@ class TestBuildPortableCommandsSh:
         # Should not have "--demo None"
         assert "--demo None" not in result
 
+    def test_uses_portable_python_interpreter(self):
+        """The replay command must invoke a portable interpreter (`${PYTHON:-python3}`),
+        never a bare `python`. Modern macOS and many Linux distributions ship only
+        `python3` (PEP 394), so a bare `python "$SKILL_SCRIPT"` replay fails with
+        `python: command not found`. Enforced at the source template so every skill
+        that builds a bundle inherits the fix (no per-skill post-generation patch)."""
+        result = build_portable_commands_sh(
+            skill_name="lit-synthesizer",
+            script_name="lit_synthesizer.py",
+            args={"--query": "CRISPR"},
+        )
+        assert '"${PYTHON:-python3}" "$SKILL_SCRIPT"' in result
+        assert "\npython \"$SKILL_SCRIPT\"" not in result
+
     def test_list_value_expands_to_repeated_flags(self):
         """A list value must emit the flag once per element, not a Python repr."""
         result = build_portable_commands_sh(
